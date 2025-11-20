@@ -42,7 +42,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentatio
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.GenerateQrCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels.Companion.pixels
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.by
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
 import kotlinx.serialization.*
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -257,7 +257,7 @@ class InitTransactionLive(
     private val requestJarByReference: EmbedOption.ByReference<RequestId>,
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
     private val publishPresentationEvent: PublishPresentationEvent,
-    private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
+    private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509Certificates,
     private val generateQrCode: GenerateQrCode,
 ) : InitTransaction {
 

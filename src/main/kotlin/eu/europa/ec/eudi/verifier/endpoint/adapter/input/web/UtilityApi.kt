@@ -86,9 +86,9 @@ internal class UtilityApi(
                 requireNotNull(it) { "nonce must be provided" }
                 Nonce(it)
             }
-        val issuerChain = form["issuer_chain"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
+        val rootCACertificates = (form["root_ca_certificates"] ?: form["issuer_chain"])?.filterNot { it.isNullOrBlank() }?.firstOrNull()
 
-        return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce, issuerChain)) {
+        return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce, rootCACertificates)) {
             is SdJwtVcValidationResult.Valid -> {
                 val reCreated = with(NimbusSdJwtOps) {
                     result.payload.sdJwt.recreateClaimsAndDisclosuresPerClaim().first

@@ -24,16 +24,16 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import java.security.cert.X509Certificate
 
 /**
- * Parses a PEM encoded X509 Certificate.
+ * Parses PEM encoded X509 Certificates.
  */
-fun interface ParsePemEncodedX509CertificateChain {
-    operator fun invoke(chain: String): Either<Throwable, NonEmptyList<X509Certificate>>
+fun interface ParsePemEncodedX509Certificates {
+    operator fun invoke(certificates: String): Either<Throwable, NonEmptyList<X509Certificate>>
 }
 
-fun ParsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(
-    chain: String,
+fun ParsePemEncodedX509Certificates.x5cShouldBeTrustedOrNull(
+    certificates: String,
     customizePKIX: ConfigurePKIXParameters = SkipRevocation,
 ): Either<Throwable, X5CShouldBe.Trusted?> = Either.catch {
-    val certs = invoke(chain).getOrThrow()
+    val certs = invoke(certificates).getOrThrow()
     X5CShouldBe.Trusted(certs, customizePKIX)
 }

@@ -13,22 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.port.out.lotl
+package eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509
 
 import arrow.core.Either
-import eu.europa.ec.eudi.verifier.endpoint.domain.TrustedListConfig
-import java.security.cert.X509Certificate
+import arrow.core.toNonEmptyListOrNull
+import com.nimbusds.jose.util.X509CertChainUtils
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
 
 /**
- * Interface for fetching LOTL certificates
+ * [ParsePemEncodedX509Certificates] implementation using Nimbus.
  */
-fun interface FetchLOTLCertificates {
-    /**
-     * Fetch certificates from a LOTL URL
-     * @param trustedListConfig Configuration for the trusted list
-     * @return Result containing a list of X509 certificates or an exception
-     */
-    suspend operator fun invoke(
-        trustedListConfig: TrustedListConfig,
-    ): Either<Throwable, List<X509Certificate>>
+internal val ParsePemEncodedX509CertificatesWithNimbus = ParsePemEncodedX509Certificates { certificates ->
+    Either.catch {
+        val certs = X509CertChainUtils.parse(certificates).toNonEmptyListOrNull()
+        requireNotNull(certs) { "Failed to parse certificates from PEM" }
+    }
 }

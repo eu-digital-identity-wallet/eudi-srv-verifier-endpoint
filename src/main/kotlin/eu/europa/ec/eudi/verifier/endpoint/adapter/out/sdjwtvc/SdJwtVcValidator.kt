@@ -26,14 +26,14 @@ import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import eu.europa.ec.eudi.sdjwt.*
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.*
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.AttestationIssuerTrust
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -119,20 +119,18 @@ private fun SdJwtVcVerificationError.toSdJwtVcValidationErrorCode(): SdJwtVcVali
 private val log = LoggerFactory.getLogger(SdJwtVcValidator::class.java)
 
 internal class SdJwtVcValidator(
-    private val provideTrustSource: ProvideTrustSource,
+    private val validateAttestationIssuerTrust: ValidateAttestationIssuerTrust,
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
     typeMetadataPolicy: TypeMetadataPolicy,
 ) {
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> = run {
         val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
-            val x5CShouldBe = provideTrustSource(vct)
-            if (x5CShouldBe != null) {
-                val x5cValidator = X5CValidator(x5CShouldBe)
-                val x5c = checkNotNull(chain.toNonEmptyListOrNull())
-                x5cValidator.ensureTrusted(x5c).fold(ifLeft = { false }, ifRight = { true })
-            } else {
-                false
+            val x5c = checkNotNull(chain.toNonEmptyListOrNull())
+            val trust = validateAttestationIssuerTrust(x5c, Vct(vct))
+            when (trust) {
+                AttestationIssuerTrust.Trusted -> true
+                AttestationIssuerTrust.NotTrusted -> false
             }
         }
         NimbusSdJwtOps.SdJwtVcVerifier(

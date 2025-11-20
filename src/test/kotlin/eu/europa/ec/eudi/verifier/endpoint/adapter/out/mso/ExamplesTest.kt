@@ -17,8 +17,9 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.getOrElse
 import cbor.Cbor
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.Ignored
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
 import id.walt.mdoc.dataelement.toDataElement
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.issuersigned.IssuerSigned
@@ -64,7 +65,7 @@ class ExamplesTest {
 
         val documentValidator = DocumentValidator(
             clock = Clock.fixed(issuedAt.toInstant().toKotlinInstant(), issuedAt.zone.toKotlinTimeZone()),
-            provideTrustSource = ProvideTrustSource.Ignored,
+            validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.Ignored,
             statusListTokenValidator = null,
         )
         val document = MDoc.fromCBORHex(waltIdExample)
@@ -80,12 +81,11 @@ class ExamplesTest {
             return Cbor.decodeFromByteArray<IssuerSigned>(cbor)
         }
 
-        val trustSources = ProvideTrustSource.Ignored
         val issuedAt = ZonedDateTime.parse("2024-08-02T16:22:19.252519705Z")
         val document = issuerSigned().asMDocWithDocType("org.iso.18013.5.1.mDL")
         val documentValidator = DocumentValidator(
             clock = Clock.fixed(issuedAt.toInstant().toKotlinInstant(), issuedAt.zone.toKotlinTimeZone()),
-            provideTrustSource = trustSources::invoke,
+            validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.Ignored,
             statusListTokenValidator = null,
         )
         documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }

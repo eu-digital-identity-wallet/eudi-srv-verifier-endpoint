@@ -78,10 +78,6 @@ dependencies {
     }
     implementation(libs.zxing)
     implementation(libs.uri)
-    implementation(libs.dss.service)
-    implementation(libs.dss.validation)
-    implementation(libs.dss.tsl.validation)
-    implementation(libs.dss.utils.apache.commons)
     implementation(libs.aedile)
 
     testImplementation(kotlin("test"))

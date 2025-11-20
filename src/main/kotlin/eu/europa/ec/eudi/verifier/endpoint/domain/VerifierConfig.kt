@@ -18,7 +18,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import arrow.core.Either
-import arrow.core.Ior
 import arrow.core.NonEmptyList
 import arrow.core.nonEmptyListOf
 import arrow.core.serialization.NonEmptyListSerializer
@@ -299,7 +298,6 @@ data class VerifierConfig(
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
     val authorizationRequestUri: UnresolvedAuthorizationRequestUri,
-    val trustSourcesConfig: Map<Regex, TrustSourceConfig>?,
 )
 
 /**
@@ -359,21 +357,6 @@ private fun SanType.asInt() =
         SanType.DNS -> 2
     }
 
-typealias TrustSourceConfig = Ior<TrustedListConfig, KeyStoreConfig>
-
-enum class ProviderKind(val value: String) {
-    PIDProvider("http://uri.etsi.org/Svc/Svctype/Provider/PID"),
-    QEEAProvider("http://uri.etsi.org/TrstSvc/Svctype/EAA/Q"),
-    PubEAAProvider("http://uri.etsi.org/TrstSvc/Svctype/EAA/Pub-EAA"),
-}
-
-data class TrustedListConfig(
-    val location: URL,
-    val serviceTypeFilter: ProviderKind?,
-    val refreshInterval: String = "0 0 * * * *",
-    val keystoreConfig: KeyStoreConfig?,
-)
-
 data class KeyStoreConfig(
     val keystorePath: String,
     val keystoreType: String? = "JKS",
@@ -387,6 +370,3 @@ internal fun VpFormatsSupported.supports(format: Format): Boolean =
         Format.MsoMdoc -> null != msoMdoc
         else -> false
     }
-
-fun TrustSourcesConfig(trustedList: TrustedListConfig?, keystore: KeyStoreConfig?): Ior<TrustedListConfig, KeyStoreConfig> =
-    Ior.fromNullables(trustedList, keystore) ?: error("Either trustedList or keystore must be provided")
