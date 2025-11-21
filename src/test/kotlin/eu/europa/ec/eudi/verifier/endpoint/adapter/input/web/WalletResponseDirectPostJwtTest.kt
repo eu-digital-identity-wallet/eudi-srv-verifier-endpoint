@@ -244,7 +244,8 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
 internal class WalletResponseDirectPostJwtValidationsEnabledTest {
 
     @TestConfiguration
-    class Config {
+    internal class Config {
+
         @Bean
         @Primary
         fun validateAttestationIssuerTrust(): ValidateAttestationIssuerTrust = ValidateAttestationIssuerTrust.Ignored
