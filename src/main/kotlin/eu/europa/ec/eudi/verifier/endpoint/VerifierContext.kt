@@ -208,11 +208,12 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
 
     // Default ValidateAttestationIssuerTrust
     registerBean(lazyInit = true) {
+        val config = bean<AttestationTrustProperties>()
         ValidateAttestationIssuerTrust.usingTrustService(
             bean(),
-            Url(env.getRequiredProperty("verifier.trustService.url")),
-            emptyMap(),
-            ServiceType.EAAProvider,
+            Url(config.serviceUrl),
+            config.attestations.associate { it.attestationType to it.serviceType },
+            config.defaultServiceType,
         )
     }
 
@@ -675,5 +676,17 @@ internal data class TypeMetadataResolutionProperties(
     data class IntegrityProperties(
         val enabled: Boolean = false,
         val allowedAlgorithms: Set<IntegrityAlgorithm> = IntegrityAlgorithm.entries.toSet(),
+    )
+}
+
+@ConfigurationProperties("verifier.trust")
+internal data class AttestationTrustProperties(
+    val serviceUrl: String,
+    val attestations: List<AttestationProperties>,
+    val defaultServiceType: ServiceType = ServiceType.EAAProvider,
+) {
+    data class AttestationProperties(
+        val attestationType: String,
+        val serviceType: ServiceType,
     )
 }

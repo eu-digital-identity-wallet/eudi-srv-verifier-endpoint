@@ -23,7 +23,7 @@ import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.support.GenericApplicationContext
 
 @SpringBootApplication
-@EnableConfigurationProperties(TypeMetadataResolutionProperties::class)
+@EnableConfigurationProperties(TypeMetadataResolutionProperties::class, AttestationTrustProperties::class)
 class VerifierApplication
 
 fun main(args: Array<String>) {

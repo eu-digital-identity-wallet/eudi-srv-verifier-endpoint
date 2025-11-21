@@ -84,10 +84,10 @@ private object X509CertificateSerializer : KSerializer<X509Certificate> {
 fun ValidateAttestationIssuerTrust.Companion.usingTrustService(
     httpClient: HttpClient,
     service: Url,
-    attestationIssuerServiceType: Map<String, ServiceType>,
+    attestations: Map<String, ServiceType>,
     defaultServiceType: ServiceType,
 ): ValidateAttestationIssuerTrust = ValidateAttestationIssuerTrust { issuerChain, attestationType ->
-    val serviceType = attestationIssuerServiceType[attestationType] ?: defaultServiceType
+    val serviceType = attestations[attestationType] ?: defaultServiceType
     val response = httpClient.post {
         expectSuccess = true
 
