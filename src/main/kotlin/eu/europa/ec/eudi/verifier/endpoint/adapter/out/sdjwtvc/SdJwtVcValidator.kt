@@ -127,7 +127,7 @@ internal class SdJwtVcValidator(
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> = run {
         val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
             val x5c = checkNotNull(chain.toNonEmptyListOrNull())
-            val trust = validateAttestationIssuerTrust(x5c, Vct(vct))
+            val trust = validateAttestationIssuerTrust(x5c, vct)
             when (trust) {
                 AttestationIssuerTrust.Trusted -> true
                 AttestationIssuerTrust.NotTrusted -> false

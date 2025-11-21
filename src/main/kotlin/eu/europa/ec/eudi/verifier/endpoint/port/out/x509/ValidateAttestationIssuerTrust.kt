@@ -16,8 +16,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.out.x509
 
 import arrow.core.NonEmptyList
-import eu.europa.ec.eudi.sdjwt.vc.Vct
-import eu.europa.ec.eudi.verifier.endpoint.domain.MsoMdocDocType
 import java.security.cert.X509Certificate
 
 sealed interface AttestationIssuerTrust {
@@ -25,10 +23,15 @@ sealed interface AttestationIssuerTrust {
     data object NotTrusted : AttestationIssuerTrust
 }
 
-interface ValidateAttestationIssuerTrust {
+fun interface ValidateAttestationIssuerTrust {
 
-    suspend operator fun invoke(issuerChain: NonEmptyList<X509Certificate>, vct: Vct): AttestationIssuerTrust
-    suspend operator fun invoke(issuerChain: NonEmptyList<X509Certificate>, docType: MsoMdocDocType): AttestationIssuerTrust
+    /**
+     * Checks if the Issuer of an Attestation is trusted.
+     *
+     * @param issuerChain The Certificate Chain of the Issuer. Usually the 'x5c' claim.
+     * @param attestationType The type of the Attestation. Either the `vct` or `docType`.
+     */
+    suspend operator fun invoke(issuerChain: NonEmptyList<X509Certificate>, attestationType: String): AttestationIssuerTrust
 
     companion object
 }

@@ -212,7 +212,6 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
             bean(),
             Url(env.getRequiredProperty("verifier.trustService.url")),
             emptyMap(),
-            emptyMap(),
             ServiceType.EAAProvider,
         )
     }

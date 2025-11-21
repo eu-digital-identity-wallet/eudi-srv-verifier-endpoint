@@ -15,36 +15,20 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509
 
-import arrow.core.NonEmptyList
-import eu.europa.ec.eudi.sdjwt.vc.Vct
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
-import eu.europa.ec.eudi.verifier.endpoint.domain.MsoMdocDocType
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.AttestationIssuerTrust
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
-import java.security.cert.X509Certificate
-
-private class ValidateAttestationIssuerTrustUsingRootCACertificates(x5cShouldBe: X5CShouldBe.Trusted) : ValidateAttestationIssuerTrust {
-    private val validator: X5CValidator by lazy { X5CValidator(x5cShouldBe) }
-
-    override suspend fun invoke(
-        issuerChain: NonEmptyList<X509Certificate>,
-        vct: Vct,
-    ): AttestationIssuerTrust = validator.checkIssuerTrust(issuerChain)
-
-    override suspend fun invoke(
-        issuerChain: NonEmptyList<X509Certificate>,
-        docType: MsoMdocDocType,
-    ): AttestationIssuerTrust = validator.checkIssuerTrust(issuerChain)
-}
-
-private fun X5CValidator.checkIssuerTrust(issuerChain: NonEmptyList<X509Certificate>): AttestationIssuerTrust =
-    ensureTrusted(issuerChain)
-        .fold(
-            ifLeft = { AttestationIssuerTrust.NotTrusted },
-            ifRight = { AttestationIssuerTrust.Trusted },
-        )
 
 fun ValidateAttestationIssuerTrust.Companion.usingRootCACertificates(
     x5cShouldBe: X5CShouldBe.Trusted,
-): ValidateAttestationIssuerTrust = ValidateAttestationIssuerTrustUsingRootCACertificates(x5cShouldBe)
+): ValidateAttestationIssuerTrust {
+    val validator: X5CValidator by lazy { X5CValidator(x5cShouldBe) }
+    return ValidateAttestationIssuerTrust { issuerChain, _ ->
+        validator.ensureTrusted(issuerChain)
+            .fold(
+                ifLeft = { AttestationIssuerTrust.NotTrusted },
+                ifRight = { AttestationIssuerTrust.Trusted },
+            )
+    }
+}

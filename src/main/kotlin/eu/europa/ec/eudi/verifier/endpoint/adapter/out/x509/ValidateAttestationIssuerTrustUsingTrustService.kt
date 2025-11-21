@@ -17,8 +17,6 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509
 
 import arrow.core.NonEmptyList
 import arrow.core.serialization.NonEmptyListSerializer
-import eu.europa.ec.eudi.sdjwt.vc.Vct
-import eu.europa.ec.eudi.verifier.endpoint.domain.MsoMdocDocType
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.AttestationIssuerTrust
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
 import io.ktor.client.*
@@ -38,43 +36,6 @@ import java.io.ByteArrayInputStream
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import kotlin.io.encoding.Base64
-
-private class ValidateAttestationIssuerTrustUsingTrustService(
-    private val httpClient: HttpClient,
-    private val service: Url,
-    private val serviceTypeByVct: Map<Vct, ServiceType>,
-    private val serviceTypeByDocType: Map<MsoMdocDocType, ServiceType>,
-    private val defaultServiceType: ServiceType,
-) : ValidateAttestationIssuerTrust {
-    override suspend fun invoke(
-        issuerChain: NonEmptyList<X509Certificate>,
-        vct: Vct,
-    ): AttestationIssuerTrust = validateTrust(issuerChain) { serviceTypeByVct[vct] }
-
-    override suspend fun invoke(
-        issuerChain: NonEmptyList<X509Certificate>,
-        docType: MsoMdocDocType,
-    ): AttestationIssuerTrust = validateTrust(issuerChain) { serviceTypeByDocType[docType] }
-
-    private suspend fun validateTrust(
-        issuerChain: NonEmptyList<X509Certificate>,
-        resolveServiceType: () -> ServiceType?,
-    ): AttestationIssuerTrust {
-        val serviceType = resolveServiceType() ?: defaultServiceType
-
-        val response = httpClient.post {
-            expectSuccess = true
-
-            url(service)
-            contentType(ContentType.Application.Json)
-            setBody(TrustQuery(issuerChain, serviceType))
-
-            accept(ContentType.Application.Json)
-        }.body<TrustResponse>()
-
-        return if (response.trusted) AttestationIssuerTrust.Trusted else AttestationIssuerTrust.NotTrusted
-    }
-}
 
 @Serializable
 enum class ServiceType {
@@ -123,8 +84,18 @@ private object X509CertificateSerializer : KSerializer<X509Certificate> {
 fun ValidateAttestationIssuerTrust.Companion.usingTrustService(
     httpClient: HttpClient,
     service: Url,
-    serviceTypeByVct: Map<Vct, ServiceType>,
-    serviceTypeByDocType: Map<MsoMdocDocType, ServiceType>,
+    attestationIssuerServiceType: Map<String, ServiceType>,
     defaultServiceType: ServiceType,
-): ValidateAttestationIssuerTrust =
-    ValidateAttestationIssuerTrustUsingTrustService(httpClient, service, serviceTypeByVct, serviceTypeByDocType, defaultServiceType)
+): ValidateAttestationIssuerTrust = ValidateAttestationIssuerTrust { issuerChain, attestationType ->
+    val serviceType = attestationIssuerServiceType[attestationType] ?: defaultServiceType
+    val response = httpClient.post {
+        expectSuccess = true
+
+        url(service)
+        contentType(ContentType.Application.Json)
+        setBody(TrustQuery(issuerChain, serviceType))
+
+        accept(ContentType.Application.Json)
+    }.body<TrustResponse>()
+    if (response.trusted) AttestationIssuerTrust.Trusted else AttestationIssuerTrust.NotTrusted
+}

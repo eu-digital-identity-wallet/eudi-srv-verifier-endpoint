@@ -15,22 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509
 
-import arrow.core.NonEmptyList
-import eu.europa.ec.eudi.sdjwt.vc.Vct
-import eu.europa.ec.eudi.verifier.endpoint.domain.MsoMdocDocType
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.AttestationIssuerTrust
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
-import java.security.cert.X509Certificate
 
 val ValidateAttestationIssuerTrust.Companion.Ignored: ValidateAttestationIssuerTrust
-    get() = object : ValidateAttestationIssuerTrust {
-        override suspend fun invoke(
-            issuerChain: NonEmptyList<X509Certificate>,
-            vct: Vct,
-        ): AttestationIssuerTrust = AttestationIssuerTrust.Trusted
-
-        override suspend fun invoke(
-            issuerChain: NonEmptyList<X509Certificate>,
-            docType: MsoMdocDocType,
-        ): AttestationIssuerTrust = AttestationIssuerTrust.Trusted
-    }
+    get() = ValidateAttestationIssuerTrust { _, _ -> AttestationIssuerTrust.Trusted }
