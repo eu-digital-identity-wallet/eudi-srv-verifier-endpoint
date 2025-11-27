@@ -43,7 +43,7 @@ dependencies {
     implementation(libs.arrow.fx.coroutines)
     implementation(libs.arrow.core.serialization)
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
-    implementation("org.webjars:webjars-locator-core")
+    implementation("org.webjars:webjars-locator-lite")
     implementation(libs.swagger.ui)
     implementation(libs.waltid.mdoc.credentials) {
         because("To verify CBOR credentials")
@@ -89,6 +89,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
+    testImplementation("org.springframework.boot:spring-boot-webtestclient")
 }
 
 java {
@@ -102,7 +103,7 @@ kotlin {
     }
 
     compilerOptions {
-        apiVersion = KotlinVersion.KOTLIN_2_1
+        apiVersion = KotlinVersion.KOTLIN_2_2
         freeCompilerArgs.add("-Xjsr305=strict")
         optIn.addAll(
             "kotlinx.serialization.ExperimentalSerializationApi",
