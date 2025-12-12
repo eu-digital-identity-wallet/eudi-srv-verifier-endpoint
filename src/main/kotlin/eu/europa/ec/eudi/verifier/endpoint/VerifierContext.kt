@@ -241,7 +241,7 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
             bean(),
         )
     }
-    bean { ProcessSdJwtVc() }
+    registerBean { ProcessSdJwtVc() }
 
     registerBean {
         ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
@@ -377,7 +377,7 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
             webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern")
                 .removeSuffix("/**"),
         )
-        val utilityApi = UtilityApi(bean(), bean(), ref())
+        val utilityApi = UtilityApi(bean(), bean(), bean())
         walletApi.route
             .and(verifierApi.route)
             .and(staticContent.route)
@@ -440,7 +440,7 @@ private inline fun <reified T> SupplierContextDsl<T>.deviceResponseValidator(
         issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
         validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
         provideTrustSource = provideTrustSource,
-        statusListTokenValidator = provider<StatusListTokenValidator>().ifAvailable,
+        statusListTokenValidator = beanProvider<StatusListTokenValidator>().ifAvailable,
     )
     log.info(
         "Created DocumentValidator using: \n\t" +
