@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
-import cbor.Cbor
 import id.walt.mdoc.dataelement.DataElement
 import id.walt.mdoc.dataelement.EncodedCBORElement
 import id.walt.mdoc.dataretrieval.DeviceResponse
@@ -24,9 +23,17 @@ import id.walt.mdoc.mso.MSO
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlin.io.encoding.Base64
+import cbor.Cbor as WaltIdCbor
+import kotlinx.serialization.cbor.Cbor as KotlinXSerializationCbor
 
-val cbor: Cbor by lazy {
-    Cbor {
+val waltIdCbor: WaltIdCbor by lazy {
+    WaltIdCbor(WaltIdCbor.Default) {
+        ignoreUnknownKeys = true
+    }
+}
+
+val kotlinXSerializationCbor: KotlinXSerializationCbor by lazy {
+    KotlinXSerializationCbor(KotlinXSerializationCbor.CoseCompliant) {
         ignoreUnknownKeys = true
     }
 }
@@ -42,7 +49,7 @@ val base64UrlNoPadding: Base64 by lazy {
  */
 fun DeviceResponse.Companion.decodeFromCborBase64Url(value: String): DeviceResponse {
     val decoded = base64UrlNoPadding.decode(value)
-    return cbor.decodeFromByteArray(decoded)
+    return waltIdCbor.decodeFromByteArray(decoded)
 }
 
 /**
@@ -55,10 +62,10 @@ fun DeviceResponse.Companion.decodeFromCborBase64Url(value: String): DeviceRespo
 fun MDoc.decodeMso() {
     if (_mso == null) {
         _mso = issuerSigned.issuerAuth?.payload?.let { data ->
-            val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(data)
-            cbor.decodeFromByteArray<MSO>(encoded.value)
+            val encoded = waltIdCbor.decodeFromByteArray<EncodedCBORElement>(data)
+            waltIdCbor.decodeFromByteArray<MSO>(encoded.value)
         }
     }
 }
 
-inline fun <reified T> DataElement.decodeAs(): T = cbor.decodeFromByteArray(cbor.encodeToByteArray(this))
+inline fun <reified T> DataElement.decodeAs(): T = waltIdCbor.decodeFromByteArray(waltIdCbor.encodeToByteArray(this))
