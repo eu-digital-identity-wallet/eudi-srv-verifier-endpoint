@@ -18,11 +18,8 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.presentation
 import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.raise.either
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.SkipRevocation
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
-import java.security.cert.X509Certificate
 
 /**
  * Validates Verifiable Presentations.
@@ -35,37 +32,13 @@ import java.security.cert.X509Certificate
 fun interface ValidateVerifiablePresentation {
 
     suspend operator fun invoke(
-        transactionId: TransactionId?,
+        presentation: Presentation.RequestObjectRetrieved,
         verifiablePresentation: VerifiablePresentation,
-        vpFormatsSupported: VpFormatsSupported,
-        nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
-        issuerChain: X5CShouldBe.Trusted?,
-        profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation>
-
-    suspend operator fun invoke(
-        transactionId: TransactionId?,
-        verifiablePresentation: VerifiablePresentation,
-        vpFormatsSupported: VpFormatsSupported,
-        nonce: Nonce,
-        transactionData: NonEmptyList<TransactionData>?,
-        issuerChain: NonEmptyList<X509Certificate>?,
-        profile: Profile,
-    ): Either<WalletResponseValidationError, VerifiablePresentation> = invoke(
-        transactionId,
-        verifiablePresentation,
-        vpFormatsSupported,
-        nonce,
-        transactionData,
-        issuerChain?.let {
-            X5CShouldBe.Trusted(it, customizePKIX = SkipRevocation)
-        },
-        profile,
-    )
 
     companion object {
         val NoOp: ValidateVerifiablePresentation =
-            ValidateVerifiablePresentation { _, verifiablePresentation, _, _, _, _, _ -> either { verifiablePresentation } }
+            ValidateVerifiablePresentation { _, verifiablePresentation, _ -> either { verifiablePresentation } }
     }
 }

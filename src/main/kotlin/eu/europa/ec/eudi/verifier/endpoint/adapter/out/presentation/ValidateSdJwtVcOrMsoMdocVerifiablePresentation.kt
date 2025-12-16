@@ -26,6 +26,7 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
 import eu.europa.ec.eudi.statium.TokenStatusListSpec
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.SkipRevocation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
@@ -56,16 +57,15 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private val sdJwtVcValidatorFactory: (X5CShouldBe.Trusted?) -> SdJwtVcValidator,
     private val deviceResponseValidatorFactory: (X5CShouldBe.Trusted?) -> DeviceResponseValidator,
 ) : ValidateVerifiablePresentation {
+    private val vpFormatsSupported = config.clientMetaData.vpFormatsSupported
 
     override suspend fun invoke(
-        transactionId: TransactionId?,
+        presentation: Presentation.RequestObjectRetrieved,
         verifiablePresentation: VerifiablePresentation,
-        vpFormatsSupported: VpFormatsSupported,
-        nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
-        issuerChain: X5CShouldBe.Trusted?,
-        profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
+        val issuerChain = presentation.issuerChain?.let { X5CShouldBe.Trusted(rootCACertificates = it, customizePKIX = SkipRevocation) }
+
         when (verifiablePresentation.format) {
             Format.SdJwtVc -> {
                 val vpFormatSupported = checkNotNull(vpFormatsSupported.sdJwtVc)
@@ -73,10 +73,10 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 validator.validateSdJwtVcVerifiablePresentation(
                     vpFormatSupported,
                     verifiablePresentation,
-                    nonce,
+                    presentation.nonce,
                     transactionData,
-                    transactionId,
-                    profile,
+                    presentation.id,
+                    presentation.profile,
                 ).bind()
             }
 
@@ -85,8 +85,8 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 val validator = deviceResponseValidatorFactory(issuerChain)
                 validator.validateMsoMdocVerifiablePresentation(
                     verifiablePresentation,
-                    transactionId,
-                    profile,
+                    presentation.id,
+                    presentation.profile,
                 ).bind()
             }
 
@@ -100,7 +100,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
-        transactionId: TransactionId?,
+        transactionId: TransactionId,
         profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         fun invalidVpToken(errors: NonEmptyList<SdJwtVcValidationError>): WalletResponseValidationError {
@@ -155,7 +155,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
 
     private suspend fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
         verifiablePresentation: VerifiablePresentation,
-        transactionId: TransactionId?,
+        transactionId: TransactionId,
         profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation.Str> = either {
         ensure(verifiablePresentation is VerifiablePresentation.Str) {

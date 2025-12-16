@@ -130,13 +130,9 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                 }
                 unvalidatedVerifiablePresentations.map {
                     validateVerifiablePresentation(
-                        presentation.id,
+                        presentation,
                         it,
-                        vpFormatsSupported,
-                        presentation.nonce,
                         applicableTransactionData,
-                        presentation.issuerChain,
-                        presentation.profile,
                     ).bind()
                 }
             }
