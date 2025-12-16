@@ -31,9 +31,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.decodePayload
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
@@ -45,6 +43,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifia
 import id.walt.mdoc.dataelement.MapElement
 import id.walt.mdoc.dataelement.MapKey
 import id.walt.mdoc.dataelement.MapKeyType
+import id.walt.mdoc.mdocauth.DeviceAuthentication
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -56,6 +55,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private val config: VerifierConfig,
     private val sdJwtVcValidatorFactory: (X5CShouldBe.Trusted?) -> SdJwtVcValidator,
     private val deviceResponseValidatorFactory: (X5CShouldBe.Trusted?) -> DeviceResponseValidator,
+    private val deviceSignatureValidator: DeviceSignatureValidator = DeviceSignatureValidator.Default,
 ) : ValidateVerifiablePresentation {
     private val vpFormatsSupported = config.clientMetaData.vpFormatsSupported
 
@@ -84,9 +84,8 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 checkNotNull(vpFormatsSupported.msoMdoc)
                 val validator = deviceResponseValidatorFactory(issuerChain)
                 validator.validateMsoMdocVerifiablePresentation(
+                    presentation,
                     verifiablePresentation,
-                    presentation.id,
-                    presentation.profile,
                 ).bind()
             }
 
@@ -154,22 +153,21 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     }
 
     private suspend fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
+        presentation: Presentation.RequestObjectRetrieved,
         verifiablePresentation: VerifiablePresentation,
-        transactionId: TransactionId,
-        profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation.Str> = either {
         ensure(verifiablePresentation is VerifiablePresentation.Str) {
             WalletResponseValidationError.InvalidVpToken("Mso MDoc VC must be a string.")
         }
 
-        val documents = ensureValid(verifiablePresentation.value, transactionId)
+        val documents = ensureValid(verifiablePresentation.value, presentation.id)
             .mapLeft { error ->
                 log.warn("Failed to validate MsoMdoc VC. Reason: '$error'")
                 error.toWalletResponseValidationError()
             }
             .bind()
 
-        if (Profile.HAIP == profile) {
+        if (Profile.HAIP == presentation.profile) {
             ensure(1 == documents.size) {
                 WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc
             }
@@ -179,15 +177,49 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             val issuerAuth = ensureNotNull(document.issuerSigned.issuerAuth) {
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
             }
+
             val issuerAuthPayload = checkNotNull(issuerAuth.decodePayload<MapElement>())
             val status = issuerAuthPayload.value[MapKey(TokenStatusListSpec.STATUS)]
-            if (Profile.HAIP == profile && status is MapElement) {
+            if (Profile.HAIP == presentation.profile && status is MapElement) {
                 val msoRevocationMechanisms = setOf("identifier_list", TokenStatusListSpec.STATUS_LIST)
                 ensure(status.value.keys.all { MapKeyType.string == it.type && it.str in msoRevocationMechanisms }) {
                     WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism(
                         used = status.value.keys.map { it.toString() }.toSet(),
                         allowed = msoRevocationMechanisms,
                     )
+                }
+            }
+
+            if (null != document.deviceSigned?.deviceAuth?.deviceSignature) {
+                val deviceAuthentication = DeviceAuthentication(
+                    SessionTranscript(
+                        handover = OpenID4VPHandover(
+                            clientId = config.verifierId,
+                            nonce = presentation.nonce,
+                            ephemeralEncryptionKey = when (val responseMode = presentation.responseMode) {
+                                ResponseMode.DirectPost -> null
+                                is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
+                            },
+                            responseUri = config.responseUriBuilder(presentation.requestId),
+                        ),
+                    ),
+                    document.docType.value,
+                    DeviceNameSpaces.fromDocument(document),
+                )
+
+                with(deviceSignatureValidator) {
+                    document.validateDeviceSignature(deviceAuthentication)
+                        .mapLeft { failure ->
+                            val (message, cause) = when (failure) {
+                                DeviceSignatureValidationFailure.MissingDeviceSignature ->
+                                    "DeviceSignature is missing" to null
+                                is DeviceSignatureValidationFailure.DeviceKeyCannotBeParsed ->
+                                    "DeviceKey cannot be parsed" to failure.cause
+                                is DeviceSignatureValidationFailure.DeviceSignatureValidationFailed ->
+                                    "DeviceSignature cannot be validated" to failure.cause
+                            }
+                            WalletResponseValidationError.InvalidVpToken(message, cause)
+                        }.bind()
                 }
             }
         }
