@@ -194,7 +194,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 val deviceAuthentication = DeviceAuthentication(
                     SessionTranscript(
                         handover = OpenID4VPHandover(
-                            clientId = config.verifierId,
+                            verifierId = config.verifierId,
                             nonce = presentation.nonce,
                             ephemeralEncryptionKey = when (val responseMode = presentation.responseMode) {
                                 ResponseMode.DirectPost -> null

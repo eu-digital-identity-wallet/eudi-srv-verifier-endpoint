@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.NonEmptyList
 import arrow.core.toNonEmptyListOrNull
+import cbor.Cbor
 import com.nimbusds.jose.jwk.JWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
@@ -24,10 +25,9 @@ import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.mdocauth.DeviceAuthentication
 import kotlinx.serialization.*
-import kotlinx.serialization.cbor.ByteString
-import kotlinx.serialization.cbor.CborArray
 import java.net.URL
 import java.security.MessageDigest
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.cbor as myCbor
 
 operator fun DeviceAuthentication.Companion.invoke(
     sessionTranscript: SessionTranscript,
@@ -39,16 +39,17 @@ operator fun DeviceAuthentication.Companion.invoke(
     deviceNameSpaces = deviceNameSpaces.toEncodedCborElement(),
 )
 
+typealias NameSpace = String
+
 @JvmInline
-value class DeviceNameSpaces(val nameSpaces: Map<String, DeviceSignedItems>) {
+value class DeviceNameSpaces(val nameSpaces: Map<NameSpace, DeviceSignedItems>) {
     fun toMapElement(): MapElement =
         buildMap {
             nameSpaces.forEach { (nameSpace, deviceSignedItems) -> put(MapKey(nameSpace), deviceSignedItems.toMapElement()) }
         }.toDataElement()
-
-    fun toCbor(): ByteArray = waltIdCbor.encodeToByteArray(toMapElement())
-    fun toCborHex(): String = waltIdCbor.encodeToHexString(toMapElement())
-    fun toEncodedCborElement(): EncodedCBORElement = EncodedCBORElement(toCbor())
+    fun toCbor(cbor: Cbor = myCbor): ByteArray = cbor.encodeToByteArray(toMapElement())
+    fun toCborHex(cbor: Cbor = myCbor): String = cbor.encodeToHexString(toMapElement())
+    fun toEncodedCborElement(cbor: Cbor = myCbor): EncodedCBORElement = EncodedCBORElement(toCbor(cbor))
 
     companion object {
         fun empty(): DeviceNameSpaces = DeviceNameSpaces(emptyMap())
@@ -65,7 +66,7 @@ value class DeviceNameSpaces(val nameSpaces: Map<String, DeviceSignedItems>) {
     }
 }
 
-fun Map<String, DeviceSignedItems>.toDeviceNameSpaces(): DeviceNameSpaces = DeviceNameSpaces(this)
+fun Map<NameSpace, DeviceSignedItems>.toDeviceNameSpaces(): DeviceNameSpaces = DeviceNameSpaces(this)
 
 @JvmInline
 value class DeviceSignedItems(val items: NonEmptyList<DeviceSignedItem>) {
@@ -80,79 +81,44 @@ value class DeviceSignedItems(val items: NonEmptyList<DeviceSignedItem>) {
         buildMap {
             items.forEach { (identifier, value) -> put(MapKey(identifier), value) }
         }.toDataElement()
-
-    fun toCbor(): ByteArray = waltIdCbor.encodeToByteArray(toMapElement())
-    fun toCborHex(): String = waltIdCbor.encodeToHexString(toMapElement())
+    fun toCbor(cbor: Cbor = myCbor): ByteArray = cbor.encodeToByteArray(toMapElement())
+    fun toCborHex(cbor: Cbor = myCbor): String = cbor.encodeToHexString(toMapElement())
 }
 
-data class DeviceSignedItem(val identifier: String, val value: AnyDataElement)
+typealias DataElementIdentifier = String
 
-@CborArray
-@Serializable
-data class SessionTranscript(
-    @EncodeDefault val deviceEngagementBytes: ByteArray? = null,
-    @EncodeDefault val eReaderKeyBytes: ByteArray? = null,
-    @Required val handover: OpenID4VPHandover,
-) {
-    constructor(handover: OpenID4VPHandover) : this(deviceEngagementBytes = null, eReaderKeyBytes = null, handover = handover)
+data class DeviceSignedItem(val identifier: DataElementIdentifier, val value: AnyDataElement)
 
-    init {
-        require(null == deviceEngagementBytes) { "deviceEngagementBytes must be null" }
-        require(null == eReaderKeyBytes) { "eReaderKeyBytes must be null" }
-    }
-
-    fun toCbor(): ByteArray = kotlinXSerializationCbor.encodeToByteArray(this)
-    fun toCborHex(): String = kotlinXSerializationCbor.encodeToHexString(this)
-    fun toListElement(): ListElement = waltIdCbor.decodeFromByteArray(toCbor())
-
-    override fun equals(other: Any?): Boolean =
-        other is SessionTranscript &&
-            deviceEngagementBytes.contentEquals(other.deviceEngagementBytes) &&
-            eReaderKeyBytes.contentEquals(other.eReaderKeyBytes) &&
-            handover == other.handover
-
-    override fun hashCode(): Int {
-        var result = deviceEngagementBytes?.contentHashCode() ?: 0
-        result = 31 * result + (eReaderKeyBytes?.contentHashCode() ?: 0)
-        result = 31 * result + handover.hashCode()
-        return result
-    }
+@JvmInline
+value class SessionTranscript(val handover: OpenID4VPHandover) {
+    fun toListElement(): ListElement = listOf(
+        NullElement(),
+        NullElement(),
+        handover.toListElement(),
+    ).toDataElement()
+    fun toCbor(cbor: Cbor = myCbor): ByteArray = cbor.encodeToByteArray(toListElement())
+    fun toCborHex(cbor: Cbor = myCbor): String = cbor.encodeToHexString(toListElement())
 }
 
-@CborArray
-@Serializable
-data class OpenID4VPHandover(
-    @Required @EncodeDefault val identifier: String = IDENTIFIER,
-    @Required @ByteString val openID4VPHandoverInfoHash: ByteArray,
-) {
-    init {
-        require(IDENTIFIER == identifier) { "identifier must be '$IDENTIFIER'" }
-    }
-
-    fun toCbor(): ByteArray = kotlinXSerializationCbor.encodeToByteArray(this)
-    fun toCborHex(): String = kotlinXSerializationCbor.encodeToHexString(this)
-
-    override fun equals(other: Any?): Boolean =
-        other is OpenID4VPHandover &&
-            identifier == other.identifier &&
-            openID4VPHandoverInfoHash.contentEquals(other.openID4VPHandoverInfoHash)
-
-    override fun hashCode(): Int {
-        var result = identifier.hashCode()
-        result = 31 * result + openID4VPHandoverInfoHash.contentHashCode()
-        return result
-    }
+@JvmInline
+value class OpenID4VPHandover(val openID4VPHandoverInfoHash: ByteArray) {
+    fun toListElement(): ListElement = listOf(
+        IDENTIFIER.toDataElement(),
+        openID4VPHandoverInfoHash.toDataElement(),
+    ).toDataElement()
+    fun toCbor(cbor: Cbor = myCbor): ByteArray = cbor.encodeToByteArray(toListElement())
+    fun toCborHex(cbor: Cbor = myCbor): String = cbor.encodeToHexString(toListElement())
 
     companion object {
         const val IDENTIFIER = "OpenID4VPHandover"
 
         operator fun invoke(
             sha256: (ByteArray) -> ByteArray = { MessageDigest.getInstance("SHA-256").digest(it) },
-            clientId: VerifierId,
+            verifierId: VerifierId,
             nonce: Nonce,
             ephemeralEncryptionKey: JWK?,
             responseUri: URL,
-        ): OpenID4VPHandover = invoke(sha256, OpenID4VPHandoverInfo(clientId, nonce, ephemeralEncryptionKey, responseUri))
+        ): OpenID4VPHandover = invoke(sha256, OpenID4VPHandoverInfo(verifierId, nonce, ephemeralEncryptionKey, responseUri))
 
         operator fun invoke(
             sha256: (ByteArray) -> ByteArray = { MessageDigest.getInstance("SHA-256").digest(it) },
@@ -165,43 +131,36 @@ data class OpenID4VPHandover(
     }
 }
 
-@CborArray
-@Serializable
 data class OpenID4VPHandoverInfo(
-    @Required val clientId: String,
-    @Required val nonce: String,
-    @EncodeDefault @ByteString val jwkThumbprint: ByteArray? = null,
-    @Required val responseUri: String,
+    val clientId: String,
+    val nonce: String,
+    val ephemeralEncryptionKey: JWK? = null,
+    val responseUri: URL,
 ) {
-    fun toCbor(): ByteArray = kotlinXSerializationCbor.encodeToByteArray(this)
-    fun toCborHex(): String = kotlinXSerializationCbor.encodeToHexString(this)
+    constructor(
+        verifierId: VerifierId,
+        nonce: Nonce,
+        ephemeralEncryptionKey: JWK?,
+        responseUri: URL,
+    ) : this(
+        clientId = verifierId.clientId,
+        nonce = nonce.value,
+        ephemeralEncryptionKey = ephemeralEncryptionKey,
+        responseUri = responseUri,
+    )
 
-    override fun equals(other: Any?): Boolean =
-        other is OpenID4VPHandoverInfo &&
-            clientId == other.clientId &&
-            nonce == other.nonce &&
-            jwkThumbprint.contentEquals(other.jwkThumbprint) &&
-            responseUri == other.responseUri
-
-    override fun hashCode(): Int {
-        var result = clientId.hashCode()
-        result = 31 * result + nonce.hashCode()
-        result = 31 * result + (jwkThumbprint?.contentHashCode() ?: 0)
-        result = 31 * result + responseUri.hashCode()
-        return result
+    init {
+        if (null != ephemeralEncryptionKey) {
+            require(!ephemeralEncryptionKey.isPrivate) { "ephemeralEncryptionKey cannot be private" }
+        }
     }
 
-    companion object {
-        operator fun invoke(
-            clientId: VerifierId,
-            nonce: Nonce,
-            ephemeralEncryptionKey: JWK? = null,
-            responseUri: URL,
-        ): OpenID4VPHandoverInfo = OpenID4VPHandoverInfo(
-            clientId = clientId.clientId,
-            nonce = nonce.value,
-            jwkThumbprint = ephemeralEncryptionKey?.computeThumbprint()?.decode(),
-            responseUri = responseUri.toExternalForm(),
-        )
-    }
+    fun toListElement(): ListElement = listOf(
+        clientId.toDataElement(),
+        nonce.toDataElement(),
+        ephemeralEncryptionKey?.computeThumbprint()?.decode()?.toDataElement() ?: NullElement(),
+        responseUri.toExternalForm().toDataElement(),
+    ).toDataElement()
+    fun toCbor(cbor: Cbor = myCbor): ByteArray = cbor.encodeToByteArray(toListElement())
+    fun toCborHex(cbor: Cbor = myCbor): String = cbor.encodeToHexString(toListElement())
 }

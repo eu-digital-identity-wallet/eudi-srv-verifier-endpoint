@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import com.nimbusds.jose.jwk.JWK
+import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -36,7 +37,7 @@ class DeviceAuthenticationTest {
         )
     private val clientId = "x509_san_dns:example.com"
     private val nonce = "exc7gBkxjx1rdc9udRrveKvSsJIq80avlXeLHhGwqtA"
-    private val responseUri = "https://example.com/response"
+    private val responseUri = URI.create("https://example.com/response").toURL()
 
     @Test
     fun `OpenID4VPHandoverInfo serialization test`() {
@@ -51,7 +52,7 @@ class DeviceAuthenticationTest {
         val openID4VPHandoverInfo = OpenID4VPHandoverInfo(
             clientId = clientId,
             nonce = nonce,
-            jwkThumbprint = ephemeralEncryptionKey.computeThumbprint().decode(),
+            ephemeralEncryptionKey = ephemeralEncryptionKey,
             responseUri = responseUri,
         )
         val actualHex = openID4VPHandoverInfo.toCborHex()
@@ -71,7 +72,7 @@ class DeviceAuthenticationTest {
             openID4VPHandoverInfo = OpenID4VPHandoverInfo(
                 clientId = clientId,
                 nonce = nonce,
-                jwkThumbprint = ephemeralEncryptionKey.computeThumbprint().decode(),
+                ephemeralEncryptionKey = ephemeralEncryptionKey,
                 responseUri = responseUri,
             ),
         )
@@ -93,7 +94,7 @@ class DeviceAuthenticationTest {
                 openID4VPHandoverInfo = OpenID4VPHandoverInfo(
                     clientId = clientId,
                     nonce = nonce,
-                    jwkThumbprint = ephemeralEncryptionKey.computeThumbprint().decode(),
+                    ephemeralEncryptionKey = ephemeralEncryptionKey,
                     responseUri = responseUri,
                 ),
             ),

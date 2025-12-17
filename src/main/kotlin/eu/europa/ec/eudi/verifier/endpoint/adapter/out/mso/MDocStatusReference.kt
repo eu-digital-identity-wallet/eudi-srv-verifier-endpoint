@@ -25,8 +25,8 @@ import kotlinx.serialization.decodeFromByteArray
 
 inline fun <reified T : Any> COSESign1.decodePayload(): T? =
     payload?.let {
-        val encoded = waltIdCbor.decodeFromByteArray<EncodedCBORElement>(it)
-        waltIdCbor.decodeFromByteArray<T>(encoded.value)
+        val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(it)
+        cbor.decodeFromByteArray<T>(encoded.value)
     }
 
 fun COSESign1.tokenStatusListReference(): StatusReference? =
