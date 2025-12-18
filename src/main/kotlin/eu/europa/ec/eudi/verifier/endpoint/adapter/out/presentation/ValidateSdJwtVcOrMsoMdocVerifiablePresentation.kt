@@ -180,7 +180,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
             }
 
-            val issuerAuthPayload = checkNotNull(issuerAuth.decodePayload<MapElement>())
+            val issuerAuthPayload = checkNotNull(issuerAuth.decodePayloadAs<MapElement>())
             val status = issuerAuthPayload.value[MapKey(TokenStatusListSpec.STATUS)]
             if (Profile.HAIP == presentation.profile && status is MapElement) {
                 val msoRevocationMechanisms = setOf("identifier_list", TokenStatusListSpec.STATUS_LIST)
