@@ -27,9 +27,14 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
+import eu.europa.ec.eudi.verifier.endpoint.domain.Iso180135
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
+import id.walt.mdoc.dataelement.ListElement
+import id.walt.mdoc.dataelement.MapElement
+import id.walt.mdoc.dataelement.MapKey
+import id.walt.mdoc.dataelement.StringElement
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.mdocauth.DeviceAuthentication
 import id.walt.mdoc.mso.DeviceKeyInfo
@@ -39,6 +44,8 @@ import kotlinx.datetime.toStdlibInstant
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.security.interfaces.ECPublicKey
+import kotlin.collections.component1
+import kotlin.collections.component2
 import kotlin.time.Instant
 
 enum class ValidityInfoShouldBe {
@@ -63,10 +70,7 @@ sealed interface DocumentError {
     data object NoMatchingX5CShouldBe : DocumentError
     data object DocumentHasBeenRevoked : DocumentError
     data object MissingDeviceSigned : DocumentError
-    data class DeviceKeyNotAuthorizedToSignItems(
-        val unauthorized: Map<NameSpace, NonEmptyList<DataElementIdentifier>>,
-        val authorizations: KeyAuthorizations?,
-    ) : DocumentError
+    data class DeviceKeyNotAuthorizedToSignItems(val unauthorized: Map<NameSpace, NonEmptyList<DataElementIdentifier>>) : DocumentError
     class DevicePublicKeyCannotBeParsed(val cause: Throwable) : DocumentError
     class DeviceKeyIsNotEC(val cause: Throwable) : DocumentError
     data object InvalidDeviceSignature : DocumentError
@@ -265,15 +269,14 @@ private fun Raise<Nel<DocumentError>>.ensureValidDeviceSigned(document: MDoc, se
 
 private fun Raise<DocumentError.DeviceKeyNotAuthorizedToSignItems>.ensureValidKeyAuthorizations(mso: MSO, nameSpaces: DeviceNameSpaces) {
     if (nameSpaces.isNotEmpty()) {
-        val keyAuthorizations = mso.deviceKeyInfo.keyAuthorizations?.let { KeyAuthorizations.fromMapElement(it) }
+        val keyAuthorizations = mso.deviceKeyInfo.keyAuthorizations?.let { it.toKeyAuthorizations() }
         ensureNotNull(keyAuthorizations) {
             DocumentError.DeviceKeyNotAuthorizedToSignItems(
-                unauthorized = nameSpaces.mapValues { (_, dataElements) -> dataElements.items.map { it.identifier } },
-                authorizations = null,
+                nameSpaces.mapValues { (_, dataElements) -> dataElements.items.map { it.identifier } },
             )
         }
         val fullyAuthorizedNameSpaces = keyAuthorizations.nameSpaces.orEmpty()
-        val authorizedDataElementsPerNameSpace = keyAuthorizations.dataElements.orEmpty()
+        val authorizedDataElementsPerNameSpace = keyAuthorizations.dataElements?.value.orEmpty()
 
         val unauthorized = buildMap {
             nameSpaces.forEach { (nameSpace, dataElements) ->
@@ -288,7 +291,7 @@ private fun Raise<DocumentError.DeviceKeyNotAuthorizedToSignItems>.ensureValidKe
             }
         }
         ensure(unauthorized.isEmpty()) {
-            DocumentError.DeviceKeyNotAuthorizedToSignItems(unauthorized = unauthorized, authorizations = keyAuthorizations)
+            DocumentError.DeviceKeyNotAuthorizedToSignItems(unauthorized)
         }
     }
 }
@@ -324,4 +327,56 @@ private fun Raise<DocumentError>.ensureValidDeviceAuthentication(document: MDoc,
     ) {
         DocumentError.InvalidDeviceSignature
     }
+}
+
+private typealias AuthorizedNameSpaces = NonEmptyList<NameSpace>
+
+private fun ListElement.toAuthorizedNameSpaces(): AuthorizedNameSpaces =
+    checkNotNull(value.map { (it as StringElement).value }.toNonEmptyListOrNull())
+
+private typealias DataElementsArray = NonEmptyList<DataElementIdentifier>
+
+private fun ListElement.toDataElementsArray(): DataElementsArray =
+    checkNotNull(value.map { (it as StringElement).value }.toNonEmptyListOrNull())
+
+@JvmInline
+private value class AuthorizedDataElements(val value: Map<NameSpace, DataElementsArray>) {
+    init {
+        require(value.isNotEmpty()) { "AuthorizedDataElements must contain at least one NameSpace" }
+        require(value.values.all { it.distinct().size == it.size }) {
+            "DataElementsArray must not contain duplicate DataElementIdentifiers in a NameSpace"
+        }
+    }
+}
+
+private fun MapElement.toAuthorizedDataElements(): AuthorizedDataElements =
+    buildMap {
+        value.forEach { (nameSpace, dataElements) ->
+            put(nameSpace.str, (dataElements as ListElement).toDataElementsArray())
+        }
+    }.let { AuthorizedDataElements(it) }
+
+private data class KeyAuthorizations(val nameSpaces: AuthorizedNameSpaces?, val dataElements: AuthorizedDataElements?) {
+    init {
+        require(null != nameSpaces || null != dataElements) {
+            "KeyAuthorizations must contain either AuthorizedNameSpaces or AuthorizedDataElements"
+        }
+        if (null != nameSpaces && null != dataElements) {
+            val commonNameSpaces = nameSpaces.toSet().intersect(dataElements.value.keys)
+            require(commonNameSpaces.isEmpty()) {
+                "NameSpaces included in AuthorizedNameSpaces must not be included in AuthorizedDataElements. " +
+                    "Non-compliant NameSpaces: ${commonNameSpaces.joinToString()}"
+            }
+        }
+    }
+}
+
+private fun MapElement.toKeyAuthorizations(): KeyAuthorizations {
+    val nameSpaces = value[MapKey(Iso180135.KEY_AUTHORIZATIONS_NAMESPACES)]?.let {
+        (it as ListElement).toAuthorizedNameSpaces()
+    }
+    val dataElements = value[MapKey(Iso180135.KEY_AUTHORIZATIONS_DATA_ELEMENTS)]?.let {
+        (it as MapElement).toAuthorizedDataElements()
+    }
+    return KeyAuthorizations(nameSpaces, dataElements)
 }
