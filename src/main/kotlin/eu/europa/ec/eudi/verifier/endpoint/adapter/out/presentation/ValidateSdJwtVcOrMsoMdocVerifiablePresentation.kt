@@ -34,8 +34,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.OpenID4VPHandover
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.SessionTranscript
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.HandoverInfo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
@@ -162,19 +161,8 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             WalletResponseValidationError.InvalidVpToken("Mso MDoc VC must be a string.")
         }
 
-        val sessionTranscript = SessionTranscript(
-            OpenID4VPHandover(
-                verifierId = config.verifierId,
-                nonce = presentation.nonce,
-                ephemeralEncryptionKey = when (val responseMode = presentation.responseMode) {
-                    ResponseMode.DirectPost -> null
-                    is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
-                },
-                responseUri = config.responseUriBuilder(presentation.requestId),
-            ),
-        )
-
-        val documents = ensureValid(verifiablePresentation.value, presentation.id, sessionTranscript)
+        val handoverInfo = HandoverInfo(presentation, config)
+        val documents = ensureValid(verifiablePresentation.value, presentation.id, handoverInfo)
             .mapLeft { error ->
                 log.warn("Failed to validate MsoMdoc VC. Reason: '$error'")
                 error.toWalletResponseValidationError()

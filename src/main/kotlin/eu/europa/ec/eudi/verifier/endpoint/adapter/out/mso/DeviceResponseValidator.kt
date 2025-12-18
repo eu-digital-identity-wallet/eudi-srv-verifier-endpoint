@@ -74,22 +74,22 @@ class DeviceResponseValidator(
     suspend fun ensureValid(
         vp: String,
         transactionId: TransactionId?,
-        sessionTranscript: SessionTranscript,
+        handoverInfo: HandoverInfo,
     ): Either<DeviceResponseError, List<MDoc>> =
         either {
             val deviceResponse = ensureCanBeDecoded(vp)
-            val validDocuments = ensureValid(deviceResponse, transactionId, sessionTranscript).bind()
+            val validDocuments = ensureValid(deviceResponse, transactionId, handoverInfo).bind()
             validDocuments
         }
 
     suspend fun ensureValid(
         deviceResponse: DeviceResponse,
         transactionId: TransactionId?,
-        sessionTranscript: SessionTranscript?,
+        handoverInfo: HandoverInfo?,
     ): Either<DeviceResponseError, List<MDoc>> =
         either {
             ensureStatusIsOk(deviceResponse)
-            ensureValidDocuments(deviceResponse, documentValidator, transactionId, sessionTranscript)
+            ensureValidDocuments(deviceResponse, documentValidator, transactionId, handoverInfo)
         }
 }
 
@@ -111,11 +111,11 @@ private suspend fun Raise<DeviceResponseError.InvalidDocuments>.ensureValidDocum
     deviceResponse: DeviceResponse,
     documentValidator: DocumentValidator,
     transactionId: TransactionId?,
-    sessionTranscript: SessionTranscript?,
+    handoverInfo: HandoverInfo?,
 ): List<MDoc> =
     deviceResponse.documents.withIndex().mapOrAccumulate { (index, document) ->
         documentValidator
-            .ensureValid(document, transactionId, sessionTranscript)
+            .ensureValid(document, transactionId, handoverInfo)
             .mapLeft { documentErrors -> InvalidDocument(index, document.docType.value, documentErrors) }
             .bind()
     }.mapLeft(DeviceResponseError::InvalidDocuments).bind()
