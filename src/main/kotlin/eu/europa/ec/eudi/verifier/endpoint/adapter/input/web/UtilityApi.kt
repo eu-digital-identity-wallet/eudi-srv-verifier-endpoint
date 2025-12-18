@@ -55,14 +55,14 @@ internal class UtilityApi(
 
     private suspend fun handleValidateMsoMdocDeviceResponse(request: ServerRequest): ServerResponse {
         val form = request.awaitFormData()
-        val vpToken = form["device_response"]
+        val deviceResponse = form["device_response"]
             ?.firstOrNull { it.isNotBlank() }
             .let {
                 requireNotNull(it) { "device_response must be provided" }
             }
         val issuerChain = form["issuer_chain"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
 
-        return when (val result = validateMsoMdocDeviceResponse(vpToken, issuerChain)) {
+        return when (val result = validateMsoMdocDeviceResponse(deviceResponse = deviceResponse, issuerChain = issuerChain)) {
             is DeviceResponseValidationResult.Valid ->
                 ok().json()
                     .bodyValueAndAwait(result.documents)

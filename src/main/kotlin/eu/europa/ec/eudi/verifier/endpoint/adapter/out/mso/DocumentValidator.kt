@@ -16,10 +16,12 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import COSE.AlgorithmID
+import COSE.OneKey
 import arrow.core.*
 import arrow.core.raise.*
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
+import com.upokecenter.cbor.CBORObject
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
@@ -29,10 +31,14 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
 import id.walt.mdoc.doc.MDoc
+import id.walt.mdoc.mdocauth.DeviceAuthentication
+import id.walt.mdoc.mso.DeviceKeyInfo
+import id.walt.mdoc.mso.MSO
 import id.walt.mdoc.mso.ValidityInfo
 import kotlinx.datetime.toStdlibInstant
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.security.interfaces.ECPublicKey
 import kotlin.time.Instant
 
 enum class ValidityInfoShouldBe {
@@ -56,6 +62,14 @@ sealed interface DocumentError {
     data object InvalidIssuerSignedItems : DocumentError
     data object NoMatchingX5CShouldBe : DocumentError
     data object DocumentHasBeenRevoked : DocumentError
+    data object MissingDeviceSigned : DocumentError
+    data class DeviceKeyNotAuthorizedToSignItems(
+        val unauthorized: Map<NameSpace, NonEmptyList<DataElementIdentifier>>,
+        val authorizations: KeyAuthorizations?,
+    ) : DocumentError
+    class DevicePublicKeyCannotBeParsed(val cause: Throwable) : DocumentError
+    class DeviceKeyIsNotEC(val cause: Throwable) : DocumentError
+    data object InvalidDeviceSignature : DocumentError
 }
 
 class DocumentValidator(
@@ -66,7 +80,16 @@ class DocumentValidator(
     private val statusListTokenValidator: StatusListTokenValidator?,
 ) {
 
-    suspend fun ensureValid(document: MDoc, transactionId: TransactionId?): EitherNel<DocumentError, MDoc> =
+    suspend fun ensureValid(document: MDoc): EitherNel<DocumentError, MDoc> = ensureValid(document, null, null)
+    suspend fun ensureValid(
+        document: MDoc,
+        sessionTranscript: SessionTranscript,
+    ): EitherNel<DocumentError, MDoc> = ensureValid(document, null, sessionTranscript)
+    suspend fun ensureValid(
+        document: MDoc,
+        transactionId: TransactionId?,
+        sessionTranscript: SessionTranscript?,
+    ): EitherNel<DocumentError, MDoc> =
         either {
             document.decodeMso()
 
@@ -80,6 +103,11 @@ class DocumentValidator(
                 { ensureValidIssuerSignature(document, issuerChain, x5CShouldBe.caCertificates()) },
                 { ensureNotRevoked(document, statusListTokenValidator, transactionId) },
             ) { _, _, _, _, _ -> document }
+            if (null != sessionTranscript) {
+                ensureValidDeviceSigned(document, sessionTranscript)
+            }
+
+            document
         }
 }
 
@@ -220,5 +248,80 @@ private suspend fun Raise<DocumentError.DocumentHasBeenRevoked>.ensureNotRevoked
         }) {
             raise(DocumentError.DocumentHasBeenRevoked)
         }
+    }
+}
+
+private fun Raise<Nel<DocumentError>>.ensureValidDeviceSigned(document: MDoc, sessionTranscript: SessionTranscript): MDoc {
+    val mso = checkNotNull(document.MSO)
+
+    val deviceSigned = ensureNotNull(document.deviceSigned) { DocumentError.MissingDeviceSigned.nel() }
+    val nameSpaces = DeviceNameSpaces.fromEncodedCborElement(deviceSigned.nameSpaces)
+
+    return zipOrAccumulate(
+        { ensureValidKeyAuthorizations(mso, nameSpaces) },
+        { ensureValidDeviceAuthentication(document, sessionTranscript) },
+    ) { _, _ -> document }
+}
+
+private fun Raise<DocumentError.DeviceKeyNotAuthorizedToSignItems>.ensureValidKeyAuthorizations(mso: MSO, nameSpaces: DeviceNameSpaces) {
+    if (nameSpaces.isNotEmpty()) {
+        val keyAuthorizations = mso.deviceKeyInfo.keyAuthorizations?.let { KeyAuthorizations.fromMapElement(it) }
+        ensureNotNull(keyAuthorizations) {
+            DocumentError.DeviceKeyNotAuthorizedToSignItems(
+                unauthorized = nameSpaces.mapValues { (_, dataElements) -> dataElements.items.map { it.identifier } },
+                authorizations = null,
+            )
+        }
+        val fullyAuthorizedNameSpaces = keyAuthorizations.nameSpaces.orEmpty()
+        val authorizedDataElementsPerNameSpace = keyAuthorizations.dataElements.orEmpty()
+
+        val unauthorized = buildMap {
+            nameSpaces.forEach { (nameSpace, dataElements) ->
+                dataElements
+                    .filter {
+                            (identifier, _) ->
+                        nameSpace !in fullyAuthorizedNameSpaces || identifier !in authorizedDataElementsPerNameSpace[nameSpace].orEmpty()
+                    }
+                    .map { it.identifier }
+                    .toNonEmptyListOrNull()
+                    ?.let { put(nameSpace, it) }
+            }
+        }
+        ensure(unauthorized.isEmpty()) {
+            DocumentError.DeviceKeyNotAuthorizedToSignItems(unauthorized = unauthorized, authorizations = keyAuthorizations)
+        }
+    }
+}
+
+private fun DeviceKeyInfo.cryptoProviderKeyInfo(): Either<DocumentError, COSECryptoProviderKeyInfo> =
+    either {
+        val publicKey = catch({
+            val oneKey = OneKey(CBORObject.DecodeFromBytes(deviceKey.toCBOR()))
+            oneKey.AsPublicKey()
+        }) { raise(DocumentError.DevicePublicKeyCannotBeParsed(it)) }
+
+        val ecKey = catch({
+            val ecPublicKey = publicKey as ECPublicKey
+            ECKey.Builder(Curve.forECParameterSpec(ecPublicKey.params), ecPublicKey).build()
+        }) { raise(DocumentError.DeviceKeyIsNotEC(it)) }
+
+        COSECryptoProviderKeyInfo(keyID = "DEVICE_KEY_ID", algorithmID = ecKey.coseAlgorithmID, publicKey = publicKey)
+    }
+
+private fun Raise<DocumentError>.ensureValidDeviceAuthentication(document: MDoc, sessionTranscript: SessionTranscript) {
+    val mso = checkNotNull(document.MSO)
+    val deviceKeyCryptoProviderKeyInfo = mso.deviceKeyInfo.cryptoProviderKeyInfo().bind()
+
+    val deviceSigned = checkNotNull(document.deviceSigned)
+    val deviceAuthentication = DeviceAuthentication(sessionTranscript.toListElement(), mso.docType.value, deviceSigned.nameSpaces)
+
+    ensure(
+        document.verifyDeviceSignature(
+            deviceAuthentication,
+            SimpleCOSECryptoProvider(listOf(deviceKeyCryptoProviderKeyInfo)),
+            deviceKeyCryptoProviderKeyInfo.keyID,
+        ),
+    ) {
+        DocumentError.InvalidDeviceSignature
     }
 }

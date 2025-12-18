@@ -68,7 +68,7 @@ class ExamplesTest {
             statusListTokenValidator = null,
         )
         val document = MDoc.fromCBORHex(waltIdExample)
-        documentValidator.ensureValid(document, null).getOrElse { fail(it.toString()) }
+        documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
     }
 
     @OptIn(ExperimentalEncodingApi::class, ExperimentalSerializationApi::class)
@@ -88,7 +88,7 @@ class ExamplesTest {
             provideTrustSource = trustSources::invoke,
             statusListTokenValidator = null,
         )
-        documentValidator.ensureValid(document, null).getOrElse { fail(it.toString()) }
+        documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
     }
 }
 

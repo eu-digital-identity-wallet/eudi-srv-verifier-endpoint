@@ -52,8 +52,8 @@ class DeviceAuthenticationTest {
         val openID4VPHandoverInfo = OpenID4VPHandoverInfo(
             clientId = clientId,
             nonce = nonce,
-            ephemeralEncryptionKey = ephemeralEncryptionKey,
-            responseUri = responseUri,
+            jwkThumbprint = ephemeralEncryptionKey.toPublicJWK().computeThumbprint().decode(),
+            responseUri = responseUri.toExternalForm(),
         )
         val actualHex = openID4VPHandoverInfo.toCborHex()
 
@@ -72,8 +72,8 @@ class DeviceAuthenticationTest {
             openID4VPHandoverInfo = OpenID4VPHandoverInfo(
                 clientId = clientId,
                 nonce = nonce,
-                ephemeralEncryptionKey = ephemeralEncryptionKey,
-                responseUri = responseUri,
+                jwkThumbprint = ephemeralEncryptionKey.toPublicJWK().computeThumbprint().decode(),
+                responseUri = responseUri.toExternalForm(),
             ),
         )
         val actualHex = openID4VPHandover.toCborHex()
@@ -94,8 +94,8 @@ class DeviceAuthenticationTest {
                 openID4VPHandoverInfo = OpenID4VPHandoverInfo(
                     clientId = clientId,
                     nonce = nonce,
-                    ephemeralEncryptionKey = ephemeralEncryptionKey,
-                    responseUri = responseUri,
+                    jwkThumbprint = ephemeralEncryptionKey.toPublicJWK().computeThumbprint().decode(),
+                    responseUri = responseUri.toExternalForm(),
                 ),
             ),
         )

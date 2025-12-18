@@ -32,6 +32,10 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.*
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.OpenID4VPHandover
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.SessionTranscript
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
@@ -43,7 +47,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifia
 import id.walt.mdoc.dataelement.MapElement
 import id.walt.mdoc.dataelement.MapKey
 import id.walt.mdoc.dataelement.MapKeyType
-import id.walt.mdoc.mdocauth.DeviceAuthentication
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -55,7 +58,6 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private val config: VerifierConfig,
     private val sdJwtVcValidatorFactory: (X5CShouldBe.Trusted?) -> SdJwtVcValidator,
     private val deviceResponseValidatorFactory: (X5CShouldBe.Trusted?) -> DeviceResponseValidator,
-    private val deviceSignatureValidator: DeviceSignatureValidator = DeviceSignatureValidator.Default,
 ) : ValidateVerifiablePresentation {
     private val vpFormatsSupported = config.clientMetaData.vpFormatsSupported
 
@@ -160,7 +162,19 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             WalletResponseValidationError.InvalidVpToken("Mso MDoc VC must be a string.")
         }
 
-        val documents = ensureValid(verifiablePresentation.value, presentation.id)
+        val sessionTranscript = SessionTranscript(
+            OpenID4VPHandover(
+                verifierId = config.verifierId,
+                nonce = presentation.nonce,
+                ephemeralEncryptionKey = when (val responseMode = presentation.responseMode) {
+                    ResponseMode.DirectPost -> null
+                    is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
+                },
+                responseUri = config.responseUriBuilder(presentation.requestId),
+            ),
+        )
+
+        val documents = ensureValid(verifiablePresentation.value, presentation.id, sessionTranscript)
             .mapLeft { error ->
                 log.warn("Failed to validate MsoMdoc VC. Reason: '$error'")
                 error.toWalletResponseValidationError()
@@ -187,39 +201,6 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                         used = status.value.keys.map { it.toString() }.toSet(),
                         allowed = msoRevocationMechanisms,
                     )
-                }
-            }
-
-            if (null != document.deviceSigned?.deviceAuth?.deviceSignature) {
-                val deviceAuthentication = DeviceAuthentication(
-                    SessionTranscript(
-                        handover = OpenID4VPHandover(
-                            verifierId = config.verifierId,
-                            nonce = presentation.nonce,
-                            ephemeralEncryptionKey = when (val responseMode = presentation.responseMode) {
-                                ResponseMode.DirectPost -> null
-                                is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
-                            },
-                            responseUri = config.responseUriBuilder(presentation.requestId),
-                        ),
-                    ),
-                    document.docType.value,
-                    DeviceNameSpaces.fromDocument(document),
-                )
-
-                with(deviceSignatureValidator) {
-                    document.validateDeviceSignature(deviceAuthentication)
-                        .mapLeft { failure ->
-                            val (message, cause) = when (failure) {
-                                DeviceSignatureValidationFailure.MissingDeviceSignature ->
-                                    "DeviceSignature is missing" to null
-                                is DeviceSignatureValidationFailure.DeviceKeyCannotBeParsed ->
-                                    "DeviceKey cannot be parsed" to failure.cause
-                                is DeviceSignatureValidationFailure.DeviceSignatureValidationFailed ->
-                                    "DeviceSignature cannot be validated" to failure.cause
-                            }
-                            WalletResponseValidationError.InvalidVpToken(message, cause)
-                        }.bind()
                 }
             }
         }

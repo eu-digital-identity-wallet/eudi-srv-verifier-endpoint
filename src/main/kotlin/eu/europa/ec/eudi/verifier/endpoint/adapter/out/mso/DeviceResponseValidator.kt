@@ -63,17 +63,33 @@ class DeviceResponseValidator(
      * Validates the given verifier presentation
      * It could a vp_token or an element of an array vp_token
      */
-    suspend fun ensureValid(vp: String, transactionId: TransactionId?): Either<DeviceResponseError, List<MDoc>> =
+
+    suspend fun ensureValid(vp: String): Either<DeviceResponseError, List<MDoc>> =
         either {
             val deviceResponse = ensureCanBeDecoded(vp)
-            val validDocuments = ensureValid(deviceResponse, transactionId).bind()
+            val validDocuments = ensureValid(deviceResponse, null, null).bind()
             validDocuments
         }
 
-    suspend fun ensureValid(deviceResponse: DeviceResponse, transactionId: TransactionId?): Either<DeviceResponseError, List<MDoc>> =
+    suspend fun ensureValid(
+        vp: String,
+        transactionId: TransactionId?,
+        sessionTranscript: SessionTranscript,
+    ): Either<DeviceResponseError, List<MDoc>> =
+        either {
+            val deviceResponse = ensureCanBeDecoded(vp)
+            val validDocuments = ensureValid(deviceResponse, transactionId, sessionTranscript).bind()
+            validDocuments
+        }
+
+    suspend fun ensureValid(
+        deviceResponse: DeviceResponse,
+        transactionId: TransactionId?,
+        sessionTranscript: SessionTranscript?,
+    ): Either<DeviceResponseError, List<MDoc>> =
         either {
             ensureStatusIsOk(deviceResponse)
-            ensureValidDocuments(deviceResponse, documentValidator, transactionId)
+            ensureValidDocuments(deviceResponse, documentValidator, transactionId, sessionTranscript)
         }
 }
 
@@ -95,10 +111,11 @@ private suspend fun Raise<DeviceResponseError.InvalidDocuments>.ensureValidDocum
     deviceResponse: DeviceResponse,
     documentValidator: DocumentValidator,
     transactionId: TransactionId?,
+    sessionTranscript: SessionTranscript?,
 ): List<MDoc> =
     deviceResponse.documents.withIndex().mapOrAccumulate { (index, document) ->
         documentValidator
-            .ensureValid(document, transactionId)
+            .ensureValid(document, transactionId, sessionTranscript)
             .mapLeft { documentErrors -> InvalidDocument(index, document.docType.value, documentErrors) }
             .bind()
     }.mapLeft(DeviceResponseError::InvalidDocuments).bind()
