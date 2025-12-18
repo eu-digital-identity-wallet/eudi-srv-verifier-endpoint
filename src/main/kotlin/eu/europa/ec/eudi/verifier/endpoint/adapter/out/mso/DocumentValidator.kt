@@ -89,16 +89,10 @@ class DocumentValidator(
     private val provideTrustSource: ProvideTrustSource,
     private val statusListTokenValidator: StatusListTokenValidator?,
 ) {
-
-    suspend fun ensureValid(document: MDoc): EitherNel<DocumentError, MDoc> = ensureValid(document, null, null)
     suspend fun ensureValid(
         document: MDoc,
-        handoverInfo: HandoverInfo,
-    ): EitherNel<DocumentError, MDoc> = ensureValid(document, null, handoverInfo)
-    suspend fun ensureValid(
-        document: MDoc,
-        transactionId: TransactionId?,
-        handoverInfo: HandoverInfo?,
+        transactionId: TransactionId? = null,
+        handoverInfo: HandoverInfo? = null,
     ): EitherNel<DocumentError, MDoc> =
         either {
             document.decodeMso()

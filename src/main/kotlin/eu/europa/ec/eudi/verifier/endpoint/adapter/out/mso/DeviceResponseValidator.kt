@@ -58,23 +58,14 @@ sealed interface DeviceResponseError {
 class DeviceResponseValidator(
     private val documentValidator: DocumentValidator,
 ) {
-
     /**
      * Validates the given verifier presentation
      * It could a vp_token or an element of an array vp_token
      */
-
-    suspend fun ensureValid(vp: String): Either<DeviceResponseError, List<MDoc>> =
-        either {
-            val deviceResponse = ensureCanBeDecoded(vp)
-            val validDocuments = ensureValid(deviceResponse, null, null).bind()
-            validDocuments
-        }
-
     suspend fun ensureValid(
         vp: String,
-        transactionId: TransactionId?,
-        handoverInfo: HandoverInfo,
+        transactionId: TransactionId? = null,
+        handoverInfo: HandoverInfo? = null,
     ): Either<DeviceResponseError, List<MDoc>> =
         either {
             val deviceResponse = ensureCanBeDecoded(vp)
