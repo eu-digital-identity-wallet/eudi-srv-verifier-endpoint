@@ -205,7 +205,7 @@ internal fun beans(clock: Clock) = beans {
             } else {
                 createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false, httpProxy = proxy)
             }
-            StatusListTokenValidator(httpClient, clock, ref())
+            StatusListTokenValidator(httpClient, ref(), ref())
         }
     }
 
