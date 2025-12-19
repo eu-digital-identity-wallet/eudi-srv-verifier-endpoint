@@ -40,6 +40,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.toKotlinFixedOffsetTimeZone
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
+import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.TestMethodOrder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -48,7 +49,7 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
-import org.springframework.core.annotation.Order
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
@@ -324,6 +325,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
         "verifier.clientMetadata.responseEncryption.method=A128GCM",
         "verifier.jwk.embed=ByValue",
+        "verifier.validation.sdJwtVc.statusCheck.enabled=false",
     ],
 )
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString())
@@ -374,6 +376,7 @@ internal class DeviceResponseValidationTest {
     private lateinit var config: VerifierConfig
 
     @Test
+    @DirtiesContext
     fun `when wallet responds with a deviceresponse that contains valid deviceauthentication, validations succeeds`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("08-mdl-dcql.json")
         val transactionDetails = assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
@@ -416,6 +419,7 @@ internal class DeviceResponseValidationTest {
     }
 
     @Test
+    @DirtiesContext
     fun `when wallet responds with a deviceresponse that contains invalid deviceauthentication, validations fail`() = runTest {
         // Set a different Nonce that what is included in OpenID4VPHandoverInfo, to cause a validation failure
         val initTransaction = VerifierApiClient.loadInitTransactionTO("08-mdl-dcql.json").copy(nonce = "nonce")
