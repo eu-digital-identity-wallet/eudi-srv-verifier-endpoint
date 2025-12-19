@@ -643,7 +643,12 @@ https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algori
 Default value: `ES256`
 
 Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_MSOMDOC_ENABLED`  
-Description: Enable support for MSO MDoc    
+Description: Enable support for MSO MDoc.   
+The supported algorithms are for Issuer data, and MDoc authentication are:
+* -7 (ES256)
+* -35 (ES384)
+* -36 (ES512)
+
 Default value: `true`  
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_STATUSCHECK_ENABLED`  

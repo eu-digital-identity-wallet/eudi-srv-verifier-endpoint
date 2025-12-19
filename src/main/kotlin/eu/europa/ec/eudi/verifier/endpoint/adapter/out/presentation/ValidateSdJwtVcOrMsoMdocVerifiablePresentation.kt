@@ -82,11 +82,12 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             }
 
             Format.MsoMdoc -> {
-                checkNotNull(vpFormatsSupported.msoMdoc)
+                val vpFormatSupported = checkNotNull(vpFormatsSupported.msoMdoc)
                 val validator = deviceResponseValidatorFactory(issuerChain)
                 validator.validateMsoMdocVerifiablePresentation(
                     presentation,
                     verifiablePresentation,
+                    vpFormatSupported,
                 ).bind()
             }
 
@@ -156,6 +157,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private suspend fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
         presentation: Presentation.RequestObjectRetrieved,
         verifiablePresentation: VerifiablePresentation,
+        vpFormatSupported: VpFormatsSupported.MsoMdoc,
     ): Either<WalletResponseValidationError, VerifiablePresentation.Str> = either {
         ensure(verifiablePresentation is VerifiablePresentation.Str) {
             WalletResponseValidationError.InvalidVpToken("Mso MDoc VC must be a string.")
@@ -176,12 +178,28 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         }
 
         documents.forEach { document ->
-            val issuerAuth = ensureNotNull(document.issuerSigned.issuerAuth) {
+            val issuerSignature = ensureNotNull(document.issuerSigned.issuerAuth) {
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
             }
 
-            val issuerAuthPayload = checkNotNull(issuerAuth.decodePayloadAs<MapElement>())
-            val status = issuerAuthPayload.value[MapKey(TokenStatusListSpec.STATUS)]
+            if (null != vpFormatSupported.issuerAuthAlgorithms) {
+                ensure(issuerSignature.algorithm in vpFormatSupported.issuerAuthAlgorithms.map { it.value }) {
+                    WalletResponseValidationError.InvalidVpToken("IssuerSigned not signed with a supported algorithm")
+                }
+            }
+
+            val deviceSignature = ensureNotNull(document.deviceSigned?.deviceAuth?.deviceSignature) {
+                WalletResponseValidationError.InvalidVpToken("DeviceResponse contains MSO MDoc documents without Device signature")
+            }
+
+            if (null != vpFormatSupported.deviceAuthAlgorithms) {
+                ensure(deviceSignature.algorithm in vpFormatSupported.deviceAuthAlgorithms.map { it.value }) {
+                    WalletResponseValidationError.InvalidVpToken("DeviceSigned not signed with a supported algorithm")
+                }
+            }
+
+            val issuerSignaturePayload = checkNotNull(issuerSignature.decodePayloadAs<MapElement>())
+            val status = issuerSignaturePayload.value[MapKey(TokenStatusListSpec.STATUS)]
             if (Profile.HAIP == presentation.profile && status is MapElement) {
                 val msoRevocationMechanisms = setOf("identifier_list", TokenStatusListSpec.STATUS_LIST)
                 ensure(status.value.keys.all { MapKeyType.string == it.type && it.str in msoRevocationMechanisms }) {
