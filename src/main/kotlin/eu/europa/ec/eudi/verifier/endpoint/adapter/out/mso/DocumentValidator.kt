@@ -28,10 +28,12 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Iso180135
+import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
 import id.walt.mdoc.dataelement.AnyDataElement
+import id.walt.mdoc.dataelement.EncodedCBORElement
 import id.walt.mdoc.dataelement.ListElement
 import id.walt.mdoc.dataelement.MapElement
 import id.walt.mdoc.dataelement.MapKey
@@ -321,8 +323,8 @@ private fun Raise<DocumentError>.ensureValidDeviceAuthentication(document: MDoc,
 
     val deviceSigned = checkNotNull(document.deviceSigned)
     val handover = handoverInfo.toHandover()
-    val sessionTranscript = listOf(NullElement(), NullElement(), handover).toDataElement()
-    val deviceAuthentication = DeviceAuthentication(sessionTranscript, mso.docType.value, deviceSigned.nameSpaces)
+    val sessionTranscript = SessionTranscript(deviceEngagementBytes = null, eReaderKeyBytes = null, handover)
+    val deviceAuthentication = DeviceAuthentication(sessionTranscript.toDataElement(), mso.docType.value, deviceSigned.nameSpaces)
 
     ensure(
         document.verifyDeviceSignature(
@@ -411,9 +413,67 @@ private fun MapElement.toDeviceSignedItems(): DeviceSignedItems =
 
 private data class DeviceSignedItem(val identifier: DataElementIdentifier, val value: AnyDataElement)
 
+private data class SessionTranscript(
+    val deviceEngagementBytes: ByteArray?,
+    val eReaderKeyBytes: ByteArray?,
+    val handover: Handover,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as SessionTranscript
+
+        if (!deviceEngagementBytes.contentEquals(other.deviceEngagementBytes)) return false
+        if (!eReaderKeyBytes.contentEquals(other.eReaderKeyBytes)) return false
+        if (handover != other.handover) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = deviceEngagementBytes.contentHashCode()
+        result = 31 * result + eReaderKeyBytes.contentHashCode()
+        result = 31 * result + handover.hashCode()
+        return result
+    }
+}
+
+private fun SessionTranscript.toDataElement(): ListElement =
+    listOf(
+        deviceEngagementBytes?.let { EncodedCBORElement(it) } ?: NullElement(),
+        eReaderKeyBytes?.let { EncodedCBORElement(it) } ?: NullElement(),
+        handover.toDataElement(),
+    ).toDataElement()
+
+private data class Handover(
+    val identifier: String,
+    val handoverInfoHash: ByteArray,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Handover
+
+        if (identifier != other.identifier) return false
+        if (!handoverInfoHash.contentEquals(other.handoverInfoHash)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = identifier.hashCode()
+        result = 31 * result + handoverInfoHash.contentHashCode()
+        return result
+    }
+}
+
+private fun Handover.toDataElement(): ListElement = listOf(identifier.toDataElement(), handoverInfoHash.toDataElement()).toDataElement()
+
 private fun HandoverInfo.toHandover(
     sha256: (ByteArray) -> ByteArray = { MessageDigest.getInstance("SHA-256").digest(it) },
-): ListElement {
+): Handover {
     val (identifier, handoverInfoBytes) = when (this) {
         is HandoverInfo.OpenID4VPHandoverInfo -> {
             val element = listOf(
@@ -422,7 +482,7 @@ private fun HandoverInfo.toHandover(
                 ephemeralEncryptionKey?.computeThumbprint()?.decode()?.toDataElement() ?: NullElement(),
                 responseUri.toExternalForm().toDataElement(),
             ).toDataElement()
-            "OpenID4VPHandover" to cbor.encodeToByteArray(element)
+            OpenId4VPSpec.OPENID4VP_HANDOVER_IDENTIFIER to cbor.encodeToByteArray(element)
         }
 
         is HandoverInfo.OpenID4VPDCAPIHandoverInfo -> {
@@ -431,13 +491,10 @@ private fun HandoverInfo.toHandover(
                 nonce.value.toDataElement(),
                 ephemeralEncryptionKey?.computeThumbprint()?.decode()?.toDataElement() ?: NullElement(),
             )
-            "OpenID4VPDCAPIHandover" to cbor.encodeToByteArray(element)
+            OpenId4VPSpec.OPENID4VP_DCAPI_HANDOVER_IDENTIFIER to cbor.encodeToByteArray(element)
         }
     }
 
     val handoverInfoHash = sha256(handoverInfoBytes)
-    return listOf(
-        identifier.toDataElement(),
-        handoverInfoHash.toDataElement(),
-    ).toDataElement()
+    return Handover(identifier, handoverInfoHash)
 }

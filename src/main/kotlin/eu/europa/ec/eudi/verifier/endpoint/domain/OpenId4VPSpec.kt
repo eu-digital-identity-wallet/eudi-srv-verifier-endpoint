@@ -91,4 +91,7 @@ object OpenId4VPSpec {
     val DEFAULT_CLIENT_ID_PREFIXES_SUPPORTED: List<String> = listOf(CLIENT_ID_PREFIX_PRE_REGISTERED)
 
     const val ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED = "encrypted_response_enc_values_supported"
+
+    const val OPENID4VP_HANDOVER_IDENTIFIER = "OpenID4VPHandover"
+    const val OPENID4VP_DCAPI_HANDOVER_IDENTIFIER = "OpenID4VPDCAPIHandover"
 }
