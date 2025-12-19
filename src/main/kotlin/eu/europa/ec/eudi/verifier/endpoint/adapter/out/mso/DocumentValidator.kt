@@ -32,14 +32,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
-import id.walt.mdoc.dataelement.AnyDataElement
-import id.walt.mdoc.dataelement.EncodedCBORElement
-import id.walt.mdoc.dataelement.ListElement
-import id.walt.mdoc.dataelement.MapElement
-import id.walt.mdoc.dataelement.MapKey
-import id.walt.mdoc.dataelement.NullElement
-import id.walt.mdoc.dataelement.StringElement
-import id.walt.mdoc.dataelement.toDataElement
+import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.mdocauth.DeviceAuthentication
 import id.walt.mdoc.mso.DeviceKeyInfo
@@ -48,12 +41,11 @@ import id.walt.mdoc.mso.ValidityInfo
 import kotlinx.datetime.toStdlibInstant
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
+import org.slf4j.LoggerFactory
 import java.security.MessageDigest
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.security.interfaces.ECPublicKey
-import kotlin.collections.component1
-import kotlin.collections.component2
 import kotlin.time.Instant
 
 enum class ValidityInfoShouldBe {
@@ -84,6 +76,8 @@ sealed interface DocumentError {
     data object InvalidDeviceSignature : DocumentError
 }
 
+private val log = LoggerFactory.getLogger(DocumentValidator::class.java)
+
 class DocumentValidator(
     private val clock: Clock = Clock.System,
     private val validityInfoShouldBe: ValidityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
@@ -106,11 +100,15 @@ class DocumentValidator(
                 { ensureNotExpiredValidityInfo(document, clock, validityInfoShouldBe) },
                 { ensureMatchingDocumentType(document) },
                 { ensureDigestsOfIssuerSignedItems(document, issuerSignedItemsShouldBe) },
-                { ensureValidIssuerSignature(document, issuerChain, x5CShouldBe.caCertificates()) },
+                {
+                    ensureValidIssuerSignature(document, issuerChain, x5CShouldBe.caCertificates())
+                        .also { log.info("IssuerSigned validation succeeded") }
+                },
                 { ensureNotRevoked(document, statusListTokenValidator, transactionId) },
             ) { _, _, _, _, _ -> document }
             if (null != handoverInfo) {
                 ensureValidDeviceSigned(document, handoverInfo)
+                    .also { log.info("DeviceSigned validation succeeded") }
             }
 
             document
