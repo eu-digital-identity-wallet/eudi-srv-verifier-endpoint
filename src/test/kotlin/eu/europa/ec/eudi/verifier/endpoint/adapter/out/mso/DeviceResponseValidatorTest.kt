@@ -82,7 +82,7 @@ class DeviceResponseValidatorTest {
     fun `a vp_token where the 3d document has an invalid validity info should fail`() = runTest {
         val invalidDocument = run {
             val validator = deviceResponseValidator(Data.caCerts, clock)
-            val validated = validator.ensureValid(Data.ThreeDocumentVP, null)
+            val validated = validator.ensureValid(Data.ThreeDocumentVP)
             val invalidDocuments =
                 assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
                     .invalidDocuments
@@ -115,7 +115,7 @@ class DeviceResponseValidatorTest {
                 statusListTokenValidator = null,
             )
             val vpValidator = DeviceResponseValidator(docV)
-            val validated = vpValidator.ensureValid(Data.ThreeDocumentVP, null)
+            val validated = vpValidator.ensureValid(Data.ThreeDocumentVP)
             assertNotNull(validated.getOrNull())
         }
 
@@ -125,7 +125,7 @@ class DeviceResponseValidatorTest {
     @Test
     fun `a vp_token having a single document with invalid chain should fail`() = runTest {
         val invalidDocument = run {
-            val validated = deviceResponseValidator(Data.caCerts, clock).ensureValid(Data.MdlVP, null)
+            val validated = deviceResponseValidator(Data.caCerts, clock).ensureValid(Data.MdlVP)
             val invalidDocuments =
                 assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
                     .invalidDocuments
@@ -145,7 +145,7 @@ class DeviceResponseValidatorTest {
         val validDocuments = run {
             val docV = DocumentValidator(provideTrustSource = ProvideTrustSource.Ignored, clock = clock, statusListTokenValidator = null)
             val vpValidator = DeviceResponseValidator(docV)
-            val validated = vpValidator.ensureValid(Data.MdlVP, null)
+            val validated = vpValidator.ensureValid(Data.MdlVP)
             assertNotNull(validated.getOrNull())
         }
 

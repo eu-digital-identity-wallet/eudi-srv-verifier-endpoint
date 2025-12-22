@@ -26,13 +26,15 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
 import eu.europa.ec.eudi.statium.TokenStatusListSpec
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.SkipRevocation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.decodePayload
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.HandoverInfo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
@@ -56,16 +58,15 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private val sdJwtVcValidatorFactory: (X5CShouldBe.Trusted?) -> SdJwtVcValidator,
     private val deviceResponseValidatorFactory: (X5CShouldBe.Trusted?) -> DeviceResponseValidator,
 ) : ValidateVerifiablePresentation {
+    private val vpFormatsSupported = config.clientMetaData.vpFormatsSupported
 
     override suspend fun invoke(
-        transactionId: TransactionId?,
+        presentation: Presentation.RequestObjectRetrieved,
         verifiablePresentation: VerifiablePresentation,
-        vpFormatsSupported: VpFormatsSupported,
-        nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
-        issuerChain: X5CShouldBe.Trusted?,
-        profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
+        val issuerChain = presentation.issuerChain?.let { X5CShouldBe.Trusted(rootCACertificates = it, customizePKIX = SkipRevocation) }
+
         when (verifiablePresentation.format) {
             Format.SdJwtVc -> {
                 val vpFormatSupported = checkNotNull(vpFormatsSupported.sdJwtVc)
@@ -73,20 +74,20 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 validator.validateSdJwtVcVerifiablePresentation(
                     vpFormatSupported,
                     verifiablePresentation,
-                    nonce,
+                    presentation.nonce,
                     transactionData,
-                    transactionId,
-                    profile,
+                    presentation.id,
+                    presentation.profile,
                 ).bind()
             }
 
             Format.MsoMdoc -> {
-                checkNotNull(vpFormatsSupported.msoMdoc)
+                val vpFormatSupported = checkNotNull(vpFormatsSupported.msoMdoc)
                 val validator = deviceResponseValidatorFactory(issuerChain)
                 validator.validateMsoMdocVerifiablePresentation(
+                    presentation,
                     verifiablePresentation,
-                    transactionId,
-                    profile,
+                    vpFormatSupported,
                 ).bind()
             }
 
@@ -100,7 +101,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
-        transactionId: TransactionId?,
+        transactionId: TransactionId,
         profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         fun invalidVpToken(errors: NonEmptyList<SdJwtVcValidationError>): WalletResponseValidationError {
@@ -154,34 +155,52 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     }
 
     private suspend fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
+        presentation: Presentation.RequestObjectRetrieved,
         verifiablePresentation: VerifiablePresentation,
-        transactionId: TransactionId?,
-        profile: Profile,
+        vpFormatSupported: VpFormatsSupported.MsoMdoc,
     ): Either<WalletResponseValidationError, VerifiablePresentation.Str> = either {
         ensure(verifiablePresentation is VerifiablePresentation.Str) {
             WalletResponseValidationError.InvalidVpToken("Mso MDoc VC must be a string.")
         }
 
-        val documents = ensureValid(verifiablePresentation.value, transactionId)
+        val handoverInfo = HandoverInfo(presentation, config)
+        val documents = ensureValid(verifiablePresentation.value, presentation.id, handoverInfo)
             .mapLeft { error ->
                 log.warn("Failed to validate MsoMdoc VC. Reason: '$error'")
                 error.toWalletResponseValidationError()
             }
             .bind()
 
-        if (Profile.HAIP == profile) {
+        if (Profile.HAIP == presentation.profile) {
             ensure(1 == documents.size) {
                 WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc
             }
         }
 
         documents.forEach { document ->
-            val issuerAuth = ensureNotNull(document.issuerSigned.issuerAuth) {
+            val issuerSignature = ensureNotNull(document.issuerSigned.issuerAuth) {
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
             }
-            val issuerAuthPayload = checkNotNull(issuerAuth.decodePayload<MapElement>())
-            val status = issuerAuthPayload.value[MapKey(TokenStatusListSpec.STATUS)]
-            if (Profile.HAIP == profile && status is MapElement) {
+
+            if (null != vpFormatSupported.issuerAuthAlgorithms) {
+                ensure(issuerSignature.algorithm in vpFormatSupported.issuerAuthAlgorithms.map { it.value }) {
+                    WalletResponseValidationError.InvalidVpToken("IssuerSigned not signed with a supported algorithm")
+                }
+            }
+
+            val deviceSignature = ensureNotNull(document.deviceSigned?.deviceAuth?.deviceSignature) {
+                WalletResponseValidationError.InvalidVpToken("DeviceResponse contains MSO MDoc documents without Device signature")
+            }
+
+            if (null != vpFormatSupported.deviceAuthAlgorithms) {
+                ensure(deviceSignature.algorithm in vpFormatSupported.deviceAuthAlgorithms.map { it.value }) {
+                    WalletResponseValidationError.InvalidVpToken("DeviceSigned not signed with a supported algorithm")
+                }
+            }
+
+            val issuerSignaturePayload = checkNotNull(issuerSignature.decodePayloadAs<MapElement>())
+            val status = issuerSignaturePayload.value[MapKey(TokenStatusListSpec.STATUS)]
+            if (Profile.HAIP == presentation.profile && status is MapElement) {
                 val msoRevocationMechanisms = setOf("identifier_list", TokenStatusListSpec.STATUS_LIST)
                 ensure(status.value.keys.all { MapKeyType.string == it.type && it.str in msoRevocationMechanisms }) {
                     WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism(

@@ -26,7 +26,7 @@ import kotlinx.serialization.encodeToByteArray
 import kotlin.io.encoding.Base64
 
 val cbor: Cbor by lazy {
-    Cbor {
+    Cbor(Cbor.Default) {
         ignoreUnknownKeys = true
     }
 }

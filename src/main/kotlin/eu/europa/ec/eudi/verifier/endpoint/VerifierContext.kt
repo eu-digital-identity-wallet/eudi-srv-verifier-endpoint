@@ -205,7 +205,7 @@ internal fun beans(clock: Clock) = beans {
             } else {
                 createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false, httpProxy = proxy)
             }
-            StatusListTokenValidator(httpClient, clock, ref())
+            StatusListTokenValidator(httpClient, ref(), ref())
         }
     }
 
@@ -648,7 +648,7 @@ private fun Environment.clientMetaData(): ClientMetaData {
             } else null
         val msoMdoc =
             if (getProperty<Boolean>("verifier.clientMetadata.vpFormats.msoMdoc.enabled") ?: true) {
-                VpFormatsSupported.MsoMdoc(issuerAuthAlgorithms = null, deviceAuthAlgorithms = null)
+                VpFormatsSupported.MsoMdoc.Default
             } else null
 
         VpFormatsSupported(sdJwtVc, msoMdoc)

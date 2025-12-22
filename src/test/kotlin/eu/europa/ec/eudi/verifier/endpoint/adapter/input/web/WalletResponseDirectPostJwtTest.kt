@@ -15,25 +15,32 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import arrow.core.right
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWEEncrypter
 import com.nimbusds.jose.JWEHeader
 import com.nimbusds.jose.crypto.ECDHEncrypter
+import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.util.Base64URL
 import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
+import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinFixedOffsetTimeZone
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
+import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.TestMethodOrder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -42,12 +49,14 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
-import org.springframework.core.annotation.Order
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
+import java.time.ZoneOffset
 import kotlin.test.*
+import kotlin.time.Instant
 
 @VerifierApplicationTest([WalletResponseDirectPostJwtValidationsDisabledTest.Config::class])
 @TestPropertySource(
@@ -242,57 +251,6 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
     private lateinit var config: VerifierConfig
 
     @Test
-    fun `when wallet responds with a single device response that contains multiple documents, validations succeeds`() = runTest {
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("06-pidPlusMdl-dcql.json")
-        val transactionDetails =
-            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
-        val requestObjectJsonResponse = WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
-
-        val supportedEncryptionMethods = assertNotNull(requestObjectJsonResponse.supportedEncryptionMethods())
-        assertEquals(config.clientMetaData.responseEncryptionOption.encryptionMethods, supportedEncryptionMethods)
-
-        val ecKey = requestObjectJsonResponse.ecKey()
-        assertNotNull(ecKey)
-        assertNotNull(ecKey.algorithm)
-        val supportedAlgorithm = JWEAlgorithm.parse(ecKey.algorithm.name)
-
-        val requestId = RequestId(transactionDetails.requestUri.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-        val encryptedJwt = run {
-            val jwtClaims: JWTClaimsSet = buildJsonObject {
-                put("state", requestId.value)
-                put("vp_token", Json.decodeFromString(TestUtils.loadResource("06-pidPlusMdl-vpToken.json")))
-            }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
-
-            val jweHeader = JWEHeader.Builder(supportedAlgorithm, supportedEncryptionMethods.first())
-                .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
-                .build()
-
-            EncryptedJWT(jweHeader, jwtClaims)
-        }.apply { encrypt(ECDHEncrypter(ecKey)) }
-
-        val walletResponse = LinkedMultiValueMap<String, Any>()
-            .apply {
-                add("response", encryptedJwt.serialize())
-            }
-
-        WalletApiClient.directPostJwt(client, requestId, walletResponse)
-
-        val transactionResponse =
-            assertNotNull(VerifierApiClient.getWalletResponse(client, TransactionId(transactionDetails.transactionId)))
-
-        val vpToken = assertNotNull(transactionResponse.vpToken)
-        assertEquals(2, vpToken.size)
-
-        val pid = assertIs<JsonArray>(vpToken["eu_europa_ec_eudi_pid_1"])
-        assertEquals(1, pid.size)
-        assertIs<JsonPrimitive>(pid[0])
-
-        val mDL = assertIs<JsonArray>(vpToken["org_iso_18013_5_1_mDL"])
-        assertEquals(1, mDL.size)
-        assertIs<JsonPrimitive>(mDL[0])
-    }
-
-    @Test
     fun `verifier accepts unencrypted error responses even when direct_post_jwt is expected`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("06-pidPlusMdl-dcql.json")
 
@@ -352,6 +310,147 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
 
         try {
             WalletApiClient.directPostJwt(client, requestId, walletResponse)
+            fail("Expected to fail but didn't")
+        } catch (error: AssertionError) {
+            assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
+        }
+    }
+}
+
+@VerifierApplicationTest([DeviceResponseValidationTest.Config::class])
+@TestPropertySource(
+    properties = [
+        "verifier.maxAge=PT6400M",
+        "verifier.response.mode=DirectPostJwt",
+        "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
+        "verifier.clientMetadata.responseEncryption.method=A128GCM",
+        "verifier.jwk.embed=ByValue",
+        "verifier.validation.sdJwtVc.statusCheck.enabled=false",
+    ],
+)
+@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString())
+internal class DeviceResponseValidationTest {
+
+    @TestConfiguration
+    class Config {
+
+        @Bean
+        @Primary
+        fun clock(): Clock = Clock.fixed(
+            now = Instant.fromEpochSeconds(1766135977L),
+            timeZone = ZoneOffset.ofHours(3).toKotlinFixedOffsetTimeZone(),
+        )
+
+        @Bean
+        @Primary
+        fun generateRequestId(): GenerateRequestId = GenerateRequestId.fixed(requestId)
+
+        @Bean
+        @Primary
+        fun generateEphemeralEncryptionKeyPair(): GenerateEphemeralEncryptionKeyPair =
+            GenerateEphemeralEncryptionKeyPair { ephemeralEncryptionKey.right() }
+
+        companion object {
+            val requestId: RequestId = RequestId("1234567890")
+            val ephemeralEncryptionKey: ECKey = ECKey.parse(
+                """
+                        {
+                            "kty": "EC",
+                            "d": "RD5iTzNDQpt7KeOM1AfMV1Un27-LY9QZSABS2ETfBc4",
+                            "use": "enc",
+                            "crv": "P-256",
+                            "kid": "de7eb521-eb6a-403d-a83f-a74333b936e5",
+                            "x": "rQARUEPijpGzfTIaZUv8G9h-09spX-J9mGXuEFyu06g",
+                            "y": "PEFq_diAbJH2aUV57z0f9ngrbWikTCN7Pczg-VkQBXE",
+                            "alg": "ECDH-ES"
+                        }
+                """.trimIndent(),
+            )
+        }
+    }
+
+    @Autowired
+    private lateinit var client: WebTestClient
+
+    @Autowired
+    private lateinit var config: VerifierConfig
+
+    @Test
+    @DirtiesContext
+    fun `when wallet responds with a deviceresponse that contains valid deviceauthentication, validations succeeds`() = runTest {
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("08-mdl-dcql.json")
+        val transactionDetails = assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
+            VerifierApiClient.initTransaction(client, initTransaction),
+        )
+        WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
+
+        val encryptedJwt = run {
+            val jwtClaims: JWTClaimsSet = buildJsonObject {
+                put("state", Config.requestId.value)
+                put("vp_token", Json.decodeFromString(TestUtils.loadResource("08-mdl-vpToken.json")))
+            }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
+
+            val jweHeader = JWEHeader.Builder(
+                JWEAlgorithm(Config.ephemeralEncryptionKey.algorithm.name),
+                config.clientMetaData.responseEncryptionOption.encryptionMethods.first(),
+            )
+                .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
+                .build()
+
+            EncryptedJWT(jweHeader, jwtClaims)
+        }.apply { encrypt(ECDHEncrypter(Config.ephemeralEncryptionKey)) }
+
+        val walletResponse = LinkedMultiValueMap<String, Any>()
+            .apply {
+                add("response", encryptedJwt.serialize())
+            }
+
+        WalletApiClient.directPostJwt(client, Config.requestId, walletResponse)
+
+        val transactionResponse =
+            assertNotNull(VerifierApiClient.getWalletResponse(client, TransactionId(transactionDetails.transactionId)))
+
+        val vpToken = assertNotNull(transactionResponse.vpToken)
+        assertEquals(1, vpToken.size)
+
+        val mDL = assertIs<JsonArray>(vpToken["query_0"])
+        assertEquals(1, mDL.size)
+        assertIs<JsonPrimitive>(mDL[0])
+    }
+
+    @Test
+    @DirtiesContext
+    fun `when wallet responds with a deviceresponse that contains invalid deviceauthentication, validations fail`() = runTest {
+        // Set a different Nonce that what is included in OpenID4VPHandoverInfo, to cause a validation failure
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("08-mdl-dcql.json").copy(nonce = "nonce")
+        val transactionDetails = assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
+            VerifierApiClient.initTransaction(client, initTransaction),
+        )
+        WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
+
+        val encryptedJwt = run {
+            val jwtClaims: JWTClaimsSet = buildJsonObject {
+                put("state", Config.requestId.value)
+                put("vp_token", Json.decodeFromString(TestUtils.loadResource("08-mdl-vpToken.json")))
+            }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
+
+            val jweHeader = JWEHeader.Builder(
+                JWEAlgorithm(Config.ephemeralEncryptionKey.algorithm.name),
+                config.clientMetaData.responseEncryptionOption.encryptionMethods.first(),
+            )
+                .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
+                .build()
+
+            EncryptedJWT(jweHeader, jwtClaims)
+        }.apply { encrypt(ECDHEncrypter(Config.ephemeralEncryptionKey)) }
+
+        val walletResponse = LinkedMultiValueMap<String, Any>()
+            .apply {
+                add("response", encryptedJwt.serialize())
+            }
+
+        try {
+            WalletApiClient.directPostJwt(client, Config.requestId, walletResponse)
             fail("Expected to fail but didn't")
         } catch (error: AssertionError) {
             assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)

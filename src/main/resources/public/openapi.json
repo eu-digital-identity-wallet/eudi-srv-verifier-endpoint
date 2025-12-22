@@ -1279,7 +1279,12 @@
           "DocumentTypeNotMatching",
           "InvalidIssuerSignedItems",
           "NoMatchingX5CValidator",
-          "DocumentHasBeenRevoked"
+          "DocumentHasBeenRevoked",
+          "DeviceKeyIsNotEC",
+          "DeviceKeyNotAuthorizedToSignItems",
+          "DevicePublicKeyCannotBeParsed",
+          "InvalidDeviceSignature",
+          "MissingDeviceSigned"
         ]
       },
       "MsoMdocInvalidDocument": {

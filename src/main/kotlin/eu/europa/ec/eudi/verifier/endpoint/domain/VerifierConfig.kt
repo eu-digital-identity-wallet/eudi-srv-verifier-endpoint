@@ -20,6 +20,7 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
 import arrow.core.Either
 import arrow.core.Ior
 import arrow.core.NonEmptyList
+import arrow.core.nonEmptyListOf
 import arrow.core.serialization.NonEmptyListSerializer
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
@@ -155,7 +156,22 @@ data class VpFormatsSupported(
 
         @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED_MSO_MDOC_DEVICE_AUTH_ALGORITHMS)
         val deviceAuthAlgorithms: NonEmptyList<CoseAlgorithm>?,
-    )
+    ) {
+        companion object {
+            val Default: MsoMdoc = MsoMdoc(
+                issuerAuthAlgorithms = nonEmptyListOf(
+                    CoseAlgorithm(-7), // AlgorithmID.ECDSA_256
+                    CoseAlgorithm(-35), // AlgorithmID.ECDSA_384
+                    CoseAlgorithm(-36), // AlgorithmID.ECDSA_512
+                ),
+                deviceAuthAlgorithms = nonEmptyListOf(
+                    CoseAlgorithm(-7), // AlgorithmID.ECDSA_256
+                    CoseAlgorithm(-35), // AlgorithmID.ECDSA_384
+                    CoseAlgorithm(-36), // AlgorithmID.ECDSA_512
+                ),
+            )
+        }
+    }
 }
 
 /**
