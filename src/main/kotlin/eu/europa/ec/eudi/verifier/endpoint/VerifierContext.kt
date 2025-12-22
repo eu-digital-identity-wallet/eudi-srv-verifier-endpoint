@@ -49,7 +49,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificatesWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ServiceType
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingRootCACertificates
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingIssuerChain
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingTrustService
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -230,7 +230,7 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
             deviceResponseValidatorFactory = { userProvidedRootCACertificates ->
                 val appDefault = bean<DeviceResponseValidator>()
                 userProvidedRootCACertificates?.let {
-                    deviceResponseValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                    deviceResponseValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
         )
@@ -240,7 +240,7 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
             sdJwtVcValidatorFactory = { userProvidedRootCACertificates ->
                 val appDefault = bean<SdJwtVcValidator>()
                 userProvidedRootCACertificates?.let {
-                    sdJwtVcValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                    sdJwtVcValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
             bean(),
@@ -254,13 +254,13 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
             sdJwtVcValidatorFactory = { userProvidedRootCACertificates ->
                 val appDefault = bean<SdJwtVcValidator>()
                 userProvidedRootCACertificates?.let {
-                    sdJwtVcValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                    sdJwtVcValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
             deviceResponseValidatorFactory = { userProvidedRootCACertificates ->
                 val appDefault = bean<DeviceResponseValidator>()
                 userProvidedRootCACertificates?.let {
-                    deviceResponseValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                    deviceResponseValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
         )

@@ -20,7 +20,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.AttestationIssuerTrust
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
 
-fun ValidateAttestationIssuerTrust.Companion.usingRootCACertificates(
+fun ValidateAttestationIssuerTrust.Companion.usingIssuerChain(
     x5cShouldBe: X5CShouldBe.Trusted,
 ): ValidateAttestationIssuerTrust {
     val validator: X5CValidator by lazy { X5CValidator(x5cShouldBe) }

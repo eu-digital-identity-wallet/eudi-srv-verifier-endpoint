@@ -19,7 +19,7 @@ import arrow.core.NonEmptyList
 import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.Ignored
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingRootCACertificates
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingIssuerChain
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.toJavaDate
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
@@ -106,7 +106,7 @@ class DeviceResponseValidatorTest {
             val docV = DocumentValidator(
                 clock = clock,
                 validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
-                validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.usingRootCACertificates(
+                validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.usingIssuerChain(
                     X5CShouldBe.Trusted(Data.caCerts) {
                         isRevocationEnabled = false
                         date = clock.now().toJavaDate()
@@ -167,7 +167,7 @@ private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, cloc
         clock,
         ValidityInfoShouldBe.NotExpired,
         IssuerSignedItemsShouldBe.Verified,
-        validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.usingRootCACertificates(x5CShouldBe),
+        validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.usingIssuerChain(x5CShouldBe),
         statusListTokenValidator = null,
     )
     return DeviceResponseValidator(documentValidator)
