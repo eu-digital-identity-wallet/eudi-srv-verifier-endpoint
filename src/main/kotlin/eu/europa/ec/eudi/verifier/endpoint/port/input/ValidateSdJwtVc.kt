@@ -51,7 +51,7 @@ internal enum class SdJwtVcValidationErrorCodeTO {
     UnableToDetermineVerificationMethod,
     StatusCheckFailed,
     UnexpectedError,
-    InvalidRootCACertificates,
+    InvalidIssuerChain,
 }
 
 internal data class SdJwtVcValidationErrorDetailsTO(
@@ -93,25 +93,25 @@ internal class ValidateSdJwtVc(
     suspend operator fun invoke(
         unverified: JsonObject,
         nonce: Nonce,
-        rootCACertificates: String?,
+        issuerChain: String?,
     ): SdJwtVcValidationResult =
-        validate(unverified.left(), nonce, rootCACertificates)
+        validate(unverified.left(), nonce, issuerChain)
 
     suspend operator fun invoke(
         unverified: String,
         nonce: Nonce,
-        rootCACertificates: String?,
+        issuerChain: String?,
     ): SdJwtVcValidationResult =
-        validate(unverified.right(), nonce, rootCACertificates)
+        validate(unverified.right(), nonce, issuerChain)
 
     private suspend fun validate(
         unverified: Either<JsonObject, String>,
         nonce: Nonce,
-        rootCACertificates: String?,
+        issuerChain: String?,
     ): SdJwtVcValidationResult {
-        val sdJwtVcValidator = sdJwtVcValidator(rootCACertificates)
+        val sdJwtVcValidator = sdJwtVcValidator(issuerChain)
             .getOrElse {
-                return SdJwtVcValidationResult.Invalid(nonEmptyListOf(it.toInvalidRootCACertificatesSdJwtVcValidationError()))
+                return SdJwtVcValidationResult.Invalid(nonEmptyListOf(it.toInvalidIssuersChainSdJwtVcValidationError()))
             }
 
         return unverified.fold(
@@ -123,16 +123,16 @@ internal class ValidateSdJwtVc(
         )
     }
 
-    private fun sdJwtVcValidator(rootCACertificatesInPem: String?): Either<Throwable, SdJwtVcValidator> = Either.catch {
-        val x5cShouldBe = rootCACertificatesInPem
+    private fun sdJwtVcValidator(issuerChainInPem: String?): Either<Throwable, SdJwtVcValidator> = Either.catch {
+        val x5cShouldBe = issuerChainInPem
             ?.let { parsePemEncodedX509Certificates.x5cShouldBeTrustedOrNull(it).getOrThrow() }
         sdJwtVcValidatorFactory(x5cShouldBe)
     }
 }
 
-private fun Throwable.toInvalidRootCACertificatesSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =
+private fun Throwable.toInvalidIssuersChainSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =
     SdJwtVcValidationErrorDetailsTO(
-        reason = SdJwtVcValidationErrorCodeTO.InvalidRootCACertificates,
+        reason = SdJwtVcValidationErrorCodeTO.InvalidIssuerChain,
         description = "unable to parse Root CA Certificates",
         cause = this,
     )
