@@ -81,7 +81,7 @@ private object X509CertificateSerializer : KSerializer<X509Certificate> {
     }
 }
 
-fun ValidateAttestationIssuerTrust.Companion.usingTrustService(
+fun ValidateAttestationIssuerTrust.Companion.usingTrustValidatorService(
     httpClient: HttpClient,
     service: Url,
     attestations: Map<String, ServiceType>,

@@ -686,19 +686,22 @@ Variable: `CORS_MAXAGE`
 Description: Time in seconds of how long pre-flight request responses can be cached by clients  
 Default value: `3600`
 
-### Configuring trust sources
+### Configuring trust
 
-Verifier Endpoint verifies whether the Issuer of a Verifiable Credential is trusted or not using an external Trust Service.
-To configure the Trust Service, use the following environment variables:
+Verifier Endpoint verifies whether the Issuer of a Verifiable Credential is trusted or not using an external service. 
+Currently, only [eudi-srv-trust-validator](https://github.com/eu-digital-identity-wallet/eudi-srv-trust-validator) is supported.  
+
+To configure the service, use the following environment variables:
 
 Variable: `VERIFIER_TRUST_SERVICEURL`  
-Description: The URL of the Trust Service.   
+Description: The URL of the service to use for trust verification. __If no URL is configured, all Verifiable Credentials Issuers are considered trusted.__        
+Default value: none
 
 Variable: `VERIFIER_TRUST_ATTESTATIONS_XX_ATTESTATIONTYPE`  
 Description: The type (`vct` or `docType`) of the Attestation.  
 
 Variable: `VERIFIER_TRUST_ATTESTATIONS_XX_SERVICETYPE`  
-Description: The Service Type the Issuer of the Attestation with type `VERIFIER_TRUST_ATTESTATIONS_XX_ATTESTATIONTYPE`.  
+Description: The Service Type of the Issuer of the Attestation with type `VERIFIER_TRUST_ATTESTATIONS_XX_ATTESTATIONTYPE`.  
 Possible values: `pidprovider`, `eaaprovider`, `qeaaprovider`, `pubeaaprovider`, `walletprovider`   
 
 Variable: `VERIFIER_TRUST_DEFAULTSERVICETYPE`  
@@ -706,7 +709,7 @@ Description: The Service Type of Issuers of Attestations with no explicit config
 Possible values: `pidprovider`, `eaaprovider`, `qeaaprovider`, `pubeaaprovider`, `walletprovider`  
 Default value: `eaaprovider`  
 
-By default the Attestations with type `urn:eudi:pid:1`, and `eu.europa.ec.eudi.pid.1`, use the Service Type `pidprovider`.
+By default, the Attestations with type `urn:eudi:pid:1`, and `eu.europa.ec.eudi.pid.1`, use the Service Type `pidprovider`.
 
 ### Proxy configuration  
 

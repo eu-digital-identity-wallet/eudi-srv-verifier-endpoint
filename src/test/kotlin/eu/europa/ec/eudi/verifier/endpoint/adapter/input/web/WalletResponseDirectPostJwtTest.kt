@@ -25,7 +25,6 @@ import com.nimbusds.jose.util.Base64URL
 import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.Ignored
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
@@ -36,7 +35,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.toKotlinFixedOffsetTimeZone
@@ -231,7 +229,7 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
     }
 }
 
-@VerifierApplicationTest([WalletResponseDirectPostJwtValidationsEnabledTest.Config::class])
+@VerifierApplicationTest
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
@@ -242,14 +240,6 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
     ],
 )
 internal class WalletResponseDirectPostJwtValidationsEnabledTest {
-
-    @TestConfiguration
-    internal class Config {
-
-        @Bean
-        @Primary
-        fun validateAttestationIssuerTrust(): ValidateAttestationIssuerTrust = ValidateAttestationIssuerTrust.Ignored
-    }
 
     @Autowired
     private lateinit var client: WebTestClient
@@ -355,10 +345,6 @@ internal class DeviceResponseValidationTest {
         @Primary
         fun generateEphemeralEncryptionKeyPair(): GenerateEphemeralEncryptionKeyPair =
             GenerateEphemeralEncryptionKeyPair { ephemeralEncryptionKey.right() }
-
-        @Bean
-        @Primary
-        fun validateAttestationIssuerTrust(): ValidateAttestationIssuerTrust = ValidateAttestationIssuerTrust.Ignored
 
         companion object {
             val requestId: RequestId = RequestId("1234567890")
