@@ -237,9 +237,9 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
     }
     registerBean(lazyInit = true) {
         ValidateSdJwtVc(
-            sdJwtVcValidatorFactory = { userProvidedRootCACertificates ->
+            sdJwtVcValidatorFactory = { userProvided ->
                 val appDefault = bean<SdJwtVcValidator>()
-                userProvidedRootCACertificates?.let {
+                userProvided?.let {
                     sdJwtVcValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
