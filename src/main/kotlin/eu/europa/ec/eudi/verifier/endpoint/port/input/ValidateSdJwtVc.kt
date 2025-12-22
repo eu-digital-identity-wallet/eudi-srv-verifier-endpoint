@@ -123,8 +123,8 @@ internal class ValidateSdJwtVc(
         )
     }
 
-    private fun sdJwtVcValidator(issuerChainInPem: String?): Either<Throwable, SdJwtVcValidator> = Either.catch {
-        val x5cShouldBe = issuerChainInPem
+    private fun sdJwtVcValidator(issuerChain: String?): Either<Throwable, SdJwtVcValidator> = Either.catch {
+        val x5cShouldBe = issuerChain
             ?.let { parsePemEncodedX509Certificates.x5cShouldBeTrustedOrNull(it).getOrThrow() }
         sdJwtVcValidatorFactory(x5cShouldBe)
     }
@@ -133,7 +133,7 @@ internal class ValidateSdJwtVc(
 private fun Throwable.toInvalidIssuersChainSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =
     SdJwtVcValidationErrorDetailsTO(
         reason = SdJwtVcValidationErrorCodeTO.InvalidIssuerChain,
-        description = "unable to parse Root CA Certificates",
+        description = "unable to parse Trusted Issuers certificates",
         cause = this,
     )
 
