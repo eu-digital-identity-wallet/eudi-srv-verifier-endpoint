@@ -694,7 +694,7 @@ Currently, only [eudi-srv-trust-validator](https://github.com/eu-digital-identit
 To configure the service, use the following environment variables:
 
 Variable: `VERIFIER_TRUST_SERVICEURL`  
-Description: The URL of the service to use for trust verification. __If no URL is configured, all Verifiable Credentials Issuers are considered trusted.__        
+Description: The URL of the `/trust` endpoint of the service to use for trust verification. __If no URL is configured, all Verifiable Credentials Issuers are considered trusted.__        
 Default value: none
 
 Variable: `VERIFIER_TRUST_ATTESTATIONS_XX_ATTESTATIONTYPE`  
