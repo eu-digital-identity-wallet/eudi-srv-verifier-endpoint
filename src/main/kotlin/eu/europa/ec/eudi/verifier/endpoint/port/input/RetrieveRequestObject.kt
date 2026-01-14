@@ -231,10 +231,12 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
 
     private fun Raise<RetrieveRequestObjectError>.ensureVerifierSupportsWalletJarSigningAlgorithms(metadata: WalletMetadataTO) {
         val jarSigningAlgorithm = verifierConfig.verifierId.jarSigning.algorithm.name
-        ensure(jarSigningAlgorithm in metadata.requestObjectSigningAlgorithmsSupported.orEmpty()) {
-            RetrieveRequestObjectError.UnsupportedWalletMetadata(
-                "Wallet does not support JAR Signing Algorithms '$jarSigningAlgorithm'",
-            )
+        if (null != metadata.requestObjectSigningAlgorithmsSupported) {
+            ensure(jarSigningAlgorithm in metadata.requestObjectSigningAlgorithmsSupported) {
+                RetrieveRequestObjectError.UnsupportedWalletMetadata(
+                    "Wallet does not support JAR Signing Algorithms '$jarSigningAlgorithm'",
+                )
+            }
         }
     }
 
