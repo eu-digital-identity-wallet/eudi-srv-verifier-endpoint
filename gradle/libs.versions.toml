@@ -2,7 +2,7 @@
 coroutines = "1.10.2"
 kotlin = "2.3.0"
 foojay = "0.9.0"
-springboot = "4.0.0"
+springboot = "4.0.1"
 spotless = "7.0.2"
 java = "17"
 kotlinxSerialization = "1.9.0"
