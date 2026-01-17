@@ -65,8 +65,6 @@ internal enum class SdJwtVcValidationErrorCode {
     TypeMetadataValidationFailure,
     TypeMetadataResolutionFailure,
 
-    JsonSchemaValidationFailure,
-
     StatusCheckFailed,
 
     UnexpectedError,
@@ -116,7 +114,6 @@ private fun SdJwtVcVerificationError.toSdJwtVcValidationErrorCode(): SdJwtVcVali
         IssuerKeyVerificationError.CannotDetermineIssuerVerificationMethod -> SdJwtVcValidationErrorCode.UnableToDetermineVerificationMethod
         is TypeMetadataVerificationError.TypeMetadataResolutionFailure -> SdJwtVcValidationErrorCode.TypeMetadataResolutionFailure
         is TypeMetadataVerificationError.TypeMetadataValidationFailure -> SdJwtVcValidationErrorCode.TypeMetadataValidationFailure
-        is JsonSchemaVerificationError.JsonSchemaValidationFailure -> SdJwtVcValidationErrorCode.JsonSchemaValidationFailure
     }
 
 private val log = LoggerFactory.getLogger(SdJwtVcValidator::class.java)

@@ -50,7 +50,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.ValidateSdJw
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFromData
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadataFromUrl
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.ValidateJsonSchema
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -296,7 +295,6 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
                 }
             val delegate = ResolveTypeMetadata(
                 LookupTypeMetadataFromUrl(bean(), vcts, sriValidator),
-                LookupJsonSchemaUsingKtor(bean(), sriValidator),
             )
 
             return object : ResolveTypeMetadata by delegate {
@@ -315,16 +313,10 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
             TypeMetadataPolicyEnum::class.java,
         )
 
-        val validateJsonSchema by lazy {
-            if (env.getProperty<Boolean>("verifier.validation.sdJwtVc.typeMetadata.jsonSchema.validation.enabled", true))
-                ValidateJsonSchema
-            else null
-        }
-
         when (policy) {
             TypeMetadataPolicyEnum.NotUsed -> TypeMetadataPolicy.NotUsed
-            TypeMetadataPolicyEnum.Optional -> TypeMetadataPolicy.Optional(resolveTypeMetadata(), validateJsonSchema)
-            TypeMetadataPolicyEnum.AlwaysRequired -> TypeMetadataPolicy.AlwaysRequired(resolveTypeMetadata(), validateJsonSchema)
+            TypeMetadataPolicyEnum.Optional -> TypeMetadataPolicy.Optional(resolveTypeMetadata())
+            TypeMetadataPolicyEnum.AlwaysRequired -> TypeMetadataPolicy.AlwaysRequired(resolveTypeMetadata())
             TypeMetadataPolicyEnum.RequiredFor -> {
                 val vcts = env.getOptionalList(
                     name = "verifier.validation.sdJwtVc.typeMetadata.policy.requiredFor",
@@ -338,7 +330,6 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
                 TypeMetadataPolicy.RequiredFor(
                     vcts,
                     resolveTypeMetadata(),
-                    validateJsonSchema,
                 )
             }
         }
