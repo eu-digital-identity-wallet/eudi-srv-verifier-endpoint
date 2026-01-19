@@ -26,4 +26,6 @@ object RFC9101 {
     const val REQUEST_OBJECT_MEDIA_SUBTYPE: String = "oauth-authz-req+jwt"
 
     const val REQUEST_OBJECT_SIGNING_ALGORITHMS_SUPPORTED: String = "request_object_signing_alg_values_supported"
+    const val REQUEST_OBJECT_ENCRYPTION_ALG_VALUES_SUPPORTED = "request_object_encryption_alg_values_supported"
+    const val REQUEST_OBJECT_ENCRYPTION_ENC_VALUES_SUPPORTED = "request_object_encryption_enc_values_supported"
 }
