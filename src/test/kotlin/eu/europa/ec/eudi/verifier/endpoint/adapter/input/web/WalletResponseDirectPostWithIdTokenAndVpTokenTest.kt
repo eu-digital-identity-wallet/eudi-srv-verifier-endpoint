@@ -51,7 +51,7 @@ import kotlin.test.*
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)
-@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
+@AutoConfigureWebTestClient // used for debugging only
 internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
     private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectPostWithIdTokenAndVpTokenTest::class.java)

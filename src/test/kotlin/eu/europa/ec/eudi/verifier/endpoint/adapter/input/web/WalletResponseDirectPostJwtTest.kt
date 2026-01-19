@@ -69,7 +69,7 @@ import kotlin.time.Instant
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)
-@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
+@AutoConfigureWebTestClient // used for debugging only
 internal class WalletResponseDirectPostJwtValidationsDisabledTest {
 
     private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectPostJwtValidationsDisabledTest::class.java)
@@ -241,7 +241,7 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
         "verifier.jwk.embed=ByValue",
     ],
 )
-@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString())
+@AutoConfigureWebTestClient
 internal class WalletResponseDirectPostJwtValidationsEnabledTest {
 
     @Autowired
@@ -328,7 +328,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         "verifier.validation.sdJwtVc.statusCheck.enabled=false",
     ],
 )
-@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString())
+@AutoConfigureWebTestClient
 internal class DeviceResponseValidationTest {
 
     @TestConfiguration

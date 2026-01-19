@@ -43,7 +43,7 @@ import kotlin.test.assertNull
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)
-@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
+@AutoConfigureWebTestClient // used for debugging only
 internal class WalletResponseDirectPostTest {
 
     @Autowired

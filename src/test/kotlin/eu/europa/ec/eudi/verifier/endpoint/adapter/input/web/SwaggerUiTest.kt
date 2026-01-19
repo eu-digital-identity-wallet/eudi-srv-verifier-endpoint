@@ -29,7 +29,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @VerifierApplicationTest
-@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString())
+@AutoConfigureWebTestClient
 internal class SwaggerUiTest {
     private val log: Logger = LoggerFactory.getLogger(SwaggerUiTest::class.java)
 
