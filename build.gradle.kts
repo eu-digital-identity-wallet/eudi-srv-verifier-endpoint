@@ -31,7 +31,7 @@ dependencies {
     implementation(enforcedPlatform(libs.ktor.bom))
     implementation(enforcedPlatform(libs.kotlinx.serialization.bom))
     implementation(enforcedPlatform(libs.arrow.stack))
-    implementation(enforcedPlatform(SpringBootPlugin.BOM_COORDINATES))
+    implementation(platform(SpringBootPlugin.BOM_COORDINATES))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
