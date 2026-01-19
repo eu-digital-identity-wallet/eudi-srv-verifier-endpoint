@@ -26,10 +26,13 @@ repositories {
 }
 
 dependencies {
+    implementation(enforcedPlatform(libs.kotlin.bom))
+    implementation(enforcedPlatform(libs.kotlinx.coroutines.bom))
+    implementation(enforcedPlatform(libs.ktor.bom))
+    implementation(enforcedPlatform(libs.kotlinx.serialization.bom))
+    implementation(enforcedPlatform(libs.arrow.stack))
     implementation(platform(SpringBootPlugin.BOM_COORDINATES))
-    implementation(platform("org.jetbrains.kotlinx:kotlinx-serialization-bom:${libs.versions.kotlinxSerialization.get()}"))
 
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
@@ -103,7 +106,7 @@ kotlin {
     }
 
     compilerOptions {
-        apiVersion = KotlinVersion.KOTLIN_2_2
+        apiVersion = KotlinVersion.DEFAULT
         freeCompilerArgs.add("-Xjsr305=strict")
         optIn.addAll(
             "kotlinx.serialization.ExperimentalSerializationApi",
