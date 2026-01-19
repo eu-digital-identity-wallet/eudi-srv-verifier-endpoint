@@ -347,8 +347,8 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
     //
     // Scheduled
     //
-    registerBean { ::ScheduleTimeoutPresentations }
-    registerBean { ::ScheduleDeleteOldPresentations }
+    registerBean { ScheduleTimeoutPresentations(bean()) }
+    registerBean { ScheduleDeleteOldPresentations(bean()) }
     registerBean { RefreshTrustSources(bean(), bean(), bean()) }
 
     //
@@ -432,7 +432,7 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
     }
 }
 
-private inline fun <reified T> SupplierContextDsl<T>.deviceResponseValidator(
+private fun SupplierContextDsl<*>.deviceResponseValidator(
     provideTrustSource: ProvideTrustSource,
 ): DeviceResponseValidator {
     val docValidator = DocumentValidator(
@@ -450,7 +450,7 @@ private inline fun <reified T> SupplierContextDsl<T>.deviceResponseValidator(
     return DeviceResponseValidator(docValidator)
 }
 
-private inline fun <reified T> SupplierContextDsl<T>.sdJwtVcValidator(
+private fun SupplierContextDsl<*>.sdJwtVcValidator(
     provideTrustSource: ProvideTrustSource,
 ): SdJwtVcValidator = SdJwtVcValidator(
     provideTrustSource = provideTrustSource,
