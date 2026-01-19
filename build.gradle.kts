@@ -31,7 +31,7 @@ dependencies {
     implementation(enforcedPlatform(libs.ktor.bom))
     implementation(enforcedPlatform(libs.kotlinx.serialization.bom))
     implementation(enforcedPlatform(libs.arrow.stack))
-    implementation(platform(SpringBootPlugin.BOM_COORDINATES))
+    implementation(enforcedPlatform(SpringBootPlugin.BOM_COORDINATES))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -51,10 +51,10 @@ dependencies {
     implementation(libs.waltid.mdoc.credentials) {
         because("To verify CBOR credentials")
     }
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1-0.6.x-compat") {
+    implementation(libs.kotlinx.datetime) {
         because("required by walt.id")
     }
-    implementation("com.augustcellars.cose:cose-java:1.1.0") {
+    implementation(libs.cose.java) {
         because("required by walt.id")
     }
     implementation(libs.sd.jwt)
