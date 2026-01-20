@@ -26,11 +26,11 @@ repositories {
 }
 
 dependencies {
-    implementation(enforcedPlatform(libs.kotlin.bom))
-    implementation(enforcedPlatform(libs.kotlinx.coroutines.bom))
-    implementation(enforcedPlatform(libs.ktor.bom))
-    implementation(enforcedPlatform(libs.kotlinx.serialization.bom))
-    implementation(enforcedPlatform(libs.arrow.stack))
+    implementation(platform(libs.kotlin.bom))
+    implementation(platform(libs.kotlinx.coroutines.bom))
+    implementation(platform(libs.ktor.bom))
+    implementation(platform(libs.kotlinx.serialization.bom))
+    implementation(platform(libs.arrow.stack))
     implementation(platform(SpringBootPlugin.BOM_COORDINATES))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
