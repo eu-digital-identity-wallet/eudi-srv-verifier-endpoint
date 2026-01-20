@@ -19,7 +19,6 @@ import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.core.env.Environment
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -29,7 +28,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @VerifierApplicationTest
-@AutoConfigureWebTestClient
 internal class SwaggerUiTest {
     private val log: Logger = LoggerFactory.getLogger(SwaggerUiTest::class.java)
 

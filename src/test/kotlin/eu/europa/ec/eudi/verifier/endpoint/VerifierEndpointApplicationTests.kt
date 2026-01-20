@@ -17,10 +17,8 @@ package eu.europa.ec.eudi.verifier.endpoint
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString())
 class VerifierEndpointApplicationTests {
 
     @Test

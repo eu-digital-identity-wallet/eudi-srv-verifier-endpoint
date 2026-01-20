@@ -31,7 +31,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.core.annotation.Order
@@ -51,7 +50,6 @@ import kotlin.test.*
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)
-@AutoConfigureWebTestClient // used for debugging only
 internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
     private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectPostWithIdTokenAndVpTokenTest::class.java)
