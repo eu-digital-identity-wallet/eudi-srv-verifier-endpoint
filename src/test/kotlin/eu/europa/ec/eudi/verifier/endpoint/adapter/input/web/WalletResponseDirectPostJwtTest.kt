@@ -45,7 +45,6 @@ import org.junit.jupiter.api.TestMethodOrder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
@@ -69,7 +68,6 @@ import kotlin.time.Instant
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)
-@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
 internal class WalletResponseDirectPostJwtValidationsDisabledTest {
 
     private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectPostJwtValidationsDisabledTest::class.java)
@@ -241,7 +239,6 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
         "verifier.jwk.embed=ByValue",
     ],
 )
-@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString())
 internal class WalletResponseDirectPostJwtValidationsEnabledTest {
 
     @Autowired
@@ -328,7 +325,6 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         "verifier.validation.sdJwtVc.statusCheck.enabled=false",
     ],
 )
-@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString())
 internal class DeviceResponseValidationTest {
 
     @TestConfiguration

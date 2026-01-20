@@ -39,6 +39,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
@@ -114,6 +115,7 @@ object TestContext {
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
 )
 @ContextConfiguration(initializers = [BeansDslApplicationContextInitializer::class])
+@AutoConfigureWebTestClient
 internal annotation class VerifierApplicationTest(
 
     /**
@@ -130,6 +132,6 @@ internal annotation class VerifierApplicationTest(
  */
 internal class BeansDslApplicationContextInitializer : ApplicationContextInitializer<GenericApplicationContext> {
     override fun initialize(applicationContext: GenericApplicationContext) {
-        beans(Clock.System).initializer().initialize(applicationContext)
+        applicationContext.register(beans(Clock.System))
     }
 }
