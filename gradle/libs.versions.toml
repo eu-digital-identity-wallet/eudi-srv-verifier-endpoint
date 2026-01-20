@@ -14,7 +14,7 @@ arrow = "2.2.1.1"
 dependencycheck = "12.1.1"
 swaggerUi = "5.30.2"
 waltid = "0.11.0"
-sdJwt = "0.17.2"
+sdJwt = "0.18.0"
 ktor = "3.3.3"
 jsonpathkt = "2.0.1"
 tink = "1.17.0"
@@ -23,8 +23,6 @@ kover = "0.9.4"
 zxing = "3.5.3"
 uri = "0.0.19"
 dss = "6.2"
-jsonValidator = "1.5.7"
-joni = "2.2.6"
 aedile = "2.1.2"
 
 [libraries]
@@ -55,8 +53,6 @@ dss-service = { module = "eu.europa.ec.joinup.sd-dss:dss-service", version.ref =
 dss-validation = { module = "eu.europa.ec.joinup.sd-dss:dss-validation", version.ref = "dss" }
 dss-tsl-validation = { module = "eu.europa.ec.joinup.sd-dss:dss-tsl-validation", version.ref = "dss" }
 dss-utils-apache-commons = { module = "eu.europa.ec.joinup.sd-dss:dss-utils-apache-commons", version.ref = "dss" }
-json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "jsonValidator" }
-joni = { module = "org.jruby.joni:joni", version.ref = "joni" }
 aedile = { module = "com.sksamuel.aedile:aedile-core", version.ref = "aedile" }
 cose-java = { module = "com.augustcellars.cose:cose-java", version.ref = "cose" }
 

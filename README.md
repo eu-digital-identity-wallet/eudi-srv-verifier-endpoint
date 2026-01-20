@@ -783,10 +783,6 @@ Description: Comma-separated list of allowed sub-resource integrity hash algorit
 Allowed values: `sha256`, `sha384`, `sha512`  
 Default value: `sha256,sha384,sha512`  
 
-Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_JSONSCHEMA_VALIDATION_ENABLED`  
-Description: Whether Json Schema validation should be enabled or not    
-Default value: `true`   
-
 ## How to contribute
 
 We welcome contributions to this project. To ensure that the process is smooth for everyone

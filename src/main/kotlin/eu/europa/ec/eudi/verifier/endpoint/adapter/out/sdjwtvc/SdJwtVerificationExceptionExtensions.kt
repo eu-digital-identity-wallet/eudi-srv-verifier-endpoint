@@ -47,14 +47,6 @@ private fun descriptionOf(sdJwtError: VerificationError): String = when (sdJwtEr
     is VerificationError.SdJwtVcError -> when (val sdJwtVcError = sdJwtError.error) {
         is IssuerKeyVerificationError -> sdJwtVcError.description
         is TypeMetadataVerificationError -> sdJwtVcError.description
-        is JsonSchemaVerificationError.JsonSchemaValidationFailure -> {
-            val schemaViolations = sdJwtVcError.errors.flatMap { (schema, schemaViolations) ->
-                schemaViolations.map { schemaViolation ->
-                    joinNotBlank("[schema $schema]: ${schemaViolation.description}", descriptionOf(schemaViolation.cause))
-                }
-            }.joinToString()
-            joinNotBlank("sd-jwt vc could not be validated according to its json schema", schemaViolations)
-        }
     }
 }
 
