@@ -39,7 +39,7 @@ Actors: Wallet, Verifier (back-end)
 Intention: Wallet wants to retrieve the Request Object. 
 
 This `RequestObject` is actually a JWT which includes (as claims) the
-parameters of an OpenID4VP and/or SIOPv2 AuthorizationRequest (actually of any OAUTH2 authorization request)
+parameters of an OpenID4VP AuthorizationRequest (actually of any OAUTH2 authorization request)
 
 Preconditions:
 
