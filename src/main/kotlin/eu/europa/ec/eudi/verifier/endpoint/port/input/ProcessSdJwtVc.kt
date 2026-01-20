@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 import arrow.core.Either
 import eu.europa.ec.eudi.sdjwt.DefaultSdJwtOps
 import eu.europa.ec.eudi.sdjwt.JwtAndClaims
+import eu.europa.ec.eudi.sdjwt.RFC9901
 import eu.europa.ec.eudi.sdjwt.SdJwtVcVerifier
 import eu.europa.ec.eudi.sdjwt.vc.IssuerVerificationMethod
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
@@ -31,7 +32,7 @@ class ProcessSdJwtVc {
     )
 
     suspend operator fun invoke(unprocessed: String): Either<Throwable, JsonObject> = Either.catch {
-        if (unprocessed.endsWith(DISCLOSURE_SEPARATOR)) {
+        if (unprocessed.endsWith(RFC9901.DISCLOSURE_SEPARATOR)) {
             verifier.processWithoutKeyBinding(unprocessed)
         } else {
             verifier.processWithKeyBinding(unprocessed)
@@ -52,9 +53,5 @@ class ProcessSdJwtVc {
             sdJwt.recreateClaimsAndDisclosuresPerClaim()
         }
         return processed
-    }
-
-    private companion object {
-        const val DISCLOSURE_SEPARATOR = "~"
     }
 }
