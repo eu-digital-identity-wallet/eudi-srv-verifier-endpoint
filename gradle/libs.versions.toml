@@ -1,24 +1,25 @@
 [versions]
 coroutines = "1.10.2"
-kotlin = "2.1.21"
-foojay = "0.9.0"
-springboot = "3.4.6"
+kotlin = "2.3.0"
+springboot = "4.0.1"
 spotless = "7.0.2"
 java = "17"
-kotlinxSerialization = "1.8.0"
+kotlinxSerialization = "1.9.0"
+kotlinxDatetime = "0.7.1-0.6.x-compat"
+cose = "1.1.0"
 oauth2OidcSdk = "11.23.1"
 ktlintVersion = "0.50.0"
 bouncyCastle = "1.80"
-arrow = "2.0.1"
+arrow = "2.2.1.1"
 dependencycheck = "12.1.1"
-swaggerUi = "5.20.1"
+swaggerUi = "5.30.2"
 waltid = "0.11.0"
 sdJwt = "0.17.2"
-ktor = "3.2.3"
+ktor = "3.3.3"
 jsonpathkt = "2.0.1"
 tink = "1.17.0"
 statium = "0.4.0"
-kover = "0.9.1"
+kover = "0.9.4"
 zxing = "3.5.3"
 uri = "0.0.19"
 dss = "6.2"
@@ -27,18 +28,24 @@ joni = "2.2.6"
 aedile = "2.1.2"
 
 [libraries]
-kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
+kotlinx-coroutines-bom = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-bom", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test" }
+kotlinx-serialization-bom = { module = "org.jetbrains.kotlinx:kotlinx-serialization-bom", version.ref = "kotlinxSerialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+arrow-stack = { module = "io.arrow-kt:arrow-stack", version.ref = "arrow" }
+arrow-core  = { module = "io.arrow-kt:arrow-core" }
+arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines" }
+arrow-core-serialization = { module = "io.arrow-kt:arrow-core-serialization" }
+ktor-bom = { module = "io.ktor:ktor-bom", version.ref = "ktor" }
+ktor-client-apache = { module = "io.ktor:ktor-client-apache" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation" }
+ktor-client-serialization = { module = "io.ktor:ktor-serialization-kotlinx-json" }
 nimbusds-oauth2-oidc-sdk = { module = "com.nimbusds:oauth2-oidc-sdk", version.ref = "oauth2OidcSdk" }
 bouncy-castle = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncyCastle" }
-arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
-arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "arrow" }
-arrow-core-serialization = { module = "io.arrow-kt:arrow-core-serialization", version.ref = "arrow" }
 swagger-ui = { module = "org.webjars:swagger-ui", version.ref = "swaggerUi" }
 waltid-mdoc-credentials = { module = "id.walt.mdoc-credentials:waltid-mdoc-credentials-jvm", version.ref = "waltid" }
 sd-jwt = { module = "eu.europa.ec.eudi:eudi-lib-jvm-sdjwt-kt", version.ref = "sdJwt" }
-ktor-client-apache = { module = "io.ktor:ktor-client-apache", version.ref = "ktor" }
-ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
-ktor-client-serialization = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 jsonpathkt = { module = "com.nfeld.jsonpathkt:jsonpathkt", version.ref = "jsonpathkt" }
 tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
 statium = { module = "eu.europa.ec.eudi:eudi-lib-kmp-statium", version.ref = "statium" }
@@ -51,9 +58,9 @@ dss-utils-apache-commons = { module = "eu.europa.ec.joinup.sd-dss:dss-utils-apac
 json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "jsonValidator" }
 joni = { module = "org.jruby.joni:joni", version.ref = "joni" }
 aedile = { module = "com.sksamuel.aedile:aedile-core", version.ref = "aedile" }
+cose-java = { module = "com.augustcellars.cose:cose-java", version.ref = "cose" }
 
 [plugins]
-foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }
 spring-boot = { id = "org.springframework.boot", version.ref = "springboot" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
