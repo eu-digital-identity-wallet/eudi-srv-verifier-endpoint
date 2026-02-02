@@ -567,7 +567,7 @@ Variable: `VERIFIER_ACCESS_CERTIFICATE_ALIAS`
 Description: Alias of the Access Certificate Key to use for JAR signing, in the configured Keystore  
 
 > [!CAUTION]  
-> **The Access Certificate must be associated with a Certificate chain. The leaf Certificate cannot be self-signed.**
+> **The Access Certificate must be associated with a Certificate chain. The Access Certificate cannot be self-signed.**
 
 Variable: `VERIFIER_ACCESS_CERTIFICATE_PASSWORD`  
 Description: Password of the Access Certificate Key to use for JAR signing, in the configured Keystore

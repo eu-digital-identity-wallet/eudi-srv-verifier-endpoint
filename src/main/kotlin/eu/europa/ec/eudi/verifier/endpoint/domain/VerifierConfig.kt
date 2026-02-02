@@ -194,8 +194,8 @@ data class AccessCertificate(
 ) {
     init {
         require(key.isPrivate) { "a private key is required for signing" }
-        require(!key.parsedX509CertChain.isNullOrEmpty()) { "access certificate must contain a certificate chain" }
-        require(!certificate.isSelfSigned()) { "access certificate key must not use a self-signed certificate" }
+        require(!key.parsedX509CertChain.isNullOrEmpty()) { "access certificate must have a non-empty certificate chain" }
+        require(!certificate.isSelfSigned()) { "access certificate must not be self-signed" }
         require(algorithm in JWSAlgorithm.Family.SIGNATURE) { "'${algorithm.name}' is not a valid signature algorithm" }
 
         // Verify a JWSSigner can be instantiated with the provided key/algorithm combo
