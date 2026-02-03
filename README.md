@@ -127,6 +127,10 @@ To provide an external keystore mount it to the path designated by the value of 
       VERIFIER_PUBLICURL: "https://10.240.174.10"
       VERIFIER_RESPONSE_MODE: "DirectPost"
       VERIFIER_ACCESS_CERTIFICATE_KEYSTORE: file:///certs/keystore.jks
+      VERIFIER_ACCESS_CERTIFICATE_KEYSTORE_TYPE: "jks"
+      VERIFIER_ACCESS_CERTIFICATE_KEYSTORE_PASSWORD: <PASSWORD OF KEYSTORE>
+      VERIFIER_ACCESS_CERTIFICATE_ALIAS: <ALIAS OF CERTIFICATE>
+      VERIFIER_ACCESS_CERTIFICATE_PASSWORD: <PASSWORD OF CERTIFICATE>
     volumes:
       - <PATH OF KEYSTORE IN HOST MACHINE>/keystore.jks:/certs/keystore.jks
       
