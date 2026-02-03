@@ -22,7 +22,6 @@ import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.util.Base64
 import com.sksamuel.aedile.core.asCache
-import com.sksamuel.aedile.core.expireAfterWrite
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
@@ -70,6 +69,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.BeanRegistrarDsl
 import org.springframework.beans.factory.BeanRegistrarDsl.SupplierContextDsl
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.bind.Name
 import org.springframework.boot.http.codec.CodecCustomizer
 import org.springframework.core.env.Environment
 import org.springframework.core.env.getProperty
@@ -81,7 +81,9 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import java.security.KeyStore
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toJavaDuration
 
 private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 
@@ -204,9 +206,9 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
     }
 
     // Default ValidateAttestationIssuerTrust
-    registerBean(lazyInit = true) {
-        val config = bean<AttestationTrustProperties>()
-        if (config.serviceUrl.isNullOrBlank()) {
+    registerBean {
+        val config = bean<VerifierEndpointConfigurationProperties>().trust
+        if (null == config) {
             log.warn("Trust Validator Service has not been configured. Trusting all Attestation Issuers.")
             ValidateAttestationIssuerTrust.Ignored
         } else {
@@ -274,32 +276,24 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
     //
     registerBean<TypeMetadataPolicy> {
         fun resolveTypeMetadata(): ResolveTypeMetadata {
-            val typeMetadataResolutionProperties = bean<TypeMetadataResolutionProperties>()
-            val vcts = typeMetadataResolutionProperties.vcts
+            val config = bean<VerifierEndpointConfigurationProperties>().validation.sdJwtVc.typeMetadataResolution
+            val vcts = config.vcts
                 .associateBy { Vct(it.vct) }.mapValues { Url(it.value.url) }
             require(vcts.isNotEmpty()) {
                 "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts must be set"
             }
 
-            val cacheTtl = Duration.parse(
-                env.getProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.cache.ttl", "PT1H"),
-            )
-            val cacheSize = env.getProperty(
-                "verifier.validation.sdJwtVc.typeMetadata.resolution.cache.maxEntries",
-                10,
-            ).toLong()
-
             val cache = Caffeine.newBuilder()
-                .expireAfterWrite(cacheTtl)
-                .maximumSize(cacheSize)
+                .expireAfterWrite(config.cache.ttl)
+                .maximumSize(config.cache.maxEntries.toLong())
                 .asCache<Vct, ResolvedTypeMetadata>()
 
             val sriValidator =
-                if (!typeMetadataResolutionProperties.integrity.enabled) {
+                if (!config.integrity.enabled) {
                     null
                 } else {
                     SRIValidator(
-                        requireNotNull(typeMetadataResolutionProperties.integrity.allowedAlgorithms.toNonEmptySetOrNull()) {
+                        requireNotNull(config.integrity.allowedAlgorithms.toNonEmptySetOrNull()) {
                             "verifier.validation.sdJwtVc.typeMetadata.resolution.integrity.allowedAlgorithms cannot be empty"
                         },
                     )
@@ -666,29 +660,47 @@ private enum class TypeMetadataPolicyEnum {
     RequiredFor,
 }
 
-@ConfigurationProperties("verifier.validation.sd-jwt-vc.type-metadata.resolution")
-internal data class TypeMetadataResolutionProperties(
-    val vcts: List<VctProperties> = emptyList(),
-    val integrity: IntegrityProperties = IntegrityProperties(),
+@ConfigurationProperties("verifier")
+data class VerifierEndpointConfigurationProperties(
+    val validation: ValidationConfigurationProperties,
+    val trust: TrustConfigurationProperties? = null,
+)
+
+data class ValidationConfigurationProperties(
+    @Name("sd-jwt-vc") val sdJwtVc: SdJwtVcConfigurationProperties,
+)
+
+data class SdJwtVcConfigurationProperties(
+    @Name("type-metadata.resolution") val typeMetadataResolution: TypeMetadataResolutionConfigurationProperties,
+)
+
+data class TypeMetadataResolutionConfigurationProperties(
+    val vcts: List<VctConfigurationProperties> = emptyList(),
+    val integrity: IntegrityConfigurationProperties = IntegrityConfigurationProperties(),
+    val cache: CacheConfigurationProperties = CacheConfigurationProperties(),
 ) {
-    data class VctProperties(
+    data class VctConfigurationProperties(
         val vct: String,
         val url: String,
     )
 
-    data class IntegrityProperties(
+    data class IntegrityConfigurationProperties(
         val enabled: Boolean = false,
         val allowedAlgorithms: Set<IntegrityAlgorithm> = IntegrityAlgorithm.entries.toSet(),
     )
+
+    data class CacheConfigurationProperties(
+        val ttl: java.time.Duration = 1.hours.toJavaDuration(),
+        val maxEntries: Int = 10,
+    )
 }
 
-@ConfigurationProperties("verifier.trust")
-internal data class AttestationTrustProperties(
-    val serviceUrl: String? = null,
-    val attestations: List<AttestationProperties>,
+data class TrustConfigurationProperties(
+    val serviceUrl: String,
+    val attestations: List<AttestationIssuerTrustConfigurationProperties>,
     val defaultServiceType: ServiceType = ServiceType.EAAProvider,
 ) {
-    data class AttestationProperties(
+    data class AttestationIssuerTrustConfigurationProperties(
         val attestationType: String,
         val serviceType: ServiceType,
     )
