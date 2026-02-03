@@ -553,24 +553,24 @@ Note: The configured signing algorithm must be compatible with the configured si
 Default value: `ES256`
 
 Variable: `VERIFIER_ACCESS_CERTIFICATE_KEYSTORE`  
-Description: URL of the Access Certificate Keystore from which to load the Key to use for JAR signing  
+Description: URL of the Keystore from which to load the Access Certificate to use for JAR signing  
 Examples: `classpath:keystore.jks`, `file:///keystore.jks`
 
 Variable: `VERIFIER_ACCESS_CERTIFICATE_KEYSTORE_TYPE`  
-Description: Type of the Access Certificate Keystore from which to load the Key to use for JAR signing  
+Description: Type of the Keystore from which to load the Access Certificate to use for JAR signing  
 Examples: `jks`, `pkcs12`
 
 Variable: `VERIFIER_ACCESS_CERTIFICATE_KEYSTORE_PASSWORD`  
-Description: Password of the Access Certificate Keystore from which to load the Key to use for JAR signing
+Description: Password of the Keystore from which to load the Access Certificate to use for JAR signing  
 
 Variable: `VERIFIER_ACCESS_CERTIFICATE_ALIAS`  
-Description: Alias of the Access Certificate Key to use for JAR signing, in the configured Keystore  
+Description: Alias of the Access Certificate to use for JAR signing, in the configured Keystore  
 
 > [!CAUTION]  
 > **The Access Certificate must be associated with a Certificate chain. The Access Certificate cannot be self-signed.**
 
 Variable: `VERIFIER_ACCESS_CERTIFICATE_PASSWORD`  
-Description: Password of the Access Certificate Key to use for JAR signing, in the configured Keystore
+Description: Password of the Access Certificate to use for JAR signing, in the configured Keystore  
 
 Variable: `VERIFIER_PUBLICURL`  
 Description: Public URL of the Verifier Endpoint application  

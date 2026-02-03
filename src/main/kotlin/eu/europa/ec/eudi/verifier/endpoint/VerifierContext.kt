@@ -455,7 +455,7 @@ private enum class EmbedOptionEnum {
     ByReference,
 }
 
-private fun accessCertificateConfig(environment: Environment): AccessCertificate {
+private fun accessCertificate(environment: Environment): AccessCertificate {
     val keystoreLocation = environment.getRequiredProperty("verifier.access-certificate.keystore")
     log.info("Will try to load Keystore from: '{}'", keystoreLocation)
 
@@ -478,7 +478,7 @@ private fun accessCertificateConfig(environment: Environment): AccessCertificate
 private fun verifierConfig(environment: Environment): VerifierConfig {
     val verifierId = run {
         val originalClientId = environment.getProperty("verifier.originalClientId", "verifier")
-        val accessCertificateConfig = accessCertificateConfig(environment)
+        val accessCertificate = accessCertificate(environment)
 
         val factory =
             when (val clientIdPrefix = environment.getProperty("verifier.clientIdPrefix", "pre-registered")) {
@@ -487,7 +487,7 @@ private fun verifierConfig(environment: Environment): VerifierConfig {
                 "x509_hash" -> VerifierId::X509Hash
                 else -> error("Unknown clientIdPrefix '$clientIdPrefix'")
             }
-        factory(originalClientId, accessCertificateConfig)
+        factory(originalClientId, accessCertificate)
     }
 
     val publicUrl = environment.publicUrl()
