@@ -9,6 +9,14 @@ services:
     environment:
       VERIFIER_PUBLICURL: "https://10.240.174.10"
       VERIFIER_RESPONSE_MODE: "DirectPost"
+      VERIFIER_ACCESS_CERTIFICATE_SIGNING_ALGORITHM: "ES512"
+      VERIFIER_ACCESS_CERTIFICATE_KEYSTORE: "file:///certs/keystore.jks"
+      VERIFIER_ACCESS_CERTIFICATE_KEYSTORE_TYPE: "jks"
+      VERIFIER_ACCESS_CERTIFICATE_KEYSTORE_PASSWORD: "keystore"
+      VERIFIER_ACCESS_CERTIFICATE_ALIAS: "access_certificate"
+      VERIFIER_ACCESS_CERTIFICATE_PASSWORD: "access_certificate"
+    volumes:
+      - ./keystore.jks:/certs/keystore.jks
 
   verifier-ui:
     image: ghcr.io/eu-digital-identity-wallet/eudi-web-verifier:latest
