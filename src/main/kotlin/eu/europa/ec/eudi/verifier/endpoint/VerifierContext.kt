@@ -213,11 +213,18 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
             ValidateAttestationIssuerTrust.Ignored
         } else {
             log.info("Using Trust Validator Service '{}'", config.serviceUrl)
+            val contexts = config.contexts.map {
+                AttestationVerificationContext(
+                    context = it.context,
+                    useCase = it.useCase?.takeIf(String::isNotBlank),
+                    docTypes = it.docTypes?.toNonEmptySetOrNull(),
+                    vcts = it.vcts?.toNonEmptySetOrNull(),
+                )
+            }.toNonEmptyListOrNull()
             ValidateAttestationIssuerTrust.usingTrustValidatorService(
                 bean(),
                 Url(config.serviceUrl),
-                config.attestations.associate { it.attestationType to it.serviceType },
-                config.defaultServiceType,
+                checkNotNull(contexts) { "No verification contexts configured" },
             )
         }
     }
@@ -697,11 +704,12 @@ data class TypeMetadataResolutionConfigurationProperties(
 
 data class TrustConfigurationProperties(
     val serviceUrl: String,
-    val attestations: List<AttestationIssuerTrustConfigurationProperties>,
-    val defaultServiceType: ServiceType = ServiceType.EAAProvider,
+    val contexts: List<AttestationVerificationContextConfigurationProperties>,
 ) {
-    data class AttestationIssuerTrustConfigurationProperties(
-        val attestationType: String,
-        val serviceType: ServiceType,
+    data class AttestationVerificationContextConfigurationProperties(
+        val context: VerificationContext,
+        val useCase: String? = null,
+        val docTypes: List<String>? = null,
+        val vcts: List<String>? = null,
     )
 }

@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509
 
 import arrow.core.NonEmptyList
+import arrow.core.NonEmptySet
 import arrow.core.serialization.NonEmptyListSerializer
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.AttestationIssuerTrust
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
@@ -38,28 +39,51 @@ import java.security.cert.X509Certificate
 import kotlin.io.encoding.Base64
 
 @Serializable
-enum class ServiceType {
-    PIDProvider,
-    EAAProvider,
-    QEAAProvider,
-    PubEAAProvider,
-    WalletProvider,
+enum class VerificationContext {
+    PID,
+    QEAA,
+    PubEAA,
+    EAA,
+}
+
+data class AttestationVerificationContext(
+    val context: VerificationContext,
+    val useCase: String? = null,
+    val docTypes: NonEmptySet<String>? = null,
+    val vcts: NonEmptySet<String>? = null,
+) {
+    init {
+        if (null != useCase) {
+            require(VerificationContext.EAA == context) {
+                "useCase can only be provided when context is ${VerificationContext.EAA}"
+            }
+            require(useCase.isNotBlank()) { "useCase must not be blank" }
+        }
+
+        require(null != docTypes || null != vcts) { "either docTypes or vcts must be provided" }
+    }
 }
 
 @Serializable
-private data class TrustQuery(
-    @Required @Serializable(with = NonEmptyListSerializer::class) val x5c:
+private data class TrustQueryTO(
+    @Required @Serializable(with = NonEmptyListSerializer::class) val chain:
         NonEmptyList<
             @Serializable(with = X509CertificateSerializer::class)
             X509Certificate,
             >,
-    @Required val serviceType: ServiceType,
+    @Required val verificationContext: VerificationContext,
+    val useCase: String? = null,
 )
 
 @Serializable
-private data class TrustResponse(
+private data class TrustResponseTO(
     @Required val trusted: Boolean,
-)
+    @Serializable(with = X509CertificateSerializer::class) val trustAnchor: X509Certificate? = null,
+) {
+    init {
+        require(!trusted || null != trustAnchor) { "trustAnchor must be provided if trusted is true" }
+    }
+}
 
 private object X509CertificateSerializer : KSerializer<X509Certificate> {
     private val base64 = Base64.withPadding(Base64.PaddingOption.ABSENT_OPTIONAL)
@@ -84,18 +108,21 @@ private object X509CertificateSerializer : KSerializer<X509Certificate> {
 fun ValidateAttestationIssuerTrust.Companion.usingTrustValidatorService(
     httpClient: HttpClient,
     service: Url,
-    attestations: Map<String, ServiceType>,
-    defaultServiceType: ServiceType,
+    contexts: NonEmptyList<AttestationVerificationContext>,
 ): ValidateAttestationIssuerTrust = ValidateAttestationIssuerTrust { issuerChain, attestationType ->
-    val serviceType = attestations[attestationType] ?: defaultServiceType
+    val context = contexts.firstOrNull { attestationType in it.docTypes.orEmpty() || attestationType in it.vcts.orEmpty() }
+    checkNotNull(context) { "Verification context not configured for Attestation with type $attestationType" }
+
     val response = httpClient.post {
         expectSuccess = true
 
         url(service)
         contentType(ContentType.Application.Json)
-        setBody(TrustQuery(issuerChain, serviceType))
+        setBody(TrustQueryTO(issuerChain, context.context, context.useCase))
 
         accept(ContentType.Application.Json)
-    }.body<TrustResponse>()
-    if (response.trusted) AttestationIssuerTrust.Trusted else AttestationIssuerTrust.NotTrusted
+    }.body<TrustResponseTO>()
+
+    if (response.trusted) AttestationIssuerTrust.Trusted
+    else AttestationIssuerTrust.NotTrusted
 }
