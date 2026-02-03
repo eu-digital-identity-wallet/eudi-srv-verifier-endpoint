@@ -67,7 +67,7 @@ class CreateJarNimbus : CreateJar {
         requestObject: RequestObject,
         walletNonce: String?,
     ): Either<Throwable, SignedJWT> = Either.catch {
-        val (key, algorithm) = requestObject.verifierId.jarSigning
+        val (key, algorithm) = requestObject.verifierId.accessCertificate
         val header = JWSHeader.Builder(algorithm)
             .apply {
                 when (requestObject.verifierId) {

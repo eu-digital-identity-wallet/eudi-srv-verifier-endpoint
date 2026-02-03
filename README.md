@@ -110,13 +110,11 @@ variables of the service in [docker-compose.yaml](docker/docker-compose.yaml)
     environment:
       VERIFIER_PUBLICURL: "https://10.240.174.10"
       VERIFIER_RESPONSE_MODE: "DirectPost"
-      VERIFIER_JAR_SIGNING_KEY_KEYSTORE: file:///keystore.jks
+      VERIFIER_ACCESS_CERTIFICATE_KEYSTORE: file:///keystore.jks
 ```
 
-### Mount external keystore to be used with Authorization Request signing 
-When property `VERIFIER_JAR_SIGNING_KEY` is set to `LoadFromKeystore` the service can be configured (as described [here](#when-verifier_jar_signing_key-is-set-to-loadfromkeystore-the-following-environment-variables-must-also-be-configured))
-to read from a keystore the certificate used for signing authorization requests. 
-To provide an external keystore mount it to the path designated by the value of property `VERIFIER_JAR_SIGNING_KEY_KEYSTORE`.   
+### Mount external keystore to be used with Authorization Request signing  
+To provide an external keystore mount it to the path designated by the value of property `VERIFIER_ACCESS_CERTIFICATE_KEYSTORE`.   
 
 **Example:**
 ```yaml
@@ -128,7 +126,7 @@ To provide an external keystore mount it to the path designated by the value of 
     environment:
       VERIFIER_PUBLICURL: "https://10.240.174.10"
       VERIFIER_RESPONSE_MODE: "DirectPost"
-      VERIFIER_JAR_SIGNING_KEY_KEYSTORE: file:///certs/keystore.jks
+      VERIFIER_ACCESS_CERTIFICATE_KEYSTORE: file:///certs/keystore.jks
     volumes:
       - <PATH OF KEYSTORE IN HOST MACHINE>/keystore.jks:/certs/keystore.jks
       
@@ -547,32 +545,32 @@ Description: Client Id Prefix used by the Verifier Endpoint application
 Possible values: `pre-registered`, `x509_san_dns`, `x509_hash`  
 Default value: `pre-registered`
 
-Variable: `VERIFIER_JAR_SIGNING_ALGORITHM`  
+Variable: `VERIFIER_ACCESS_CERTIFICATE_SIGNING_ALGORITHM`  
 Description: Algorithm used to sign Authorization Request   
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms   
 Note: The configured signing algorithm must be compatible with the configured signing key  
 Default value: `ES256`
 
-Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE`  
-Description: URL of the Keystore from which to load the Key to use for JAR signing  
+Variable: `VERIFIER_ACCESS_CERTIFICATE_KEYSTORE`  
+Description: URL of the Keystore from which to load the Access Certificate to use for JAR signing  
 Examples: `classpath:keystore.jks`, `file:///keystore.jks`
 
-Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE_TYPE`  
-Description: Type of the Keystore from which to load the Key to use for JAR signing  
+Variable: `VERIFIER_ACCESS_CERTIFICATE_KEYSTORE_TYPE`  
+Description: Type of the Keystore from which to load the Access Certificate to use for JAR signing  
 Examples: `jks`, `pkcs12`
 
-Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE_PASSWORD`  
-Description: Password of the Keystore from which to load the Key to use for JAR signing
+Variable: `VERIFIER_ACCESS_CERTIFICATE_KEYSTORE_PASSWORD`  
+Description: Password of the Keystore from which to load the Access Certificate to use for JAR signing  
 
-Variable: `VERIFIER_JAR_SIGNING_KEY_ALIAS`  
-Description: Alias of the Key to use for JAR signing, in the configured Keystore  
+Variable: `VERIFIER_ACCESS_CERTIFICATE_ALIAS`  
+Description: Alias of the Access Certificate to use for JAR signing, in the configured Keystore  
 
 > [!CAUTION]  
-> **The JAR signing key must be associated with a Certificate chain. The leaf Certificate cannot be self-signed.**
+> **The Access Certificate must be associated with a Certificate chain. The Access Certificate cannot be self-signed.**
 
-Variable: `VERIFIER_JAR_SIGNING_KEY_PASSWORD`  
-Description: Password of the Key to use for JAR signing, in the configured Keystore
+Variable: `VERIFIER_ACCESS_CERTIFICATE_PASSWORD`  
+Description: Password of the Access Certificate to use for JAR signing, in the configured Keystore  
 
 Variable: `VERIFIER_PUBLICURL`  
 Description: Public URL of the Verifier Endpoint application  

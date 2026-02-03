@@ -230,7 +230,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
     }
 
     private fun Raise<RetrieveRequestObjectError>.ensureVerifierSupportsWalletJarSigningAlgorithms(metadata: WalletMetadataTO) {
-        val jarSigningAlgorithm = verifierConfig.verifierId.jarSigning.algorithm.name
+        val jarSigningAlgorithm = verifierConfig.verifierId.accessCertificate.algorithm.name
         if (null != metadata.requestObjectSigningAlgorithmsSupported) {
             ensure(jarSigningAlgorithm in metadata.requestObjectSigningAlgorithmsSupported) {
                 RetrieveRequestObjectError.UnsupportedWalletMetadata(
