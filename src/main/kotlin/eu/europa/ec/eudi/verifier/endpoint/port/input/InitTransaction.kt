@@ -583,7 +583,7 @@ private fun interface ProfileValidator {
             ensure(config.verifierId is VerifierId.X509Hash) {
                 ValidationError.HaipNotSupported.ClientIdPrefixX509HashMustBeUsed
             }
-            ensure(!config.verifierId.jarSigning.certificate.isSelfSigned()) {
+            ensure(!config.verifierId.accessCertificate.certificate.isSelfSigned()) {
                 ValidationError.HaipNotSupported.SelfSignedCertificateMustNotBeUsed
             }
 
