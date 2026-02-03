@@ -55,7 +55,7 @@ object TestContext {
     private val generateRequestId = GenerateRequestId.fixed(testRequestId)
     private val ecJwk: ECKey = run {
         loadKeyStore(location = "classpath:keystore.jks", type = "jks", password = "keystore")
-            .loadJWK(alias = "verifier", password = "verifier")
+            .loadJWK(alias = "access_certificate", password = "access_certificate")
             .toECKey()
     }
     private val responseEncryptionOption =
@@ -73,8 +73,8 @@ object TestContext {
             ),
         ),
     )
-    private val jarSigningConfig: SigningConfig = SigningConfig(ecJwk, JWSAlgorithm.ES512)
-    val verifierId = VerifierId.X509SanDns("verifier", jarSigningConfig)
+    private val accessCertificate: AccessCertificate = AccessCertificate(ecJwk, JWSAlgorithm.ES512)
+    val verifierId = VerifierId.X509SanDns("verifier", accessCertificate)
     val createJar: CreateJarNimbus = CreateJarNimbus()
     val signedRequestObjectVerifier: JWSVerifier = ECDSAVerifier(ecJwk)
     private val repo = PresentationInMemoryRepo()

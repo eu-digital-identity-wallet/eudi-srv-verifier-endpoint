@@ -355,7 +355,7 @@ internal class AppBeans : BeanRegistrarDsl({
         val walletApi = WalletApi(
             bean(),
             bean(),
-            bean<VerifierConfig>().verifierId.jarSigning.key,
+            bean<VerifierConfig>().verifierId.accessCertificate.key,
         )
         val verifierApi = VerifierApi(
             bean(),
@@ -455,30 +455,30 @@ private enum class EmbedOptionEnum {
     ByReference,
 }
 
-private fun jarSigningConfig(environment: Environment): SigningConfig {
-    val keystoreLocation = environment.getRequiredProperty("verifier.jar.signing.key.keystore")
+private fun accessCertificate(environment: Environment): AccessCertificate {
+    val keystoreLocation = environment.getRequiredProperty("verifier.access-certificate.keystore")
     log.info("Will try to load Keystore from: '{}'", keystoreLocation)
 
     val keystoreType =
-        environment.getProperty("verifier.jar.signing.key.keystore.type", KeyStore.getDefaultType())
+        environment.getProperty("verifier.access-certificate.keystore.type", KeyStore.getDefaultType())
     val keystorePassword =
-        environment.getProperty("verifier.jar.signing.key.keystore.password")?.takeIf { it.isNotBlank() }
+        environment.getProperty("verifier.access-certificate.keystore.password")?.takeIf { it.isNotBlank() }
     val keyStore = loadKeyStore(keystoreLocation, keystoreType, keystorePassword)
 
     val keyAlias =
-        environment.getRequiredProperty("verifier.jar.signing.key.alias")
+        environment.getRequiredProperty("verifier.access-certificate.alias")
     val keyPassword =
-        environment.getProperty("verifier.jar.signing.key.password")?.takeIf { it.isNotBlank() }
+        environment.getProperty("verifier.access-certificate.password")?.takeIf { it.isNotBlank() }
     val key = keyStore.loadJWK(keyAlias, keyPassword)
 
-    val algorithm = environment.getProperty("verifier.jar.signing.algorithm", "ES256").let(JWSAlgorithm::parse)
-    return SigningConfig(key, algorithm)
+    val algorithm = environment.getProperty("verifier.access-certificate.signing-algorithm", "ES256").let(JWSAlgorithm::parse)
+    return AccessCertificate(key, algorithm)
 }
 
 private fun verifierConfig(environment: Environment): VerifierConfig {
     val verifierId = run {
         val originalClientId = environment.getProperty("verifier.originalClientId", "verifier")
-        val jarSigning = jarSigningConfig(environment)
+        val accessCertificate = accessCertificate(environment)
 
         val factory =
             when (val clientIdPrefix = environment.getProperty("verifier.clientIdPrefix", "pre-registered")) {
@@ -487,7 +487,7 @@ private fun verifierConfig(environment: Environment): VerifierConfig {
                 "x509_hash" -> VerifierId::X509Hash
                 else -> error("Unknown clientIdPrefix '$clientIdPrefix'")
             }
-        factory(originalClientId, jarSigning)
+        factory(originalClientId, accessCertificate)
     }
 
     val publicUrl = environment.publicUrl()
