@@ -689,27 +689,52 @@ Default value: `3600`
 ### Configuring trust
 
 Verifier Endpoint verifies whether the Issuer of a Verifiable Credential is trusted or not using an external service. 
-Currently, only [eudi-srv-trust-validator](https://github.com/eu-digital-identity-wallet/eudi-srv-trust-validator) is supported.  
+Currently, only [eudi-srv-trust-validator](https://github.com/eu-digital-identity-wallet/eudi-srv-trust-validator) is supported.
 
-To configure the service, use the following environment variables:
+> [!CAUTION]
+> 
+> By default, Verifier Endpoint considers all Verifiable Credential Issuers trusted.  
+> To enable Issuer Verifiable Credential Issuers verification, configure the following environment variables.
 
 Variable: `VERIFIER_TRUST_SERVICEURL`  
-Description: The URL of the `/trust` endpoint of the service to use for trust verification. __If no URL is configured, all Verifiable Credentials Issuers are considered trusted.__        
+Description: The URL of the `/trust` endpoint of the service to use for trust verification.          
 Default value: none
 
-Variable: `VERIFIER_TRUST_ATTESTATIONS_XX_ATTESTATIONTYPE`  
-Description: The type (`vct` or `docType`) of the Attestation.  
+Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_PID_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to PIDs.  
+Default value: none  
 
-Variable: `VERIFIER_TRUST_ATTESTATIONS_XX_SERVICETYPE`  
-Description: The Service Type of the Issuer of the Attestation with type `VERIFIER_TRUST_ATTESTATIONS_XX_ATTESTATIONTYPE`.  
-Possible values: `pidprovider`, `eaaprovider`, `qeaaprovider`, `pubeaaprovider`, `walletprovider`   
+Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_PID_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to PIDs.  
+Default value: none  
 
-Variable: `VERIFIER_TRUST_DEFAULTSERVICETYPE`  
-Description: The Service Type of Issuers of Attestations with no explicit configuration.  
-Possible values: `pidprovider`, `eaaprovider`, `qeaaprovider`, `pubeaaprovider`, `walletprovider`  
-Default value: `eaaprovider`  
+Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_QEAA_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to QEAAs.  
+Default value: none  
 
-By default, the Attestations with type `urn:eudi:pid:1`, and `eu.europa.ec.eudi.pid.1`, use the Service Type `pidprovider`.
+Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_QEAA_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to QEAAs.  
+Default value: none  
+
+Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_PUBEAA_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to PubEAAs.  
+Default value: none
+
+Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_PUBEAA_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to PubEAAs.  
+Default value: none  
+
+Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_EAA_XXX_USECASE`  
+Description: EAA use-case.  
+Examples: `mDL`, `learningCredential`, etc...
+
+Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_EAA_XXX_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to EAAs.  
+Default value: none  
+
+Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_EAA_XXX_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to EAAs.  
+Default value: none
 
 ### Proxy configuration  
 

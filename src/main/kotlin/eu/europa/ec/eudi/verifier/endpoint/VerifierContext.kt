@@ -722,7 +722,7 @@ private fun AttestationClassificationsConfigurationProperties.toConsultationAtte
         pids = pid.attestationIdentifierPredicate,
         qEAAs = qeaa.attestationIdentifierPredicate,
         pubEAAs = pubeaa.attestationIdentifierPredicate,
-        eaAs = eaa.associate { it.useCase to it.attestationIdentifiers.attestationIdentifierPredicate },
+        eaAs = eaa.associate { it.useCase to it.attestationIdentifierPredicate },
     )
 
 data class AttestationIdentifiersConfigurationProperties(
@@ -731,16 +731,22 @@ data class AttestationIdentifiersConfigurationProperties(
 )
 
 private val AttestationIdentifiersConfigurationProperties.attestationIdentifierPredicate: AttestationIdentifierPredicate
-    get() {
-        val vcts = vcts.map { vct -> SDJwtVc(vct) }.let { identifiers -> AttestationIdentifierPredicate.any(identifiers.toSet()) }
-        val docTypes = docTypes.map {
-                docType ->
-            MDoc(docType)
-        }.let { identifiers -> AttestationIdentifierPredicate.any(identifiers.toSet()) }
-        return vcts or docTypes
-    }
+    get() = AttestationIdentifierPredicate.of(vcts = vcts, docTypes = docTypes)
+
+private fun AttestationIdentifierPredicate.Companion.of(
+    vcts: List<String>,
+    docTypes: List<String>,
+): AttestationIdentifierPredicate {
+    val vctsPredicate = AttestationIdentifierPredicate.any(vcts.map { SDJwtVc(it) }.toSet())
+    val docTypesPredicate = AttestationIdentifierPredicate.any(docTypes.map { MDoc(it) }.toSet())
+    return vctsPredicate or docTypesPredicate
+}
 
 data class EAAAttestationClassificationConfigurationProperties(
     val useCase: String,
-    val attestationIdentifiers: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
+    val vcts: List<String> = emptyList(),
+    val docTypes: List<String> = emptyList(),
 )
+
+private val EAAAttestationClassificationConfigurationProperties.attestationIdentifierPredicate: AttestationIdentifierPredicate
+    get() = AttestationIdentifierPredicate.of(vcts = vcts, docTypes = docTypes)
