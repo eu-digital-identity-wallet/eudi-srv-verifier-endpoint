@@ -17,9 +17,9 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.getOrElse
 import cbor.Cbor
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.Ignored
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.Ignored
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
+import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.ValidateAttestationIssuerTrust
 import id.walt.mdoc.dataelement.toDataElement
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.issuersigned.IssuerSigned

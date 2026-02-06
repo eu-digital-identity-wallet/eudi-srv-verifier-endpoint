@@ -23,6 +23,7 @@ kover = "0.9.4"
 zxing = "3.5.3"
 uri = "0.0.19"
 aedile = "2.1.2"
+consultation = "0.2.0-SNAPSHOT"
 
 [libraries]
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
@@ -31,7 +32,7 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 kotlinx-serialization-bom = { module = "org.jetbrains.kotlinx:kotlinx-serialization-bom", version.ref = "kotlinxSerialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 arrow-stack = { module = "io.arrow-kt:arrow-stack", version.ref = "arrow" }
-arrow-core  = { module = "io.arrow-kt:arrow-core" }
+arrow-core = { module = "io.arrow-kt:arrow-core" }
 arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines" }
 arrow-core-serialization = { module = "io.arrow-kt:arrow-core-serialization" }
 ktor-bom = { module = "io.ktor:ktor-bom", version.ref = "ktor" }
@@ -50,6 +51,7 @@ zxing = { module = "com.google.zxing:javase", version.ref = "zxing" }
 uri = { module = "com.eygraber:uri-kmp", version.ref = "uri" }
 aedile = { module = "com.sksamuel.aedile:aedile-core", version.ref = "aedile" }
 cose-java = { module = "com.augustcellars.cose:cose-java", version.ref = "cose" }
+consultation = { module = "eu.europa.ec.eudi:etsi-1196x2-consultation", version.ref = "consultation" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "springboot" }

@@ -27,8 +27,9 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Iso180135
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.AttestationIssuerTrust
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
+import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.AttestationIdentifier
+import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.AttestationIssuerTrust
+import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.ValidateAttestationIssuerTrust
 import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
 import id.walt.mdoc.dataelement.*
@@ -225,7 +226,7 @@ private suspend fun Raise<DocumentError.X5CNotTrusted>.ensureTrustedChain(
     issuerChain: NonEmptyList<X509Certificate>,
     validateAttestationIssuerTrust: ValidateAttestationIssuerTrust,
 ): Nel<X509Certificate> {
-    val trust = validateAttestationIssuerTrust(issuerChain, docType)
+    val trust = validateAttestationIssuerTrust(issuerChain, AttestationIdentifier.msoMdoc(docType))
     return when (trust) {
         AttestationIssuerTrust.Trusted -> issuerChain
         AttestationIssuerTrust.NotTrusted -> raise(DocumentError.X5CNotTrusted("Issuer X5C not trusted"))

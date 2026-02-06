@@ -13,10 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.port.out.x509
+package eu.europa.ec.eudi.verifier.endpoint.port.out.trust
 
 import arrow.core.NonEmptyList
 import java.security.cert.X509Certificate
+
+sealed interface AttestationIdentifier {
+    data class SdJwtVc(val vct: String) : AttestationIdentifier
+    data class MsoMdoc(val docType: String) : AttestationIdentifier
+
+    companion object {
+        fun sdJwtVc(vct: String) = SdJwtVc(vct)
+        fun msoMdoc(docType: String) = MsoMdoc(docType)
+    }
+}
 
 sealed interface AttestationIssuerTrust {
     data object Trusted : AttestationIssuerTrust
@@ -28,10 +38,10 @@ fun interface ValidateAttestationIssuerTrust {
     /**
      * Checks if the Issuer of an Attestation is trusted.
      *
-     * @param issuerChain The Certificate Chain of the Issuer. Usually the 'x5c' claim.
-     * @param attestationType The type of the Attestation. Either the `vct` or `docType`.
+     * @param chain The Certificate Chain of the Issuer. Usually the 'x5c' claim.
+     * @param identifier The identifier of the Attestation. Either the `vct` or `docType`.
      */
-    suspend operator fun invoke(issuerChain: NonEmptyList<X509Certificate>, attestationType: String): AttestationIssuerTrust
+    suspend operator fun invoke(chain: NonEmptyList<X509Certificate>, identifier: AttestationIdentifier): AttestationIssuerTrust
 
     companion object
 }

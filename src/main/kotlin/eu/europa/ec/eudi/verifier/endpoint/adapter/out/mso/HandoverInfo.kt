@@ -16,11 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import com.nimbusds.jose.jwk.JWK
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
-import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
-import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import java.net.URL
 
 sealed interface HandoverInfo {

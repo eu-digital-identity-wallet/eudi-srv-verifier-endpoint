@@ -32,9 +32,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.*
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.HandoverInfo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description

@@ -18,11 +18,11 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 import arrow.core.NonEmptyList
 import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.Ignored
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingIssuerChain
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.Ignored
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.usingIssuerChain
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.toJavaDate
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
+import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.ValidateAttestationIssuerTrust
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toInstant

@@ -25,15 +25,17 @@ import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import eu.europa.ec.eudi.sdjwt.*
 import eu.europa.ec.eudi.sdjwt.vc.*
-import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.*
+import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.IssuerKeyVerificationError
+import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.TypeMetadataVerificationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.AttestationIssuerTrust
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
+import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.AttestationIdentifier
+import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.AttestationIssuerTrust
+import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.ValidateAttestationIssuerTrust
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -127,7 +129,7 @@ internal class SdJwtVcValidator(
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> = run {
         val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
             val x5c = checkNotNull(chain.toNonEmptyListOrNull())
-            val trust = validateAttestationIssuerTrust(x5c, vct)
+            val trust = validateAttestationIssuerTrust(x5c, AttestationIdentifier.sdJwtVc(vct))
             when (trust) {
                 AttestationIssuerTrust.Trusted -> true
                 AttestationIssuerTrust.NotTrusted -> false

@@ -85,39 +85,30 @@ sealed interface X5CShouldBe {
     }
 }
 
-class X5CValidator(private val x5CShouldBe: X5CShouldBe) {
+class X5CValidator(private val x5CShouldBe: X5CShouldBe.Trusted) {
 
-    fun ensureTrusted(
-        chain: Nel<X509Certificate>,
-    ): Either<CertPathValidatorException, Nel<X509Certificate>> =
-        Either.catchOrThrow {
-            trustedOrThrow(chain)
-            chain
-        }
+    fun ensureTrusted(chain: Nel<X509Certificate>): Either<CertPathValidatorException, TrustAnchor> =
+        Either.catchOrThrow { trustedOrThrow(chain) }
 
     @Throws(CertPathValidatorException::class)
-    fun trustedOrThrow(chain: Nel<X509Certificate>) {
-        when (x5CShouldBe) {
-            X5CShouldBe.Ignored -> Unit // Do nothing
-            is X5CShouldBe.Trusted -> {
-                trustedOrThrow(chain, x5CShouldBe)
-            }
-        }
-    }
+    fun trustedOrThrow(chain: Nel<X509Certificate>): TrustAnchor = trustedOrThrow(chain, x5CShouldBe)
 }
 
 @Throws(CertPathValidatorException::class)
 private fun trustedOrThrow(
     chain: Nel<X509Certificate>,
     trusted: X5CShouldBe.Trusted,
-) {
+): TrustAnchor {
     val factory = CertificateFactory.getInstance("X.509")
     val certPath = factory.generateCertPath(chain)
 
     val pkixParameters = trusted.asPkixParameters()
     val validator = CertPathValidator.getInstance("PKIX")
 
-    validator.validate(certPath, pkixParameters)
+    val result = validator.validate(certPath, pkixParameters)
+    check(result is PKIXCertPathValidatorResult)
+
+    return result.trustAnchor
 }
 
 private fun X5CShouldBe.Trusted.asPkixParameters(): PKIXParameters {

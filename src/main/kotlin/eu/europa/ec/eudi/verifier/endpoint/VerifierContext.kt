@@ -22,6 +22,7 @@ import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.util.Base64
 import com.sksamuel.aedile.core.asCache
+import eu.europa.ec.eudi.etsi1196x2.consultation.*
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
@@ -30,6 +31,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPr
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.isChainTrustedForContextFUsingTrustValidatorService
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyEncryptedResponseWithNimbus
@@ -46,12 +48,15 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFrom
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadataFromUrl
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.*
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.Ignored
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.usingConsultation
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.usingIssuerChain
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificatesWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
+import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.ValidateAttestationIssuerTrust
 import io.ktor.client.*
 import io.ktor.client.engine.*
 import io.ktor.client.engine.apache.*
@@ -213,18 +218,18 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
             ValidateAttestationIssuerTrust.Ignored
         } else {
             log.info("Using Trust Validator Service '{}'", config.serviceUrl)
-            val contexts = config.contexts.map {
-                AttestationVerificationContext(
-                    context = it.context,
-                    useCase = it.useCase?.takeIf(String::isNotBlank),
-                    docTypes = it.docTypes?.toNonEmptySetOrNull(),
-                    vcts = it.vcts?.toNonEmptySetOrNull(),
-                )
-            }.toNonEmptyListOrNull()
-            ValidateAttestationIssuerTrust.usingTrustValidatorService(
-                bean(),
-                Url(config.serviceUrl),
-                checkNotNull(contexts) { "No verification contexts configured" },
+
+            val attestationClassifications = config.attestationClassifications.attestationClassifications
+            log.info("Attestation classifications: $attestationClassifications")
+
+            ValidateAttestationIssuerTrust.usingConsultation(
+                IsChainTrustedForAttestation(
+                    isChainTrustedForContextFUsingTrustValidatorService(
+                        bean(),
+                        Url(config.serviceUrl),
+                    ),
+                    attestationClassifications,
+                ),
             )
         }
     }
@@ -239,9 +244,9 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
         ValidateMsoMdocDeviceResponse(
             bean(),
             bean(),
-            deviceResponseValidatorFactory = { userProvidedRootCACertificates ->
+            deviceResponseValidatorFactory = { userProvided ->
                 val appDefault = bean<DeviceResponseValidator>()
-                userProvidedRootCACertificates?.let {
+                userProvided?.let {
                     deviceResponseValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
@@ -263,15 +268,15 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
     registerBean(lazyInit = true) {
         ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             config = bean(),
-            sdJwtVcValidatorFactory = { userProvidedRootCACertificates ->
+            sdJwtVcValidatorFactory = { userProvided ->
                 val appDefault = bean<SdJwtVcValidator>()
-                userProvidedRootCACertificates?.let {
+                userProvided?.let {
                     sdJwtVcValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
-            deviceResponseValidatorFactory = { userProvidedRootCACertificates ->
+            deviceResponseValidatorFactory = { userProvided ->
                 val appDefault = bean<DeviceResponseValidator>()
-                userProvidedRootCACertificates?.let {
+                userProvided?.let {
                     deviceResponseValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
@@ -704,12 +709,40 @@ data class TypeMetadataResolutionConfigurationProperties(
 
 data class TrustConfigurationProperties(
     val serviceUrl: String,
-    val contexts: List<AttestationVerificationContextConfigurationProperties>,
-) {
-    data class AttestationVerificationContextConfigurationProperties(
-        val context: VerificationContext,
-        val useCase: String? = null,
-        val docTypes: List<String>? = null,
-        val vcts: List<String>? = null,
+    val attestationClassifications: AttestationClassificationsConfigurationProperties = AttestationClassificationsConfigurationProperties(),
+)
+
+data class AttestationClassificationsConfigurationProperties(
+    val pid: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
+    val qeaa: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
+    val pubeaa: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
+    val eaa: List<EAAAttestationClassificationConfigurationProperties> = emptyList(),
+)
+
+private val AttestationClassificationsConfigurationProperties.attestationClassifications: AttestationClassifications
+    get() = AttestationClassifications(
+        pids = pid.attestationIdentifierPredicate,
+        qEAAs = qeaa.attestationIdentifierPredicate,
+        pubEAAs = pubeaa.attestationIdentifierPredicate,
+        eaAs = eaa.associate { it.useCase to it.attestationIdentifiers.attestationIdentifierPredicate },
     )
-}
+
+data class AttestationIdentifiersConfigurationProperties(
+    val vcts: List<String> = emptyList(),
+    val docTypes: List<String> = emptyList(),
+)
+
+private val AttestationIdentifiersConfigurationProperties.attestationIdentifierPredicate: AttestationIdentifierPredicate
+    get() {
+        val vcts = vcts.map { vct -> SDJwtVc(vct) }.let { identifiers -> AttestationIdentifierPredicate.any(identifiers.toSet()) }
+        val docTypes = docTypes.map {
+                docType ->
+            MDoc(docType)
+        }.let { identifiers -> AttestationIdentifierPredicate.any(identifiers.toSet()) }
+        return vcts or docTypes
+    }
+
+data class EAAAttestationClassificationConfigurationProperties(
+    val useCase: String,
+    val attestationIdentifiers: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
+)

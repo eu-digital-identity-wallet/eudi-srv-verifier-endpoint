@@ -23,6 +23,12 @@ repositories {
             releasesOnly()
         }
     }
+    maven {
+        url = uri("https://central.sonatype.com/repository/maven-snapshots")
+        mavenContent {
+            snapshotsOnly()
+        }
+    }
 }
 
 dependencies {
@@ -79,6 +85,8 @@ dependencies {
     implementation(libs.zxing)
     implementation(libs.uri)
     implementation(libs.aedile)
+
+    implementation(libs.consultation)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)
