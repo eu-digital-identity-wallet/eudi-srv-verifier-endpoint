@@ -19,8 +19,16 @@ import arrow.core.NonEmptyList
 import java.security.cert.X509Certificate
 
 sealed interface AttestationIdentifier {
-    data class SdJwtVc(val vct: String) : AttestationIdentifier
-    data class MsoMdoc(val docType: String) : AttestationIdentifier
+
+    @JvmInline
+    value class SdJwtVc(val vct: String) : AttestationIdentifier {
+        override fun toString(): String = vct
+    }
+
+    @JvmInline
+    value class MsoMdoc(val docType: String) : AttestationIdentifier {
+        override fun toString(): String = docType
+    }
 
     companion object {
         fun sdJwtVc(vct: String) = SdJwtVc(vct)
@@ -31,6 +39,7 @@ sealed interface AttestationIdentifier {
 sealed interface AttestationIssuerTrust {
     data object Trusted : AttestationIssuerTrust
     data object NotTrusted : AttestationIssuerTrust
+    class Unverified(val error: Throwable) : AttestationIssuerTrust
 }
 
 fun interface ValidateAttestationIssuerTrust {

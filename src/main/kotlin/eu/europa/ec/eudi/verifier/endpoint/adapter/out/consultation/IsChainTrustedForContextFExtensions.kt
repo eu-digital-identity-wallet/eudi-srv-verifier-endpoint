@@ -18,7 +18,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation
 
 import arrow.core.NonEmptyList
-import arrow.core.raise.catch
 import arrow.core.serialization.NonEmptyListSerializer
 import eu.europa.ec.eudi.etsi1196x2.consultation.CertificationChainValidation
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForContextF
@@ -62,23 +61,21 @@ fun isChainTrustedForContextFUsingTrustValidatorService(
     service: Url,
 ): IsChainTrustedForContextF<NonEmptyList<X509Certificate>, TrustAnchor> =
     IsChainTrustedForContextF { chain, context ->
-        catch({
-            val response = httpClient.post {
-                expectSuccess = true
+        val response = httpClient.post {
+            expectSuccess = true
 
-                url(service)
-                contentType(ContentType.Application.Json)
-                setBody(TrustQueryTO(chain, VerificationContextTO.from(context), context.useCase))
+            url(service)
+            contentType(ContentType.Application.Json)
+            setBody(TrustQueryTO(chain, VerificationContextTO.from(context), context.useCase))
 
-                accept(ContentType.Application.Json)
-            }.body<TrustResponseTO>()
+            accept(ContentType.Application.Json)
+        }.body<TrustResponseTO>()
 
-            val trustAnchor = response.trustAnchor?.let { TrustAnchor(it, null) }
-            if (response.trusted) CertificationChainValidation.Trusted(
-                checkNotNull(trustAnchor) { "trustAnchor cannot be null when chain is trusted" },
-            )
-            else CertificationChainValidation.NotTrusted(IllegalArgumentException("chain is not trusted "))
-        }) { CertificationChainValidation.NotTrusted(it) }
+        val trustAnchor = response.trustAnchor?.let { TrustAnchor(it, null) }
+        if (response.trusted) CertificationChainValidation.Trusted(
+            checkNotNull(trustAnchor) { "trustAnchor cannot be null when chain is trusted" },
+        )
+        else CertificationChainValidation.NotTrusted(IllegalArgumentException("chain is not trusted "))
     }
 
 @Serializable

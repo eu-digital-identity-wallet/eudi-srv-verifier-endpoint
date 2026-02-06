@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust
 
 import arrow.core.NonEmptyList
+import arrow.core.raise.catch
 import eu.europa.ec.eudi.etsi1196x2.consultation.CertificationChainValidation
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
 import eu.europa.ec.eudi.etsi1196x2.consultation.MDoc
@@ -49,13 +50,14 @@ fun ValidateAttestationIssuerTrust.Companion.usingConsultation(
     isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
 ): ValidateAttestationIssuerTrust =
     ValidateAttestationIssuerTrust { chain, identifier ->
-        val result = isChainTrustedForAttestation.issuance(chain, identifier.toConsultationAttestationIdentifier())
-        when (result) {
-            is CertificationChainValidation.Trusted -> AttestationIssuerTrust.Trusted
-            is CertificationChainValidation.NotTrusted,
-            null,
-            -> AttestationIssuerTrust.NotTrusted
-        }
+        catch({
+            val result = isChainTrustedForAttestation.issuance(chain, identifier.toConsultationAttestationIdentifier())
+            when (result) {
+                is CertificationChainValidation.Trusted -> AttestationIssuerTrust.Trusted
+                is CertificationChainValidation.NotTrusted -> AttestationIssuerTrust.NotTrusted
+                null -> AttestationIssuerTrust.Unverified(IllegalStateException("Missing attestation classification for $identifier"))
+            }
+        }) { AttestationIssuerTrust.Unverified(it) }
     }
 
 private fun AttestationIdentifier.toConsultationAttestationIdentifier(): ConsultationAttestationIdentifier =

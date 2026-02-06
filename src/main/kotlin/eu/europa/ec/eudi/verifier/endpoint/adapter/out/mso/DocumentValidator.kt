@@ -22,6 +22,7 @@ import arrow.core.raise.*
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
 import com.upokecenter.cbor.CBORObject
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Iso180135
@@ -225,13 +226,12 @@ private suspend fun Raise<DocumentError.X5CNotTrusted>.ensureTrustedChain(
     docType: String,
     issuerChain: NonEmptyList<X509Certificate>,
     validateAttestationIssuerTrust: ValidateAttestationIssuerTrust,
-): Nel<X509Certificate> {
-    val trust = validateAttestationIssuerTrust(issuerChain, AttestationIdentifier.msoMdoc(docType))
-    return when (trust) {
+): Nel<X509Certificate> =
+    when (val trust = validateAttestationIssuerTrust(issuerChain, AttestationIdentifier.msoMdoc(docType))) {
         AttestationIssuerTrust.Trusted -> issuerChain
-        AttestationIssuerTrust.NotTrusted -> raise(DocumentError.X5CNotTrusted("Issuer X5C not trusted"))
+        AttestationIssuerTrust.NotTrusted -> raise(X5CNotTrusted("Issuer X5C not trusted"))
+        is AttestationIssuerTrust.Unverified -> throw trust.error
     }
-}
 
 private suspend fun Raise<DocumentError.DocumentHasBeenRevoked>.ensureNotRevoked(
     document: MDoc,
