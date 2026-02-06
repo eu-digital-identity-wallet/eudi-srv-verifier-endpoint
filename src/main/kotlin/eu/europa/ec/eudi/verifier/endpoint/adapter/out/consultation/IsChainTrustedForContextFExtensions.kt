@@ -22,8 +22,6 @@ import arrow.core.serialization.NonEmptyListSerializer
 import eu.europa.ec.eudi.etsi1196x2.consultation.CertificationChainValidation
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForContextF
 import eu.europa.ec.eudi.etsi1196x2.consultation.VerificationContext
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
@@ -43,18 +41,6 @@ import java.security.cert.CertificateFactory
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import kotlin.io.encoding.Base64
-
-fun isChainTrustedForContextFUsingIssuerChain(
-    x5CShouldBe: X5CShouldBe.Trusted,
-): IsChainTrustedForContextF<NonEmptyList<X509Certificate>, TrustAnchor> =
-    IsChainTrustedForContextF { chain, _ ->
-        val validator = X5CValidator(x5CShouldBe)
-        validator.ensureTrusted(chain)
-            .fold(
-                ifLeft = { error -> CertificationChainValidation.NotTrusted(error) },
-                ifRight = { trustAnchor -> CertificationChainValidation.Trusted(trustAnchor) },
-            )
-    }
 
 fun isChainTrustedForContextFUsingTrustValidatorService(
     httpClient: HttpClient,
