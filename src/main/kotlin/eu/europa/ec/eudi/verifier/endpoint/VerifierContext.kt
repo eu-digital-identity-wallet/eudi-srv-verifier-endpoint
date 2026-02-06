@@ -218,9 +218,7 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
             ValidateAttestationIssuerTrust.Ignored
         } else {
             log.info("Using Trust Validator Service '{}'", config.serviceUrl)
-
-            val attestationClassifications = config.attestationClassifications.attestationClassifications
-            log.info("Attestation classifications: $attestationClassifications")
+            log.info("Attestation classifications: ${config.attestationClassifications}")
 
             ValidateAttestationIssuerTrust.usingConsultation(
                 IsChainTrustedForAttestation(
@@ -228,7 +226,7 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
                         bean(),
                         Url(config.serviceUrl),
                     ),
-                    attestationClassifications,
+                    config.attestationClassifications.toConsultationAttestationClassifications(),
                 ),
             )
         }
@@ -719,8 +717,8 @@ data class AttestationClassificationsConfigurationProperties(
     val eaa: List<EAAAttestationClassificationConfigurationProperties> = emptyList(),
 )
 
-private val AttestationClassificationsConfigurationProperties.attestationClassifications: AttestationClassifications
-    get() = AttestationClassifications(
+private fun AttestationClassificationsConfigurationProperties.toConsultationAttestationClassifications(): AttestationClassifications =
+    AttestationClassifications(
         pids = pid.attestationIdentifierPredicate,
         qEAAs = qeaa.attestationIdentifierPredicate,
         pubEAAs = pubeaa.attestationIdentifierPredicate,
