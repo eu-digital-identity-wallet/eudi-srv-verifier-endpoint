@@ -17,9 +17,8 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.NonEmptyList
 import arrow.core.toNonEmptyListOrNull
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.Ignored
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.usingUserProvidedIssuerChain
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.usingTrustAnchors
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.toJavaDate
 import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.ValidateAttestationIssuerTrust
@@ -61,7 +60,10 @@ object Data {
             .inputStream
             .use { inputStream ->
                 val keyStore = loadKeystore(inputStream)
-                val certs = X5CShouldBe.trustedCAs(keyStore).toNonEmptyListOrNull()
+                val certs = run {
+                    val aliases = keyStore.aliases().toList()
+                    aliases.filter { keyStore.isCertificateEntry(it) }.mapNotNull { keyStore.getCertificate(it) as? X509Certificate }
+                }.toNonEmptyListOrNull()
                 requireNotNull(certs) { "Unable to load X509 Certificates from 'classpath:trusted-issuers.jks'" }
             }
     }
@@ -106,12 +108,10 @@ class DeviceResponseValidatorTest {
             val docV = DocumentValidator(
                 clock = clock,
                 validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
-                validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.usingUserProvidedIssuerChain(
-                    X5CShouldBe.Trusted(Data.caCerts) {
-                        isRevocationEnabled = false
-                        date = clock.now().toJavaDate()
-                    },
-                ),
+                validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.usingTrustAnchors(Data.caCerts) {
+                    isRevocationEnabled = false
+                    date = clock.now().toJavaDate()
+                },
                 statusListTokenValidator = null,
             )
             val vpValidator = DeviceResponseValidator(docV)
@@ -159,15 +159,14 @@ class DeviceResponseValidatorTest {
 }
 
 private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, clock: Clock): DeviceResponseValidator {
-    val x5CShouldBe = X5CShouldBe.Trusted(caCerts) {
-        isRevocationEnabled = false
-        date = clock.now().toJavaDate()
-    }
     val documentValidator = DocumentValidator(
         clock,
         ValidityInfoShouldBe.NotExpired,
         IssuerSignedItemsShouldBe.Verified,
-        validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.usingUserProvidedIssuerChain(x5CShouldBe),
+        validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.usingTrustAnchors(caCerts) {
+            isRevocationEnabled = false
+            date = clock.now().toJavaDate()
+        },
         statusListTokenValidator = null,
     )
     return DeviceResponseValidator(documentValidator)

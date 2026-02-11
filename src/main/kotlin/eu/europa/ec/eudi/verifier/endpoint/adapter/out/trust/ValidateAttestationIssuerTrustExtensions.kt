@@ -21,30 +21,42 @@ import eu.europa.ec.eudi.etsi1196x2.consultation.CertificationChainValidation
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
 import eu.europa.ec.eudi.etsi1196x2.consultation.MDoc
 import eu.europa.ec.eudi.etsi1196x2.consultation.SDJwtVc
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
+import eu.europa.ec.eudi.etsi1196x2.consultation.ValidateCertificateChainJvm
 import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.AttestationIdentifier
 import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.AttestationIssuerTrust
 import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.ValidateAttestationIssuerTrust
+import java.security.cert.PKIXParameters
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationIdentifier as ConsultationAttestationIdentifier
+import eu.europa.ec.eudi.etsi1196x2.consultation.NonEmptyList as ConsultationNonEmptyList
 
 val ValidateAttestationIssuerTrust.Companion.Ignored: ValidateAttestationIssuerTrust
     get() = ValidateAttestationIssuerTrust { _, _ -> AttestationIssuerTrust.Trusted }
 
-fun ValidateAttestationIssuerTrust.Companion.usingUserProvidedIssuerChain(
-    x5cShouldBe: X5CShouldBe.Trusted,
-): ValidateAttestationIssuerTrust {
-    val validator: X5CValidator by lazy { X5CValidator(x5cShouldBe) }
-    return ValidateAttestationIssuerTrust { chain, _ ->
-        validator.ensureTrusted(chain)
-            .fold(
-                ifLeft = { AttestationIssuerTrust.NotTrusted },
-                ifRight = { AttestationIssuerTrust.Trusted },
-            )
+fun ValidateAttestationIssuerTrust.Companion.usingTrustAnchors(
+    trustAnchors: NonEmptyList<X509Certificate>,
+    customization: PKIXParameters.() -> Unit = { isRevocationEnabled = false },
+): ValidateAttestationIssuerTrust =
+    ValidateAttestationIssuerTrust { chain, _ ->
+        val validate = ValidateCertificateChainJvm(customization = customization)
+        catch({
+            val result = validate(chain = chain, trustAnchors = trustAnchors)
+            when (result) {
+                is CertificationChainValidation.Trusted -> AttestationIssuerTrust.Trusted
+                is CertificationChainValidation.NotTrusted -> AttestationIssuerTrust.NotTrusted
+            }
+        }) { AttestationIssuerTrust.Unverified(it) }
     }
-}
+
+private suspend operator fun ValidateCertificateChainJvm.invoke(
+    chain: NonEmptyList<X509Certificate>,
+    trustAnchors: NonEmptyList<X509Certificate>,
+): CertificationChainValidation<TrustAnchor> =
+    invoke(
+        chain,
+        ConsultationNonEmptyList(trustAnchors.map { TrustAnchor(it, null) }),
+    )
 
 fun ValidateAttestationIssuerTrust.Companion.usingTrustValidatorService(
     isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
