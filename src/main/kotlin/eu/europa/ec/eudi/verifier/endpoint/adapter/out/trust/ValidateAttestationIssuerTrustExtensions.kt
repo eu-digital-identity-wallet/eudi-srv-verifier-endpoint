@@ -33,7 +33,7 @@ import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationIdentifier as Consul
 val ValidateAttestationIssuerTrust.Companion.Ignored: ValidateAttestationIssuerTrust
     get() = ValidateAttestationIssuerTrust { _, _ -> AttestationIssuerTrust.Trusted }
 
-fun ValidateAttestationIssuerTrust.Companion.usingIssuerChain(
+fun ValidateAttestationIssuerTrust.Companion.usingUserProvidedIssuerChain(
     x5cShouldBe: X5CShouldBe.Trusted,
 ): ValidateAttestationIssuerTrust {
     val validator: X5CValidator by lazy { X5CValidator(x5cShouldBe) }
@@ -46,7 +46,7 @@ fun ValidateAttestationIssuerTrust.Companion.usingIssuerChain(
     }
 }
 
-fun ValidateAttestationIssuerTrust.Companion.usingConsultation(
+fun ValidateAttestationIssuerTrust.Companion.usingTrustValidatorService(
     isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
 ): ValidateAttestationIssuerTrust =
     ValidateAttestationIssuerTrust { chain, identifier ->
