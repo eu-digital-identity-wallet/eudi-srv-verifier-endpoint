@@ -22,7 +22,12 @@ import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.util.Base64
 import com.sksamuel.aedile.core.asCache
-import eu.europa.ec.eudi.etsi1196x2.consultation.*
+import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications
+import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationIdentifierPredicate
+import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
+import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForContextF
+import eu.europa.ec.eudi.etsi1196x2.consultation.MDoc
+import eu.europa.ec.eudi.etsi1196x2.consultation.SDJwtVc
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
@@ -31,7 +36,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPr
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.isChainTrustedForContextFUsingTrustValidatorService
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.usingTrustValidatorService
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyEncryptedResponseWithNimbus
@@ -222,10 +227,7 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
 
             ValidateAttestationIssuerTrust.usingConsultation(
                 IsChainTrustedForAttestation(
-                    isChainTrustedForContextFUsingTrustValidatorService(
-                        bean(),
-                        Url(config.serviceUrl),
-                    ),
+                    IsChainTrustedForContextF.usingTrustValidatorService(bean(), Url(config.serviceUrl)),
                     config.attestationClassifications.toConsultationAttestationClassifications(),
                 ),
             )

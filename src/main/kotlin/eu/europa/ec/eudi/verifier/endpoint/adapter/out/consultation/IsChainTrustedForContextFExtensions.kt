@@ -42,10 +42,10 @@ import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import kotlin.io.encoding.Base64
 
-fun isChainTrustedForContextFUsingTrustValidatorService(
+fun IsChainTrustedForContextF.Companion.usingTrustValidatorService(
     httpClient: HttpClient,
     service: Url,
-): IsChainTrustedForContextF<NonEmptyList<X509Certificate>, TrustAnchor> =
+): IsChainTrustedForContextF<NonEmptyList<X509Certificate>, VerificationContext, TrustAnchor> =
     IsChainTrustedForContextF { chain, context ->
         val response = httpClient.post {
             expectSuccess = true
