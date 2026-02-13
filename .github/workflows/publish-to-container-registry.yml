@@ -59,7 +59,7 @@ jobs:
       - name: Debug
         run: echo ${{ steps.meta.outputs }}
       - name: Build and publish with Gradle Wrapper
-        run: ./gradlew build bootBuildImage --imageName=${{ fromJSON(steps.meta.outputs.json).tags[0] }} --publishImage --full-stacktrace
+        run: ./gradlew build bootBuildImage --imageName=${{ fromJSON(steps.meta.outputs.json).tags[0] }} --imagePlatform linux/amd64 --publishImage --full-stacktrace
         if: github.event_name != 'pull_request'
         env:
           BP_OCI_CREATED: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
