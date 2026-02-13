@@ -696,43 +696,57 @@ Currently, only [eudi-srv-trust-validator](https://github.com/eu-digital-identit
 > By default, Verifier Endpoint considers all Verifiable Credential Issuers trusted.  
 > To enable Issuer Verifiable Credential Issuers verification, configure the following environment variables.
 
-Variable: `VERIFIER_TRUST_SERVICEURL`  
+Variable: `VERIFIER_TRUSTVALIDATOR_SERVICEURL`  
 Description: The URL of the `/trust` endpoint of the service to use for trust verification.          
 Default value: none
 
-Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_PID_VCTS`  
+### Attestation Classifications
+
+> [!IMPORTANT]
+>
+> Verifier Endpoint requires each Verifiable Credential be classified as:
+> * PID
+> * QEAA
+> * PubEAA
+> * EAA
+> 
+> Use the following configuration properties to configuration the classifications.
+> 
+> This information is used when checking whether the issuer of the Verifiable Credential is trusted or not.
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PID_VCTS`  
 Description: Comma separated list of SD-JWT VC VCTs that corresponds to PIDs.  
 Default value: none  
 
-Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_PID_DOCTYPES`  
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PID_DOCTYPES`  
 Description: Comma separated list of MSO MDoc docTypes that corresponds to PIDs.  
 Default value: none  
 
-Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_QEAA_VCTS`  
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_QEAA_VCTS`  
 Description: Comma separated list of SD-JWT VC VCTs that corresponds to QEAAs.  
 Default value: none  
 
-Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_QEAA_DOCTYPES`  
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_QEAA_DOCTYPES`  
 Description: Comma separated list of MSO MDoc docTypes that corresponds to QEAAs.  
 Default value: none  
 
-Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_PUBEAA_VCTS`  
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PUBEAA_VCTS`  
 Description: Comma separated list of SD-JWT VC VCTs that corresponds to PubEAAs.  
 Default value: none
 
-Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_PUBEAA_DOCTYPES`  
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PUBEAA_DOCTYPES`  
 Description: Comma separated list of MSO MDoc docTypes that corresponds to PubEAAs.  
 Default value: none  
 
-Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_EAA_XXX_USECASE`  
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_USECASE`  
 Description: EAA use-case.  
 Examples: `mDL`, `learningCredential`, etc...
 
-Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_EAA_XXX_VCTS`  
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_VCTS`  
 Description: Comma separated list of SD-JWT VC VCTs that corresponds to EAAs.  
 Default value: none  
 
-Variable: `VERIFIER_TRUST_ATTESTATIONCLASSIFICATIONS_EAA_XXX_DOCTYPES`  
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_DOCTYPES`  
 Description: Comma separated list of MSO MDoc docTypes that corresponds to EAAs.  
 Default value: none
 

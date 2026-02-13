@@ -21,6 +21,7 @@ import arrow.core.NonEmptyList
 import arrow.core.serialization.NonEmptyListSerializer
 import eu.europa.ec.eudi.etsi1196x2.consultation.CertificationChainValidation
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForContextF
+import eu.europa.ec.eudi.etsi1196x2.consultation.ValidateCertificateChainJvm
 import eu.europa.ec.eudi.etsi1196x2.consultation.VerificationContext
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -38,9 +39,11 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.io.ByteArrayInputStream
 import java.security.cert.CertificateFactory
+import java.security.cert.PKIXParameters
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import kotlin.io.encoding.Base64
+import eu.europa.ec.eudi.etsi1196x2.consultation.NonEmptyList as ConsultationNonEmptyList
 
 fun IsChainTrustedForContextF.Companion.usingTrustValidatorService(
     httpClient: HttpClient,
@@ -159,4 +162,21 @@ private val VerificationContext.useCase: String?
         is VerificationContext.EAAStatus -> useCase
         is VerificationContext.Custom -> useCase
         else -> null
+    }
+
+val IsChainTrustedForContextF.Companion.Ignored: IsChainTrustedForContextF<NonEmptyList<X509Certificate>, VerificationContext, TrustAnchor>
+    get() = IsChainTrustedForContextF { chain, _ ->
+        CertificationChainValidation.Trusted(TrustAnchor(chain.last(), null))
+    }
+
+fun IsChainTrustedForContextF.Companion.usingTrustAnchors(
+    trustAnchors: NonEmptyList<X509Certificate>,
+    customization: PKIXParameters.() -> Unit = { isRevocationEnabled = false },
+): IsChainTrustedForContextF<NonEmptyList<X509Certificate>, VerificationContext, TrustAnchor> =
+    IsChainTrustedForContextF { chain, _ ->
+        ValidateCertificateChainJvm(customization = customization)
+            .invoke(
+                chain = chain,
+                trustAnchors = ConsultationNonEmptyList(trustAnchors.map { TrustAnchor(it, null) }),
+            )
     }

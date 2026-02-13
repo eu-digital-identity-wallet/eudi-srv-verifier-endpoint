@@ -323,6 +323,8 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         "verifier.clientMetadata.responseEncryption.method=A128GCM",
         "verifier.jwk.embed=ByValue",
         "verifier.validation.sdJwtVc.statusCheck.enabled=false",
+        "verifier.attestation-classifications.eaa[0].use-case=mDL",
+        "verifier.attestation-classifications.eaa[0].doc-types=org.iso.18013.5.1.mDL",
     ],
 )
 internal class DeviceResponseValidationTest {

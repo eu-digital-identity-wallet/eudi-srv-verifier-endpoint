@@ -17,11 +17,14 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.NonEmptyList
 import arrow.core.toNonEmptyListOrNull
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.Ignored
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.usingTrustAnchors
+import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications
+import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationIdentifierPredicate
+import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
+import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForContextF
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.Ignored
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.usingTrustAnchors
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.toJavaDate
-import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.ValidateAttestationIssuerTrust
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toInstant
@@ -108,10 +111,18 @@ class DeviceResponseValidatorTest {
             val docV = DocumentValidator(
                 clock = clock,
                 validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
-                validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.usingTrustAnchors(Data.caCerts) {
-                    isRevocationEnabled = false
-                    date = clock.now().toJavaDate()
-                },
+                isChainTrustedForAttestation = IsChainTrustedForAttestation(
+                    IsChainTrustedForContextF.usingTrustAnchors(Data.caCerts) {
+                        isRevocationEnabled = false
+                        date = clock.now().toJavaDate()
+                    },
+                    AttestationClassifications(
+                        pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
+                        eaAs = mapOf(
+                            "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
+                        ),
+                    ),
+                ),
                 statusListTokenValidator = null,
             )
             val vpValidator = DeviceResponseValidator(docV)
@@ -145,7 +156,15 @@ class DeviceResponseValidatorTest {
         val validDocuments = run {
             val docV =
                 DocumentValidator(
-                    validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.Ignored,
+                    isChainTrustedForAttestation = IsChainTrustedForAttestation(
+                        IsChainTrustedForContextF.Ignored,
+                        AttestationClassifications(
+                            pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
+                            eaAs = mapOf(
+                                "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
+                            ),
+                        ),
+                    ),
                     clock = clock,
                     statusListTokenValidator = null,
                 )
@@ -163,10 +182,18 @@ private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, cloc
         clock,
         ValidityInfoShouldBe.NotExpired,
         IssuerSignedItemsShouldBe.Verified,
-        validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.usingTrustAnchors(caCerts) {
-            isRevocationEnabled = false
-            date = clock.now().toJavaDate()
-        },
+        isChainTrustedForAttestation = IsChainTrustedForAttestation(
+            IsChainTrustedForContextF.usingTrustAnchors(Data.caCerts) {
+                isRevocationEnabled = false
+                date = clock.now().toJavaDate()
+            },
+            AttestationClassifications(
+                pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
+                eaAs = mapOf(
+                    "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
+                ),
+            ),
+        ),
         statusListTokenValidator = null,
     )
     return DeviceResponseValidator(documentValidator)

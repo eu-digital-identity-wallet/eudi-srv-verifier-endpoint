@@ -17,9 +17,12 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.getOrElse
 import cbor.Cbor
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.trust.Ignored
+import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications
+import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationIdentifierPredicate
+import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
+import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForContextF
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.Ignored
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
-import eu.europa.ec.eudi.verifier.endpoint.port.out.trust.ValidateAttestationIssuerTrust
 import id.walt.mdoc.dataelement.toDataElement
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.issuersigned.IssuerSigned
@@ -65,7 +68,15 @@ class ExamplesTest {
 
         val documentValidator = DocumentValidator(
             clock = Clock.fixed(issuedAt.toInstant().toKotlinInstant(), issuedAt.zone.toKotlinTimeZone()),
-            validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.Ignored,
+            isChainTrustedForAttestation = IsChainTrustedForAttestation(
+                IsChainTrustedForContextF.Ignored,
+                AttestationClassifications(
+                    pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
+                    eaAs = mapOf(
+                        "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
+                    ),
+                ),
+            ),
             statusListTokenValidator = null,
         )
         val document = MDoc.fromCBORHex(waltIdExample)
@@ -85,7 +96,15 @@ class ExamplesTest {
         val document = issuerSigned().asMDocWithDocType("org.iso.18013.5.1.mDL")
         val documentValidator = DocumentValidator(
             clock = Clock.fixed(issuedAt.toInstant().toKotlinInstant(), issuedAt.zone.toKotlinTimeZone()),
-            validateAttestationIssuerTrust = ValidateAttestationIssuerTrust.Ignored,
+            isChainTrustedForAttestation = IsChainTrustedForAttestation(
+                IsChainTrustedForContextF.Ignored,
+                AttestationClassifications(
+                    pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
+                    eaAs = mapOf(
+                        "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
+                    ),
+                ),
+            ),
             statusListTokenValidator = null,
         )
         documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
