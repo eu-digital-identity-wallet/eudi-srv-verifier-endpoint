@@ -55,7 +55,7 @@ fun IsChainTrustedForContextF.Companion.usingTrustValidatorService(
 
             url(service)
             contentType(ContentType.Application.Json)
-            setBody(TrustQueryTO(chain, VerificationContextTO.from(context), context.useCase))
+            setBody(TrustQueryTO(chain, VerificationContextTO.from(context), context.useCaseOrNull))
 
             accept(ContentType.Application.Json)
         }.body<TrustResponseTO>()
@@ -156,7 +156,7 @@ private data class TrustResponseTO(
     }
 }
 
-private val VerificationContext.useCase: String?
+private val VerificationContext.useCaseOrNull: String?
     get() = when (this) {
         is VerificationContext.EAA -> useCase
         is VerificationContext.EAAStatus -> useCase
