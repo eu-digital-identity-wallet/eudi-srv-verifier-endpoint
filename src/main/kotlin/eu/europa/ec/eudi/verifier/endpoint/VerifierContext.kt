@@ -16,31 +16,31 @@
 package eu.europa.ec.eudi.verifier.endpoint
 
 import arrow.core.*
+import arrow.core.NonEmptyList
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.util.Base64
 import com.sksamuel.aedile.core.asCache
-import com.sksamuel.aedile.core.expireAfterWrite
+import eu.europa.ec.eudi.etsi1196x2.consultation.*
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshTrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.Ignored
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.usingTrustAnchors
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.usingTrustValidatorService
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyEncryptedResponseWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.keystore.loadJWK
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.keystore.loadKeyStore
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.lotl.FetchLOTLCertificatesDSS
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShouldBe
@@ -51,7 +51,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFrom
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadataFromUrl
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificatesWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -73,20 +73,25 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.BeanRegistrarDsl
 import org.springframework.beans.factory.BeanRegistrarDsl.SupplierContextDsl
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.bind.Name
 import org.springframework.boot.http.codec.CodecCustomizer
 import org.springframework.core.env.Environment
 import org.springframework.core.env.getProperty
-import org.springframework.core.io.DefaultResourceLoader
 import org.springframework.http.codec.json.KotlinSerializationJsonDecoder
 import org.springframework.http.codec.json.KotlinSerializationJsonEncoder
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.config.web.server.invoke
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
-import java.net.URI
+import java.net.URL
 import java.security.KeyStore
+import java.security.cert.TrustAnchor
+import java.security.cert.X509Certificate
+import kotlin.collections.toSet
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toJavaDuration
 
 private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 
@@ -149,7 +154,7 @@ internal class AppBeans : BeanRegistrarDsl({
     }
 
     // X509
-    registerBean { ParsePemEncodedX509CertificateChainWithNimbus }
+    registerBean { ParsePemEncodedX509CertificatesWithNimbus }
 
     //
     // Use cases
@@ -208,87 +213,93 @@ internal class AppBeans : BeanRegistrarDsl({
         }
     }
 
-    // Default DeviceResponseValidator
-    registerBean { TrustSources(revocationEnabled = false) }
-    registerBean<DeviceResponseValidator> {
-        val trustSources = bean<TrustSources>()
-        deviceResponseValidator(trustSources::invoke)
+    // Default IsChainTrustedForContextF
+    registerBean {
+        val config = bean<VerifierEndpointConfigurationProperties>()
+        log.info("Using Attestation Classifications: ${config.attestationClassifications}")
+
+        val trustValidatorConfig = config.trustValidator
+        if (null == trustValidatorConfig) {
+            log.warn("Trust Validator Service has not been configured. Trusting all Attestation Issuers.")
+            IsChainTrustedForContextF.Ignored
+        } else {
+            log.info("Using Trust Validator Service '{}'", trustValidatorConfig.serviceUrl)
+            IsChainTrustedForContextF.usingTrustValidatorService(bean(), Url(trustValidatorConfig.serviceUrl.toExternalForm()))
+        }
     }
+
+    // Default DeviceResponseValidator
+    registerBean(lazyInit = true) { deviceResponseValidator(bean()) }
 
     // Default SdJwtVcValidator
-    registerBean<SdJwtVcValidator> {
-        val trustSources = bean<TrustSources>()
-        sdJwtVcValidator(trustSources::invoke)
-    }
+    registerBean(lazyInit = true) { sdJwtVcValidator(bean()) }
 
-    registerBean {
+    registerBean(lazyInit = true) {
         ValidateMsoMdocDeviceResponse(
             bean(),
             bean(),
             deviceResponseValidatorFactory = { userProvided ->
                 val appDefault = bean<DeviceResponseValidator>()
-                userProvided?.let { deviceResponseValidator { userProvided } } ?: appDefault
+                userProvided?.let {
+                    deviceResponseValidator(IsChainTrustedForContextF.usingTrustAnchors(it))
+                } ?: appDefault
             },
         )
     }
-    registerBean {
+    registerBean(lazyInit = true) {
         ValidateSdJwtVc(
             sdJwtVcValidatorFactory = { userProvided ->
                 val appDefault = bean<SdJwtVcValidator>()
-                userProvided?.let { sdJwtVcValidator { userProvided } } ?: appDefault
+                userProvided?.let {
+                    sdJwtVcValidator(IsChainTrustedForContextF.usingTrustAnchors(it))
+                } ?: appDefault
             },
             bean(),
         )
     }
     registerBean { ProcessSdJwtVc() }
 
-    registerBean {
+    registerBean(lazyInit = true) {
         ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             config = bean(),
             sdJwtVcValidatorFactory = { userProvided ->
                 val appDefault = bean<SdJwtVcValidator>()
-                userProvided?.let { sdJwtVcValidator { userProvided } } ?: appDefault
+                userProvided?.let {
+                    sdJwtVcValidator(IsChainTrustedForContextF.usingTrustAnchors(it))
+                } ?: appDefault
             },
             deviceResponseValidatorFactory = { userProvided ->
                 val appDefault = bean<DeviceResponseValidator>()
-                userProvided?.let { deviceResponseValidator { userProvided } } ?: appDefault
+                userProvided?.let {
+                    deviceResponseValidator(IsChainTrustedForContextF.usingTrustAnchors(it))
+                } ?: appDefault
             },
         )
     }
-
-    registerBean { FetchLOTLCertificatesDSS() }
 
     //
     // Type metadata policy
     //
     registerBean<TypeMetadataPolicy> {
         fun resolveTypeMetadata(): ResolveTypeMetadata {
-            val typeMetadataResolutionProperties = bean<TypeMetadataResolutionProperties>()
-            val vcts = typeMetadataResolutionProperties.vcts
+            val config = bean<VerifierEndpointConfigurationProperties>().validation.sdJwtVc.typeMetadataResolution
+            val vcts = config.vcts
                 .associateBy { Vct(it.vct) }.mapValues { Url(it.value.url) }
             require(vcts.isNotEmpty()) {
                 "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts must be set"
             }
 
-            val cacheTtl = Duration.parse(
-                env.getProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.cache.ttl", "PT1H"),
-            )
-            val cacheSize = env.getProperty(
-                "verifier.validation.sdJwtVc.typeMetadata.resolution.cache.maxEntries",
-                10,
-            ).toLong()
-
             val cache = Caffeine.newBuilder()
-                .expireAfterWrite(cacheTtl)
-                .maximumSize(cacheSize)
+                .expireAfterWrite(config.cache.ttl)
+                .maximumSize(config.cache.maxEntries.toLong())
                 .asCache<Vct, ResolvedTypeMetadata>()
 
             val sriValidator =
-                if (!typeMetadataResolutionProperties.integrity.enabled) {
+                if (!config.integrity.enabled) {
                     null
                 } else {
                     SRIValidator(
-                        requireNotNull(typeMetadataResolutionProperties.integrity.allowedAlgorithms.toNonEmptySetOrNull()) {
+                        requireNotNull(config.integrity.allowedAlgorithms.toNonEmptySetOrNull()) {
                             "verifier.validation.sdJwtVc.typeMetadata.resolution.integrity.allowedAlgorithms cannot be empty"
                         },
                     )
@@ -340,7 +351,6 @@ internal class AppBeans : BeanRegistrarDsl({
     //
     registerBean { ScheduleTimeoutPresentations(bean()) }
     registerBean { ScheduleDeleteOldPresentations(bean()) }
-    registerBean { RefreshTrustSources(bean(), bean(), bean()) }
 
     //
     // Config
@@ -424,13 +434,17 @@ internal class AppBeans : BeanRegistrarDsl({
 })
 
 private fun SupplierContextDsl<*>.deviceResponseValidator(
-    provideTrustSource: ProvideTrustSource,
+    isChainTrustedForContext: IsChainTrustedForContextF<NonEmptyList<X509Certificate>, VerificationContext, TrustAnchor>,
 ): DeviceResponseValidator {
+    val config = bean<VerifierEndpointConfigurationProperties>()
     val docValidator = DocumentValidator(
         clock = bean(),
         issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
         validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
-        provideTrustSource = provideTrustSource,
+        isChainTrustedForAttestation = IsChainTrustedForAttestation(
+            isChainTrustedForContext,
+            config.attestationClassifications.toConsultationAttestationClassifications(),
+        ),
         statusListTokenValidator = beanProvider<StatusListTokenValidator>().ifAvailable,
     )
     log.info(
@@ -442,13 +456,19 @@ private fun SupplierContextDsl<*>.deviceResponseValidator(
 }
 
 private fun SupplierContextDsl<*>.sdJwtVcValidator(
-    provideTrustSource: ProvideTrustSource,
-): SdJwtVcValidator = SdJwtVcValidator(
-    provideTrustSource = provideTrustSource,
-    audience = bean<VerifierConfig>().verifierId,
-    beanProvider<StatusListTokenValidator>().ifAvailable,
-    typeMetadataPolicy = bean<TypeMetadataPolicy>(),
-)
+    isChainTrustedForContext: IsChainTrustedForContextF<NonEmptyList<X509Certificate>, VerificationContext, TrustAnchor>,
+): SdJwtVcValidator {
+    val config = bean<VerifierEndpointConfigurationProperties>()
+    return SdJwtVcValidator(
+        isChainTrustedForAttestation = IsChainTrustedForAttestation(
+            isChainTrustedForContext,
+            config.attestationClassifications.toConsultationAttestationClassifications(),
+        ),
+        audience = bean<VerifierConfig>().verifierId,
+        statusListTokenValidator = beanProvider<StatusListTokenValidator>().ifAvailable,
+        typeMetadataPolicy = bean<TypeMetadataPolicy>(),
+    )
+}
 
 private enum class EmbedOptionEnum {
     ByValue,
@@ -526,92 +546,7 @@ private fun verifierConfig(environment: Environment): VerifierConfig {
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
         authorizationRequestUri = authorizationRequestUri,
-        trustSourcesConfig = environment.trustSources(),
     )
-}
-
-/**
- * Parses the trust sources configuration from the environment.
- * Handles array-like property names: verifier.trustSources[0].pattern, etc.
- */
-private fun Environment.trustSources(): Map<Regex, TrustSourceConfig>? {
-    val trustSourcesConfigMap = mutableMapOf<Regex, TrustSourceConfig>()
-    val prefix = "verifier.trustSources"
-
-    var index = 0
-    while (true) {
-        val indexPrefix = "$prefix[$index]"
-        val patternStr = getPropertyOrEnvVariable("$indexPrefix.pattern") ?: break
-        val pattern = patternStr.toRegex()
-
-        // Parse LOTL configuration if present
-        val lotlSourceConfig = getPropertyOrEnvVariable("$indexPrefix.lotl.location")?.takeIf { it.isNotBlank() }?.let { lotlLocation ->
-            val location = URI(lotlLocation).toURL()
-            val serviceTypeFilter = getPropertyOrEnvVariable<ProviderKind>("$indexPrefix.lotl.serviceTypeFilter")
-            val refreshInterval = getPropertyOrEnvVariable("$indexPrefix.lotl.refreshInterval", "0 0 * * * *")
-
-            val lotlKeystoreConfig = parseKeyStoreConfig("$indexPrefix.lotl.keystore")
-
-            TrustedListConfig(location, serviceTypeFilter, refreshInterval, lotlKeystoreConfig)
-        }
-
-        // Parse keystore configuration if present
-        val keystoreConfig = parseKeyStoreConfig("$indexPrefix.keystore")
-
-        trustSourcesConfigMap[pattern] = TrustSourcesConfig(lotlSourceConfig, keystoreConfig)
-
-        index++
-    }
-
-    return trustSourcesConfigMap.ifEmpty {
-        fallbackTrustSources()
-    }
-}
-
-private fun Environment.getPropertyOrEnvVariable(property: String): String? {
-    return getProperty(property) ?: getProperty(toEnvironmentVariable(property))
-}
-
-private fun Environment.getPropertyOrEnvVariable(property: String, defaultValue: String): String {
-    return getProperty(property) ?: getProperty(toEnvironmentVariable(property)) ?: defaultValue
-}
-
-private inline fun <reified T> Environment.getPropertyOrEnvVariable(property: String): T? {
-    return this.getProperty(key = property) ?: this.getProperty(key = toEnvironmentVariable(property))
-}
-
-private fun toEnvironmentVariable(property: String): String {
-    return property.replace(".", "_")
-        .replace("[", "_")
-        .replace("]", "")
-        .replace("-", "")
-        .uppercase()
-}
-
-private fun Environment.fallbackTrustSources(): Map<Regex, TrustSourceConfig>? =
-    parseKeyStoreConfig("trustedIssuers.keystore")?.let {
-        mapOf(".*".toRegex() to TrustSourcesConfig(null, it))
-    }
-
-private fun Environment.parseKeyStoreConfig(propertyPrefix: String): KeyStoreConfig? = getPropertyOrEnvVariable(
-    "$propertyPrefix.path",
-)?.let { keystorePath ->
-    val keystoreType = getPropertyOrEnvVariable("$propertyPrefix.type") ?: "JKS"
-    val keystorePassword = getPropertyOrEnvVariable("$propertyPrefix.password", "")
-    loadKeystore(keystorePath, keystoreType, keystorePassword)
-        .onLeft { log.warn("Failed to load keystore from '$keystorePath'", it) }
-        .map { KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) }
-        .getOrNull()
-}
-
-private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePassword: String) = Either.catch {
-    DefaultResourceLoader().getResource(keystorePath)
-        .inputStream
-        .use {
-            KeyStore.getInstance(keystoreType).apply {
-                load(it, keystorePassword.toCharArray())
-            }
-        }
 }
 
 private fun Environment.clientMetaData(): ClientMetaData {
@@ -741,18 +676,81 @@ private enum class TypeMetadataPolicyEnum {
     RequiredFor,
 }
 
-@ConfigurationProperties("verifier.validation.sd-jwt-vc.type-metadata.resolution")
-internal data class TypeMetadataResolutionProperties(
-    val vcts: List<VctProperties> = emptyList(),
-    val integrity: IntegrityProperties = IntegrityProperties(),
+@ConfigurationProperties("verifier")
+data class VerifierEndpointConfigurationProperties(
+    val validation: ValidationConfigurationProperties,
+    val trustValidator: TrustValidatorConfigurationProperties? = null,
+    val attestationClassifications: AttestationClassificationsConfigurationProperties = AttestationClassificationsConfigurationProperties(),
+)
+
+data class ValidationConfigurationProperties(
+    @Name("sd-jwt-vc") val sdJwtVc: SdJwtVcConfigurationProperties,
+)
+
+data class SdJwtVcConfigurationProperties(
+    @Name("type-metadata.resolution") val typeMetadataResolution: TypeMetadataResolutionConfigurationProperties,
+)
+
+data class TypeMetadataResolutionConfigurationProperties(
+    val vcts: List<VctConfigurationProperties> = emptyList(),
+    val integrity: IntegrityConfigurationProperties = IntegrityConfigurationProperties(),
+    val cache: CacheConfigurationProperties = CacheConfigurationProperties(),
 ) {
-    data class VctProperties(
+    data class VctConfigurationProperties(
         val vct: String,
         val url: String,
     )
 
-    data class IntegrityProperties(
+    data class IntegrityConfigurationProperties(
         val enabled: Boolean = false,
         val allowedAlgorithms: Set<IntegrityAlgorithm> = IntegrityAlgorithm.entries.toSet(),
     )
+
+    data class CacheConfigurationProperties(
+        val ttl: java.time.Duration = 1.hours.toJavaDuration(),
+        val maxEntries: Int = 10,
+    )
 }
+
+data class TrustValidatorConfigurationProperties(val serviceUrl: URL)
+
+data class AttestationClassificationsConfigurationProperties(
+    val pid: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
+    val qeaa: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
+    val pubeaa: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
+    val eaa: List<EAAAttestationClassificationConfigurationProperties> = emptyList(),
+)
+
+private fun AttestationClassificationsConfigurationProperties.toConsultationAttestationClassifications(): AttestationClassifications =
+    AttestationClassifications(
+        pids = pid.attestationIdentifierPredicate,
+        qEAAs = qeaa.attestationIdentifierPredicate,
+        pubEAAs = pubeaa.attestationIdentifierPredicate,
+        eaAs = eaa.associate { it.useCase to it.attestationIdentifierPredicate },
+    )
+
+data class AttestationIdentifiersConfigurationProperties(
+    val vcts: List<String> = emptyList(),
+    val docTypes: List<String> = emptyList(),
+)
+
+private val AttestationIdentifiersConfigurationProperties.attestationIdentifierPredicate: AttestationIdentifierPredicate
+    get() = AttestationIdentifierPredicate.of(vcts = vcts, docTypes = docTypes)
+
+private fun AttestationIdentifierPredicate.Companion.of(
+    vcts: List<String>,
+    docTypes: List<String>,
+): AttestationIdentifierPredicate {
+    val vctsPredicate = AttestationIdentifierPredicate.any(vcts.map { SDJwtVc(it) }.toSet())
+    val docTypesPredicate = AttestationIdentifierPredicate.any(docTypes.map { MDoc(it) }.toSet())
+    return vctsPredicate or docTypesPredicate
+}
+
+data class EAAAttestationClassificationConfigurationProperties(
+    val useCase: String,
+    val vcts: List<String> = emptyList(),
+    val docTypes: List<String> = emptyList(),
+)
+
+private val EAAAttestationClassificationConfigurationProperties.attestationIdentifierPredicate: AttestationIdentifierPredicate
+    get() = AttestationIdentifierPredicate.of(vcts = vcts, docTypes = docTypes)

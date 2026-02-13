@@ -22,9 +22,10 @@ import arrow.core.raise.*
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
 import com.upokecenter.cbor.CBORObject
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
+import eu.europa.ec.eudi.etsi1196x2.consultation.CertificationChainValidation
+import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.msoMdocIssuance
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Iso180135
@@ -44,6 +45,7 @@ import kotlinx.serialization.encodeToByteArray
 import org.slf4j.LoggerFactory
 import java.security.MessageDigest
 import java.security.cert.CertificateFactory
+import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import java.security.interfaces.ECPublicKey
 import kotlin.time.Instant
@@ -82,8 +84,8 @@ class DocumentValidator(
     private val clock: Clock = Clock.System,
     private val validityInfoShouldBe: ValidityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
     private val issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
-    private val provideTrustSource: ProvideTrustSource,
     private val statusListTokenValidator: StatusListTokenValidator?,
+    private val isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
 ) {
     suspend fun ensureValid(
         document: MDoc,
@@ -93,15 +95,13 @@ class DocumentValidator(
         either {
             document.decodeMso()
 
-            val x5CShouldBe = ensureMatchingX5CShouldBe(document, provideTrustSource)
-
-            val issuerChain = ensureTrustedChain(document, x5CShouldBe)
+            val issuerChain = ensureTrustedChain(document, isChainTrustedForAttestation)
             zipOrAccumulate(
                 { ensureNotExpiredValidityInfo(document, clock, validityInfoShouldBe) },
                 { ensureMatchingDocumentType(document) },
                 { ensureDigestsOfIssuerSignedItems(document, issuerSignedItemsShouldBe) },
                 {
-                    ensureValidIssuerSignature(document, issuerChain, x5CShouldBe.caCertificates())
+                    ensureValidIssuerSignature(document, issuerChain)
                         .also { log.info("IssuerSigned validation succeeded") }
                 },
                 { ensureNotRevoked(document, statusListTokenValidator, transactionId) },
@@ -146,10 +146,9 @@ private fun Raise<DocumentError.DocumentTypeNotMatching>.ensureMatchingDocumentT
 
 private fun Raise<DocumentError>.ensureValidIssuerSignature(
     document: MDoc,
-    chain: NonEmptyList<X509Certificate>,
-    caCertificates: List<X509Certificate>,
+    issuerChain: NonEmptyList<X509Certificate>,
 ) {
-    val issuerKeyInfo = cryptoProviderKeyInfo(chain, caCertificates)
+    val issuerKeyInfo = cryptoProviderKeyInfo(issuerChain)
     val issuerCryptoProvider = SimpleCOSECryptoProvider(listOf(issuerKeyInfo))
     ensure(document.verifySignature(issuerCryptoProvider, issuerKeyInfo.keyID)) {
         DocumentError.InvalidIssuerSignature
@@ -158,17 +157,16 @@ private fun Raise<DocumentError>.ensureValidIssuerSignature(
 
 private const val ISSUER_KEY_ID = "ISSUER_KEY_ID"
 private fun Raise<DocumentError.IssuerKeyIsNotEC>.cryptoProviderKeyInfo(
-    chain: NonEmptyList<X509Certificate>,
-    caCertificates: List<X509Certificate>,
+    issuerChain: NonEmptyList<X509Certificate>,
 ): COSECryptoProviderKeyInfo {
-    val issuerECKey = ensureIssuerKeyIsEC(chain.head)
+    val issuerECKey = ensureIssuerKeyIsEC(issuerChain.head)
     return COSECryptoProviderKeyInfo(
         keyID = ISSUER_KEY_ID,
         algorithmID = issuerECKey.coseAlgorithmID,
         publicKey = issuerECKey.toECPublicKey(),
         privateKey = null,
-        x5Chain = chain,
-        trustedRootCAs = caCertificates,
+        x5Chain = issuerChain,
+        trustedRootCAs = emptyList(),
     )
 }
 
@@ -197,13 +195,13 @@ private fun Raise<DocumentError.InvalidIssuerSignedItems>.ensureDigestsOfIssuerS
     }
 }
 
-private fun Raise<Nel<DocumentError.X5CNotTrusted>>.ensureTrustedChain(
+private suspend fun Raise<Nel<DocumentError.X5CNotTrusted>>.ensureTrustedChain(
     document: MDoc,
-    x5CShouldBe: X5CShouldBe,
+    isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
 ): NonEmptyList<X509Certificate> =
     either {
-        val chain = ensureContainsChain(document)
-        ensureValidChain(chain, x5CShouldBe)
+        val issuerChain = ensureContainsChain(document)
+        ensureTrustedChain(document.docType.value, issuerChain, isChainTrustedForAttestation)
     }.toEitherNel().bind()
 
 private fun Raise<DocumentError.X5CNotTrusted>.ensureContainsChain(
@@ -225,21 +223,16 @@ private fun Raise<DocumentError.X5CNotTrusted>.ensureContainsChain(
     }
 }
 
-private fun Raise<DocumentError.X5CNotTrusted>.ensureValidChain(
-    chain: NonEmptyList<X509Certificate>,
-    x5CShouldBe: X5CShouldBe,
-): Nel<X509Certificate> {
-    val x5cValidator = X5CValidator(x5CShouldBe)
-    val validChain = x5cValidator.ensureTrusted(chain).mapLeft { exception ->
-        DocumentError.X5CNotTrusted(exception.message)
+private suspend fun Raise<DocumentError.X5CNotTrusted>.ensureTrustedChain(
+    docType: String,
+    issuerChain: NonEmptyList<X509Certificate>,
+    isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
+): Nel<X509Certificate> =
+    when (isChainTrustedForAttestation.msoMdocIssuance(issuerChain, docType)) {
+        is CertificationChainValidation.Trusted -> issuerChain
+        is CertificationChainValidation.NotTrusted -> raise(X5CNotTrusted("Issuer X5C not trusted"))
+        null -> throw IllegalStateException("Could not find Attestation Classification for docType '$docType'")
     }
-    return validChain.bind()
-}
-
-private suspend fun Raise<Nel<DocumentError.NoMatchingX5CShouldBe>>.ensureMatchingX5CShouldBe(
-    document: MDoc,
-    trustSourceProvider: ProvideTrustSource,
-): X5CShouldBe = trustSourceProvider(document.docType.value) ?: raise(DocumentError.NoMatchingX5CShouldBe.nel())
 
 private suspend fun Raise<DocumentError.DocumentHasBeenRevoked>.ensureNotRevoked(
     document: MDoc,

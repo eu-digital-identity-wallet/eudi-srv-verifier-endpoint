@@ -17,7 +17,11 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.getOrElse
 import cbor.Cbor
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
+import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications
+import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationIdentifierPredicate
+import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
+import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForContextF
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.Ignored
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import id.walt.mdoc.dataelement.toDataElement
 import id.walt.mdoc.doc.MDoc
@@ -64,7 +68,15 @@ class ExamplesTest {
 
         val documentValidator = DocumentValidator(
             clock = Clock.fixed(issuedAt.toInstant().toKotlinInstant(), issuedAt.zone.toKotlinTimeZone()),
-            provideTrustSource = ProvideTrustSource.Ignored,
+            isChainTrustedForAttestation = IsChainTrustedForAttestation(
+                IsChainTrustedForContextF.Ignored,
+                AttestationClassifications(
+                    pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
+                    eaAs = mapOf(
+                        "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
+                    ),
+                ),
+            ),
             statusListTokenValidator = null,
         )
         val document = MDoc.fromCBORHex(waltIdExample)
@@ -80,12 +92,19 @@ class ExamplesTest {
             return Cbor.decodeFromByteArray<IssuerSigned>(cbor)
         }
 
-        val trustSources = ProvideTrustSource.Ignored
         val issuedAt = ZonedDateTime.parse("2024-08-02T16:22:19.252519705Z")
         val document = issuerSigned().asMDocWithDocType("org.iso.18013.5.1.mDL")
         val documentValidator = DocumentValidator(
             clock = Clock.fixed(issuedAt.toInstant().toKotlinInstant(), issuedAt.zone.toKotlinTimeZone()),
-            provideTrustSource = trustSources::invoke,
+            isChainTrustedForAttestation = IsChainTrustedForAttestation(
+                IsChainTrustedForContextF.Ignored,
+                AttestationClassifications(
+                    pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
+                    eaAs = mapOf(
+                        "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
+                    ),
+                ),
+            ),
             statusListTokenValidator = null,
         )
         documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }

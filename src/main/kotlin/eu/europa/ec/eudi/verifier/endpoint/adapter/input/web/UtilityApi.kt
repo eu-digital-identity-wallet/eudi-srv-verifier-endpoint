@@ -24,7 +24,6 @@ import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.badRequest
 import org.springframework.web.reactive.function.server.ServerResponse.ok
-import kotlin.collections.firstOrNull
 
 private val log = LoggerFactory.getLogger(UtilityApi::class.java)
 

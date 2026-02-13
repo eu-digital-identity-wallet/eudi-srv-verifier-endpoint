@@ -78,11 +78,9 @@ dependencies {
     }
     implementation(libs.zxing)
     implementation(libs.uri)
-    implementation(libs.dss.service)
-    implementation(libs.dss.validation)
-    implementation(libs.dss.tsl.validation)
-    implementation(libs.dss.utils.apache.commons)
     implementation(libs.aedile)
+
+    implementation(libs.consultation)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)
@@ -103,7 +101,10 @@ kotlin {
 
     compilerOptions {
         apiVersion = KotlinVersion.DEFAULT
-        freeCompilerArgs.add("-Xjsr305=strict")
+        freeCompilerArgs.addAll(
+            "-Xjsr305=strict",
+            "-Xannotation-default-target=param-property",
+        )
         optIn.addAll(
             "kotlinx.serialization.ExperimentalSerializationApi",
             "kotlin.io.encoding.ExperimentalEncodingApi",

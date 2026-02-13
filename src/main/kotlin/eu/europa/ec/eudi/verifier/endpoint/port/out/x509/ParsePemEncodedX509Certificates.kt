@@ -13,22 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.port.out.lotl
+package eu.europa.ec.eudi.verifier.endpoint.port.out.x509
 
 import arrow.core.Either
-import eu.europa.ec.eudi.verifier.endpoint.domain.TrustedListConfig
+import arrow.core.NonEmptyList
 import java.security.cert.X509Certificate
 
 /**
- * Interface for fetching LOTL certificates
+ * Parses PEM encoded X509 Certificates.
  */
-fun interface FetchLOTLCertificates {
-    /**
-     * Fetch certificates from a LOTL URL
-     * @param trustedListConfig Configuration for the trusted list
-     * @return Result containing a list of X509 certificates or an exception
-     */
-    suspend operator fun invoke(
-        trustedListConfig: TrustedListConfig,
-    ): Either<Throwable, List<X509Certificate>>
+fun interface ParsePemEncodedX509Certificates {
+    operator fun invoke(certificates: String): Either<Throwable, NonEmptyList<X509Certificate>>
 }

@@ -18,7 +18,9 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.presentation
 import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.raise.either
-import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionData
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifiablePresentation
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 
 /**

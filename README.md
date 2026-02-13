@@ -686,49 +686,69 @@ Variable: `CORS_MAXAGE`
 Description: Time in seconds of how long pre-flight request responses can be cached by clients  
 Default value: `3600`
 
-### Configuring trust sources
+### Configuring trust
 
-The verifier supports the configuration of multiple trust sources, that will be used to trust the issuers of presented credentials.  
-Each trust source is associated with a regex pattern, that will be used to match the trust source to an issuer, based on a credential's docType/vct.
-Each trust source can be configured with a List of Trusted Lists, a Keystore or both.
-The trust sources are configured using the environment variable `VERIFIER_TRUSTSOURCES` and are indexed starting from `0`. You can define multiple trust sources by incrementing the index (e.g., VERIFIER_TRUSTSOURCES_0_*, VERIFIER_TRUSTSOURCES_1_*, etc.)
+Verifier Endpoint verifies whether the Issuer of a Verifiable Credential is trusted or not using an external service. 
+Currently, only [eudi-srv-trust-validator](https://github.com/eu-digital-identity-wallet/eudi-srv-trust-validator) is supported.
 
-Variable: `VERIFIER_TRUSTSOURCES_0_PATTERN`
-Description: The regex pattern used to match the trust source to an issuer, based on a credential's docType/vct
-Example: `eu.europa.ec.eudi.pid.*|urn:eu.europa.ec.eudi:pid:.*`
+> [!CAUTION]
+> 
+> By default, Verifier Endpoint considers all Verifiable Credential Issuers trusted.  
+> To enable Issuer Verifiable Credential Issuers verification, configure the following environment variables.
 
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_LOCATION`
-Description: If present, the URL of the List of Trusted Lists from which to load the X509 Certificates for this trust source
+Variable: `VERIFIER_TRUSTVALIDATOR_SERVICEURL`  
+Description: The URL of the `/trust` endpoint of the service to use for trust verification.          
+Default value: none
 
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_REFRESHINTERVAL`
-Description: If present, a cron expression with the refresh interval of the List of Trusted Lists in seconds. If not present, the default value is `0 0 * * * * ` (every hour)
-Example: `0 0 */4 * * *`
+### Attestation Classifications
 
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_SERVICETYPEFILTER`
-Description: If present, the service type filter to be used when loading the List of Trusted Lists. If not present, all service types are loaded. Valid values are `PIDProvider`, `QEEAProvider` and `PubEAAProvider`.
-Example: `PIDProvider`
+> [!IMPORTANT]
+>
+> Verifier Endpoint requires each Verifiable Credential be classified as:
+> * PID
+> * QEAA
+> * PubEAA
+> * EAA
+> 
+> Use the following configuration properties to configuration the classifications.
+> 
+> This information is used when checking whether the issuer of the Verifiable Credential is trusted or not.
 
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_KEYSTORE_PATH`
-Description: If present, the URL of the Keystore which contains the public key that was used to sign the List of Trusted Lists
-Examples: `classpath:lotl-key.jks`, `file:///lotl-key.jks`
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PID_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to PIDs.  
+Default value: none  
 
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_KEYSTORE_TYPE`
-Description: Type of the Keystore which contains the public key that was used to sign the List of Trusted Lists
-Examples: `jks`, `pkcs12`
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PID_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to PIDs.  
+Default value: none  
 
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_KEYSTORE_PASSWORD`
-Description: If present and non-blank, the password of the Keystore which contains the public key that was used to sign the List of Trusted Lists
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_QEAA_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to QEAAs.  
+Default value: none  
 
-Variable: `VERIFIER_TRUSTSOURCES_0_KEYSTORE_PATH`
-Description: If present, the URL of the Keystore from which to load the X509 Certificates for this trust source 
-Examples: `classpath:trusted-issuers.jks`, `file:///trusted-issuers.jks`
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_QEAA_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to QEAAs.  
+Default value: none  
 
-Variable: `VERIFIER_TRUSTSOURCES_0_KEYSTORE_TYPE`
-Description: Type of the Keystore from which to load the X509 Certificates for this trust source
-Examples: `jks`, `pkcs12`
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PUBEAA_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to PubEAAs.  
+Default value: none
 
-Variable: `VERIFIER_TRUSTSOURCES_0_KEYSTORE_PASSWORD`
-Description: If present and non-blank, the password of the Keystore from which to load the X509 Certificates for this trust source
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PUBEAA_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to PubEAAs.  
+Default value: none  
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_USECASE`  
+Description: EAA use-case.  
+Examples: `mDL`, `learningCredential`, etc...
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to EAAs.  
+Default value: none  
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to EAAs.  
+Default value: none
 
 ### Proxy configuration  
 

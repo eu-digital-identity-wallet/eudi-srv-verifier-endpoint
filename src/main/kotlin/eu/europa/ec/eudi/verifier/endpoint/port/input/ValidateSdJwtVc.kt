@@ -19,7 +19,6 @@ import arrow.core.*
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationErrorCode
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
@@ -27,9 +26,9 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.x5cShouldBeTrustedOrNull
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
 import kotlinx.serialization.json.*
+import java.security.cert.X509Certificate
 
 internal enum class SdJwtVcValidationErrorCodeTO {
     IsUnparsable,
@@ -86,8 +85,8 @@ internal sealed interface SdJwtVcValidationResult {
  * Validates an SD-JWT Verifiable Credential.
  */
 internal class ValidateSdJwtVc(
-    private val sdJwtVcValidatorFactory: (X5CShouldBe.Trusted?) -> SdJwtVcValidator,
-    private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
+    private val sdJwtVcValidatorFactory: (NonEmptyList<X509Certificate>?) -> SdJwtVcValidator,
+    private val parsePemEncodedX509Certificates: ParsePemEncodedX509Certificates,
 ) {
 
     suspend operator fun invoke(
@@ -124,9 +123,9 @@ internal class ValidateSdJwtVc(
     }
 
     private fun sdJwtVcValidator(issuerChain: String?): Either<Throwable, SdJwtVcValidator> = Either.catch {
-        val x5cShouldBe = issuerChain
-            ?.let { parsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(it).getOrThrow() }
-        sdJwtVcValidatorFactory(x5cShouldBe)
+        sdJwtVcValidatorFactory(
+            issuerChain?.let { parsePemEncodedX509Certificates(it).getOrThrow() },
+        )
     }
 }
 

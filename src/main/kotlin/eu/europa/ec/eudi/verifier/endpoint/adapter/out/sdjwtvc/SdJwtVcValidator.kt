@@ -23,11 +23,13 @@ import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
+import eu.europa.ec.eudi.etsi1196x2.consultation.CertificationChainValidation
+import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
 import eu.europa.ec.eudi.sdjwt.*
 import eu.europa.ec.eudi.sdjwt.vc.*
-import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.*
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
+import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.IssuerKeyVerificationError
+import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.TypeMetadataVerificationError
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.sdJwtVcIssuance
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
@@ -38,6 +40,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
+import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 
 internal enum class SdJwtVcValidationErrorCode {
@@ -119,20 +122,18 @@ private fun SdJwtVcVerificationError.toSdJwtVcValidationErrorCode(): SdJwtVcVali
 private val log = LoggerFactory.getLogger(SdJwtVcValidator::class.java)
 
 internal class SdJwtVcValidator(
-    private val provideTrustSource: ProvideTrustSource,
+    private val isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
     typeMetadataPolicy: TypeMetadataPolicy,
 ) {
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> = run {
         val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
-            val x5CShouldBe = provideTrustSource(vct)
-            if (x5CShouldBe != null) {
-                val x5cValidator = X5CValidator(x5CShouldBe)
-                val x5c = checkNotNull(chain.toNonEmptyListOrNull())
-                x5cValidator.ensureTrusted(x5c).fold(ifLeft = { false }, ifRight = { true })
-            } else {
-                false
+            val x5c = checkNotNull(chain.toNonEmptyListOrNull())
+            when (isChainTrustedForAttestation.sdJwtVcIssuance(x5c, vct)) {
+                is CertificationChainValidation.Trusted -> true
+                is CertificationChainValidation.NotTrusted -> false
+                null -> throw IllegalStateException("Could not find Attestation Classification for vct '$vct'")
             }
         }
         NimbusSdJwtOps.SdJwtVcVerifier(

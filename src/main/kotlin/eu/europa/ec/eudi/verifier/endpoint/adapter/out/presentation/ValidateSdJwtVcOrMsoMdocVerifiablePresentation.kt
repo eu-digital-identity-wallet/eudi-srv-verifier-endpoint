@@ -26,15 +26,10 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
 import eu.europa.ec.eudi.statium.TokenStatusListSpec
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.SkipRevocation
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.*
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.HandoverInfo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
@@ -50,13 +45,14 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
+import java.security.cert.X509Certificate
 
 private val log = LoggerFactory.getLogger(ValidateSdJwtVcOrMsoMdocVerifiablePresentation::class.java)
 
 internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private val config: VerifierConfig,
-    private val sdJwtVcValidatorFactory: (X5CShouldBe.Trusted?) -> SdJwtVcValidator,
-    private val deviceResponseValidatorFactory: (X5CShouldBe.Trusted?) -> DeviceResponseValidator,
+    private val sdJwtVcValidatorFactory: (NonEmptyList<X509Certificate>?) -> SdJwtVcValidator,
+    private val deviceResponseValidatorFactory: (NonEmptyList<X509Certificate>?) -> DeviceResponseValidator,
 ) : ValidateVerifiablePresentation {
     private val vpFormatsSupported = config.clientMetaData.vpFormatsSupported
 
@@ -65,12 +61,10 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         verifiablePresentation: VerifiablePresentation,
         transactionData: NonEmptyList<TransactionData>?,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
-        val issuerChain = presentation.issuerChain?.let { X5CShouldBe.Trusted(rootCACertificates = it, customizePKIX = SkipRevocation) }
-
         when (verifiablePresentation.format) {
             Format.SdJwtVc -> {
                 val vpFormatSupported = checkNotNull(vpFormatsSupported.sdJwtVc)
-                val validator = sdJwtVcValidatorFactory(issuerChain)
+                val validator = sdJwtVcValidatorFactory(presentation.issuerChain)
                 validator.validateSdJwtVcVerifiablePresentation(
                     vpFormatSupported,
                     verifiablePresentation,
@@ -83,7 +77,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
 
             Format.MsoMdoc -> {
                 val vpFormatSupported = checkNotNull(vpFormatsSupported.msoMdoc)
-                val validator = deviceResponseValidatorFactory(issuerChain)
+                val validator = deviceResponseValidatorFactory(presentation.issuerChain)
                 validator.validateMsoMdocVerifiablePresentation(
                     presentation,
                     verifiablePresentation,

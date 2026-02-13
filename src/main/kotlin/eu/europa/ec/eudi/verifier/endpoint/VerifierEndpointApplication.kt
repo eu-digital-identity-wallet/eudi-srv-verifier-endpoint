@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Import
 
 @SpringBootApplication
 @Import(AppBeans::class)
-@EnableConfigurationProperties(TypeMetadataResolutionProperties::class)
+@EnableConfigurationProperties(VerifierEndpointConfigurationProperties::class)
 class VerifierApplication
 
 fun main(args: Array<String>) {

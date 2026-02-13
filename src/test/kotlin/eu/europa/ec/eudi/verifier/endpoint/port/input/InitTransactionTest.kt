@@ -48,7 +48,6 @@ class InitTransactionTest {
         transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
         requestUriMethod = RequestUriMethod.Get,
         authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
-        trustSourcesConfig = mapOf(),
     )
 
     @Test
@@ -88,7 +87,6 @@ class InitTransactionTest {
                 transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                 requestUriMethod = RequestUriMethod.Get,
                 authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
-                trustSourcesConfig = mapOf(),
             )
 
             val input = InitTransactionTO(

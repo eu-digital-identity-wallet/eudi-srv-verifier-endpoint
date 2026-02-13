@@ -20,7 +20,8 @@ import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
 import eu.europa.ec.eudi.sdjwt.VerificationError
 import eu.europa.ec.eudi.sdjwt.dsl.def.DefinitionViolation
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError
-import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.*
+import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.IssuerKeyVerificationError
+import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.TypeMetadataVerificationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 
 internal val SdJwtVerificationException.description: String
