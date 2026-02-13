@@ -114,7 +114,7 @@ object TestContext {
     classes = [VerifierApplication::class],
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
 )
-@ContextConfiguration(initializers = [BeansDslApplicationContextInitializer::class])
+@ContextConfiguration
 @AutoConfigureWebTestClient
 internal annotation class VerifierApplicationTest(
 
@@ -124,14 +124,4 @@ internal annotation class VerifierApplicationTest(
      */
     @get:AliasFor(annotation = ContextConfiguration::class)
     val classes: Array<KClass<*>> = [],
-
 )
-
-/**
- * [ApplicationContextInitializer] for use with [SpringBootTest]/[ContextConfiguration]
- */
-internal class BeansDslApplicationContextInitializer : ApplicationContextInitializer<GenericApplicationContext> {
-    override fun initialize(applicationContext: GenericApplicationContext) {
-        applicationContext.register(beans(Clock.System))
-    }
-}

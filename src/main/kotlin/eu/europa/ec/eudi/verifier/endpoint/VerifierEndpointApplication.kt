@@ -15,23 +15,16 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication
-import org.springframework.context.ApplicationContextInitializer
-import org.springframework.context.support.GenericApplicationContext
+import org.springframework.context.annotation.Import
 
 @SpringBootApplication
+@Import(AppBeans::class)
 @EnableConfigurationProperties(TypeMetadataResolutionProperties::class)
 class VerifierApplication
 
 fun main(args: Array<String>) {
-    runApplication<VerifierApplication>(*args) {
-        addInitializers(
-            ApplicationContextInitializer<GenericApplicationContext> {
-                it.register(beans(Clock.System))
-            },
-        )
-    }
+    runApplication<VerifierApplication>(*args)
 }

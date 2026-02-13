@@ -91,8 +91,8 @@ import kotlin.time.Duration.Companion.minutes
 private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 
 @OptIn(ExperimentalSerializationApi::class)
-internal fun beans(clock: Clock) = BeanRegistrarDsl {
-    registerBean { clock }
+internal class AppBeans : BeanRegistrarDsl ({
+    registerBean<Clock> { Clock.System }
 
     //
     // JOSE
@@ -421,7 +421,7 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
             csrf { disable() } // cross-site request forgery disabled
         }
     }
-}
+})
 
 private fun SupplierContextDsl<*>.deviceResponseValidator(
     provideTrustSource: ProvideTrustSource,
