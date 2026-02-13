@@ -40,10 +40,8 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
-import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
-import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.annotation.AliasFor
 import org.springframework.test.context.ContextConfiguration
 import kotlin.reflect.KClass

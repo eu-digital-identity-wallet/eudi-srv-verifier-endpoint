@@ -91,7 +91,7 @@ import kotlin.time.Duration.Companion.minutes
 private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 
 @OptIn(ExperimentalSerializationApi::class)
-internal class AppBeans : BeanRegistrarDsl ({
+internal class AppBeans : BeanRegistrarDsl({
     registerBean<Clock> { Clock.System }
 
     //
