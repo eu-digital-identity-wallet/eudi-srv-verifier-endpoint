@@ -213,15 +213,18 @@ internal fun beans(clock: Clock) = BeanRegistrarDsl {
         }
     }
 
-    // Default ValidateAttestationIssuerTrust
+    // Default IsChainTrustedForContextF
     registerBean {
-        val config = bean<VerifierEndpointConfigurationProperties>().trustValidator
-        if (null == config) {
+        val config = bean<VerifierEndpointConfigurationProperties>()
+        log.info("Using Attestation Classifications: ${config.attestationClassifications}")
+
+        val trustValidatorConfig = config.trustValidator
+        if (null == trustValidatorConfig) {
             log.warn("Trust Validator Service has not been configured. Trusting all Attestation Issuers.")
             IsChainTrustedForContextF.Ignored
         } else {
-            log.info("Using Trust Validator Service '{}'", config.serviceUrl)
-            IsChainTrustedForContextF.usingTrustValidatorService(bean(), Url(config.serviceUrl.toExternalForm()))
+            log.info("Using Trust Validator Service '{}'", trustValidatorConfig.serviceUrl)
+            IsChainTrustedForContextF.usingTrustValidatorService(bean(), Url(trustValidatorConfig.serviceUrl.toExternalForm()))
         }
     }
 
