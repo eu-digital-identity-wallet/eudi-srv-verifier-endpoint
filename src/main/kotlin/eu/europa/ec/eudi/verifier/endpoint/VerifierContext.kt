@@ -23,6 +23,7 @@ import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.util.Base64
 import com.sksamuel.aedile.core.asCache
+import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications as ConsultationAttestationClassifications
 import eu.europa.ec.eudi.etsi1196x2.consultation.*
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
@@ -680,7 +681,7 @@ private enum class TypeMetadataPolicyEnum {
 data class VerifierEndpointConfigurationProperties(
     val validation: ValidationConfigurationProperties,
     val trustValidator: TrustValidatorConfigurationProperties? = null,
-    val attestationClassifications: AttestationClassificationsConfigurationProperties = AttestationClassificationsConfigurationProperties(),
+    val attestationClassifications: AttestationClassifications = AttestationClassifications(),
 )
 
 data class ValidationConfigurationProperties(
@@ -712,29 +713,19 @@ data class TypeMetadataResolutionConfigurationProperties(
     )
 }
 
-data class TrustValidatorConfigurationProperties(val serviceUrl: URL)
-
-data class AttestationClassificationsConfigurationProperties(
-    val pid: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
-    val qeaa: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
-    val pubeaa: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
-    val eaa: List<EAAAttestationClassificationConfigurationProperties> = emptyList(),
+data class TrustValidatorConfigurationProperties(
+    val serviceUrl: URL,
 )
 
-private fun AttestationClassificationsConfigurationProperties.toConsultationAttestationClassifications(): AttestationClassifications =
-    AttestationClassifications(
+private fun AttestationClassifications.toConsultationAttestationClassifications(): ConsultationAttestationClassifications =
+    ConsultationAttestationClassifications(
         pids = pid.attestationIdentifierPredicate,
         qEAAs = qeaa.attestationIdentifierPredicate,
         pubEAAs = pubeaa.attestationIdentifierPredicate,
         eaAs = eaa.associate { it.useCase to it.attestationIdentifierPredicate },
     )
 
-data class AttestationIdentifiersConfigurationProperties(
-    val vcts: List<String> = emptyList(),
-    val docTypes: List<String> = emptyList(),
-)
-
-private val AttestationIdentifiersConfigurationProperties.attestationIdentifierPredicate: AttestationIdentifierPredicate
+private val AttestationIdentifiers.attestationIdentifierPredicate: AttestationIdentifierPredicate
     get() = AttestationIdentifierPredicate.of(vcts = vcts, docTypes = docTypes)
 
 private fun AttestationIdentifierPredicate.Companion.of(
@@ -746,11 +737,5 @@ private fun AttestationIdentifierPredicate.Companion.of(
     return vctsPredicate or docTypesPredicate
 }
 
-data class EAAAttestationClassificationConfigurationProperties(
-    val useCase: String,
-    val vcts: List<String> = emptyList(),
-    val docTypes: List<String> = emptyList(),
-)
-
-private val EAAAttestationClassificationConfigurationProperties.attestationIdentifierPredicate: AttestationIdentifierPredicate
+private val EAAAttestationClassification.attestationIdentifierPredicate: AttestationIdentifierPredicate
     get() = AttestationIdentifierPredicate.of(vcts = vcts, docTypes = docTypes)
