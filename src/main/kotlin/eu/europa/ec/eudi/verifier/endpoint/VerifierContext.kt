@@ -379,7 +379,12 @@ internal class AppBeans : BeanRegistrarDsl({
             webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern")
                 .removeSuffix("/**"),
         )
-        val utilityApi = UtilityApi(bean(), bean(), bean())
+        val utilityApi = UtilityApi(
+            bean(),
+            bean(),
+            bean(),
+            bean<VerifierEndpointConfigurationProperties>().attestationClassifications,
+        )
         walletApi.route
             .and(verifierApi.route)
             .and(staticContent.route)
