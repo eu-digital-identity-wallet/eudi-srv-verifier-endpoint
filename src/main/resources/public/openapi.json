@@ -1502,6 +1502,7 @@
           "eaa": {
             "type": "array",
             "nullable": false,
+            "default": [],
             "items": {
               "$ref": "#/components/schemas/EAAAttestationClassification"
             }
@@ -1549,10 +1550,9 @@
         "nullable": false,
         "properties": {
           "useCase": {
-            "description": "Use case identifier for this EAA (e.g. \\\"mDL\\\")",
+            "description": "Use case identifier for this EAA (e.g. \"mDL\")",
             "type": "string",
-            "nullable": false,
-            "minLength": 1
+            "nullable": false
           },
           "vcts": {
             "type": "array",
@@ -1990,44 +1990,36 @@
         "value": {
           "pid": {
             "vcts": [
-              "urn:example:vct:pid:1"
+              "urn:eudi:pid:1"
             ],
             "docTypes": [
-              "org.iso.18013.5.1.mDL"
+              "eu.europa.ec.eudi.pid.1"
             ]
           },
           "qeaa": {
-            "vcts": [
-              "urn:example:vct:qeaa:1"
-            ],
-            "docTypes": [
-              "eu.europa.ec.eudi:qeaa"
-            ]
+            "vcts": [],
+            "docTypes": []
           },
           "pubeaa": {
             "vcts": [
-              "urn:example:vct:pubeaa:1"
+              "urn:eudi:ehic:1"
             ],
-            "docTypes": [
-              "eu.europa.ec.eudi:pubeaa"
-            ]
+            "docTypes": []
           },
           "eaa": [
             {
-              "useCase": "age_verification",
-              "vcts": [
-                "urn:example:vct:eaa:age:1"
-              ],
+              "useCase": "mDL",
+              "vcts": [],
               "docTypes": [
-                "eu.europa.ec.eudi:eaa.age"
+                "org.iso.18013.5.1.mDL"
               ]
             },
             {
-              "useCase": "address_verification",
-              "vcts": [],
-              "docTypes": [
-                "eu.europa.ec.eudi:eaa.address"
-              ]
+              "useCase": "learningCredential",
+              "vcts": [
+                "urn:eu.europa.ec.eudi:learning:credential:1"
+              ],
+              "docTypes": []
             }
           ]
         }
