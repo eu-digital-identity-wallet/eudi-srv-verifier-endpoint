@@ -55,7 +55,7 @@ internal class UtilityApi(
 
         GET(
             ATTESTATION_CLASSIFICATIONS_PATH,
-            contentType(APPLICATION_JSON),
+            accept(APPLICATION_JSON),
             ::handleAttestationClassifications,
         )
     }

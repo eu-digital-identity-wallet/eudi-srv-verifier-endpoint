@@ -715,14 +715,13 @@ Default value: none
 > This information is used when checking whether the issuer of the Verifiable Credential is trusted or not.
 
 Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS`  
-Description: JSON object describing the supported/allowed attestation identifiers per classification.  
+Description: JSON object that contains the identifiers (either vcts, or docTypes) per attestation class  
 Notes:
-* Each classification (`pid`, `qeaa`, `pubeaa`) contains identifiers for SD-JWT VC (`vcts`) and/or MSO mdoc (`docTypes`)  
-* The `eaa` classification is a list of entries and each entry must contain a `useCase` and optionally `vcts` and/or `docTypes`  
-* Any `AttestationIdentifiers` object may be empty (`{}`), meaning no identifiers are configured for that classification  
-* Double quotes (" ") characters must be escaped in the JSON string when creating an environment variable (preferably using single quotes)  
+* Each class (`pid`, `qeaa`, `pubeaa`) contains `vcts` and/or `docTypes`  
+* Each `eaa` class, corresponds to a specific `useCase` and contains `vcts` and/or `docTypes`  
+* Please ensure double quotes `"` are properly escaped in the environment variable value.  
 * More information about the JSON structure can be found [here](src/main/resources/public/openapi.json#/components/schemas/AttestationIdentifiers/AttestationClassifications).
-Example: `{"pid":{"vcts":["eu.europa.ec.eudi.pid.1"]},"pubeaa":{"vcts":["urn:eudi:ehic:1"]},"eaa":[{"useCase":"mDL","docTypes":["org.iso.18013.5.1.mDL"]},{"useCase":"learningCredential","vcts":["urn:eu.europa.ec.eudi:learning:credential:1"]}]}`
+Example: `{"pid":{"vcts":["urn:eudi:pid:1"]},"pubeaa":{"vcts":["urn:eudi:ehic:1"]},"eaa":[{"useCase":"mDL","docTypes":["org.iso.18013.5.1.mDL"]},{"useCase":"learningCredential","vcts":["urn:eu.europa.ec.eudi:learning:credential:1"]}]}`  
 
 ### Proxy configuration  
 

@@ -16,34 +16,43 @@
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.Required
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class AttestationClassifications(
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    @Required
     val pid: AttestationIdentifiers = AttestationIdentifiers(),
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    @Required
     val qeaa: AttestationIdentifiers = AttestationIdentifiers(),
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    @Required
     val pubeaa: AttestationIdentifiers = AttestationIdentifiers(),
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    @Required
     val eaa: List<EAAAttestationClassification> = emptyList(),
 )
 
 @Serializable
 data class AttestationIdentifiers(
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    @Required
     val vcts: List<String> = emptyList(),
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    @Required
     val docTypes: List<String> = emptyList(),
 )
 
 @Serializable
 data class EAAAttestationClassification(
-    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    @Required
     val useCase: String,
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    @Required
     val vcts: List<String> = emptyList(),
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    @Required
     val docTypes: List<String> = emptyList(),
 )
