@@ -92,6 +92,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
+import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications as ConsultationAttestationClassifications
 
 private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 
@@ -378,7 +379,12 @@ internal class AppBeans : BeanRegistrarDsl({
             webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern")
                 .removeSuffix("/**"),
         )
-        val utilityApi = UtilityApi(bean(), bean(), bean())
+        val utilityApi = UtilityApi(
+            bean(),
+            bean(),
+            bean(),
+            bean<VerifierEndpointConfigurationProperties>().attestationClassifications,
+        )
         walletApi.route
             .and(verifierApi.route)
             .and(staticContent.route)
@@ -680,7 +686,7 @@ private enum class TypeMetadataPolicyEnum {
 data class VerifierEndpointConfigurationProperties(
     val validation: ValidationConfigurationProperties,
     val trustValidator: TrustValidatorConfigurationProperties? = null,
-    val attestationClassifications: AttestationClassificationsConfigurationProperties = AttestationClassificationsConfigurationProperties(),
+    val attestationClassifications: AttestationClassifications = AttestationClassifications(),
 )
 
 data class ValidationConfigurationProperties(
@@ -712,29 +718,19 @@ data class TypeMetadataResolutionConfigurationProperties(
     )
 }
 
-data class TrustValidatorConfigurationProperties(val serviceUrl: URL)
-
-data class AttestationClassificationsConfigurationProperties(
-    val pid: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
-    val qeaa: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
-    val pubeaa: AttestationIdentifiersConfigurationProperties = AttestationIdentifiersConfigurationProperties(),
-    val eaa: List<EAAAttestationClassificationConfigurationProperties> = emptyList(),
+data class TrustValidatorConfigurationProperties(
+    val serviceUrl: URL,
 )
 
-private fun AttestationClassificationsConfigurationProperties.toConsultationAttestationClassifications(): AttestationClassifications =
-    AttestationClassifications(
+private fun AttestationClassifications.toConsultationAttestationClassifications(): ConsultationAttestationClassifications =
+    ConsultationAttestationClassifications(
         pids = pid.attestationIdentifierPredicate,
         qEAAs = qeaa.attestationIdentifierPredicate,
         pubEAAs = pubeaa.attestationIdentifierPredicate,
         eaAs = eaa.associate { it.useCase to it.attestationIdentifierPredicate },
     )
 
-data class AttestationIdentifiersConfigurationProperties(
-    val vcts: List<String> = emptyList(),
-    val docTypes: List<String> = emptyList(),
-)
-
-private val AttestationIdentifiersConfigurationProperties.attestationIdentifierPredicate: AttestationIdentifierPredicate
+private val AttestationIdentifiers.attestationIdentifierPredicate: AttestationIdentifierPredicate
     get() = AttestationIdentifierPredicate.of(vcts = vcts, docTypes = docTypes)
 
 private fun AttestationIdentifierPredicate.Companion.of(
@@ -746,11 +742,5 @@ private fun AttestationIdentifierPredicate.Companion.of(
     return vctsPredicate or docTypesPredicate
 }
 
-data class EAAAttestationClassificationConfigurationProperties(
-    val useCase: String,
-    val vcts: List<String> = emptyList(),
-    val docTypes: List<String> = emptyList(),
-)
-
-private val EAAAttestationClassificationConfigurationProperties.attestationIdentifierPredicate: AttestationIdentifierPredicate
+private val EAAAttestationClassification.attestationIdentifierPredicate: AttestationIdentifierPredicate
     get() = AttestationIdentifierPredicate.of(vcts = vcts, docTypes = docTypes)

@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps
+import eu.europa.ec.eudi.verifier.endpoint.domain.AttestationClassifications
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import org.slf4j.LoggerFactory
@@ -31,6 +32,7 @@ internal class UtilityApi(
     private val validateMsoMdocDeviceResponse: ValidateMsoMdocDeviceResponse,
     private val validateSdJwtVc: ValidateSdJwtVc,
     private val processSdJwtVc: ProcessSdJwtVc,
+    private val attestationClassifications: AttestationClassifications,
 ) {
     val route: RouterFunction<ServerResponse> = coRouter {
         POST(
@@ -49,6 +51,12 @@ internal class UtilityApi(
             PROCESS_SD_JWT_VC_PATH,
             contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
             ::handleProcessSdJwtVc,
+        )
+
+        GET(
+            ATTESTATION_CLASSIFICATIONS_PATH,
+            accept(APPLICATION_JSON),
+            ::handleAttestationClassifications,
         )
     }
 
@@ -116,9 +124,13 @@ internal class UtilityApi(
             )
     }
 
+    private suspend fun handleAttestationClassifications(request: ServerRequest): ServerResponse =
+        ok().json().bodyValueAndAwait(attestationClassifications)
+
     companion object {
         const val VALIDATE_MSO_MDOC_DEVICE_RESPONSE_PATH = "/utilities/validations/msoMdoc/deviceResponse"
         const val VALIDATE_SD_JWT_VC_PATH = "/utilities/validations/sdJwtVc"
         const val PROCESS_SD_JWT_VC_PATH = "/utilities/process/sdJwtVc"
+        const val ATTESTATION_CLASSIFICATIONS_PATH = "/utilities/attestationClassifications"
     }
 }

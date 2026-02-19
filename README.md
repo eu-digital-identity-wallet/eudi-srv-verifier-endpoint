@@ -714,41 +714,15 @@ Default value: none
 > 
 > This information is used when checking whether the issuer of the Verifiable Credential is trusted or not.
 
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PID_VCTS`  
-Description: Comma separated list of SD-JWT VC VCTs that corresponds to PIDs.  
-Default value: none  
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS`  
+Description: JSON object that contains the identifiers (either vcts, or docTypes) per attestation class  
+Notes:
+* Each class (`pid`, `qeaa`, `pubeaa`) contains `vcts` and/or `docTypes`  
+* Each `eaa` class, corresponds to a specific `useCase` and contains `vcts` and/or `docTypes`  
+* Please ensure double quotes `"` are properly escaped in the environment variable value.  
+* More information about the JSON structure can be found in [AttestationClassifications](src/main/resources/public/openapi.json).  
 
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PID_DOCTYPES`  
-Description: Comma separated list of MSO MDoc docTypes that corresponds to PIDs.  
-Default value: none  
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_QEAA_VCTS`  
-Description: Comma separated list of SD-JWT VC VCTs that corresponds to QEAAs.  
-Default value: none  
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_QEAA_DOCTYPES`  
-Description: Comma separated list of MSO MDoc docTypes that corresponds to QEAAs.  
-Default value: none  
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PUBEAA_VCTS`  
-Description: Comma separated list of SD-JWT VC VCTs that corresponds to PubEAAs.  
-Default value: none
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PUBEAA_DOCTYPES`  
-Description: Comma separated list of MSO MDoc docTypes that corresponds to PubEAAs.  
-Default value: none  
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_USECASE`  
-Description: EAA use-case.  
-Examples: `mDL`, `learningCredential`, etc...
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_VCTS`  
-Description: Comma separated list of SD-JWT VC VCTs that corresponds to EAAs.  
-Default value: none  
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_DOCTYPES`  
-Description: Comma separated list of MSO MDoc docTypes that corresponds to EAAs.  
-Default value: none
+Example: `{"pid":{"vcts":["urn:eudi:pid:1"],"docTypes":["eu.europa.ec.eudi.pid.1"]},"qeaa":{"vcts":[],"docTypes":[]},"pubeaa":{"vcts":["urn:eudi:ehic:1"],"docTypes":[]},"eaa":[{"useCase":"mDL","vcts":[],"docTypes":["org.iso.18013.5.1.mDL"]},{"useCase":"learningCredential","vcts":["urn:eu.europa.ec.eudi:learning:credential:1"],"docTypes":[]}]}`  
 
 ### Proxy configuration  
 
