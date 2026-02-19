@@ -724,6 +724,48 @@ Notes:
 
 Example: `{"pid":{"vcts":["urn:eudi:pid:1"],"docTypes":["eu.europa.ec.eudi.pid.1"]},"qeaa":{"vcts":[],"docTypes":[]},"pubeaa":{"vcts":["urn:eudi:ehic:1"],"docTypes":[]},"eaa":[{"useCase":"mDL","vcts":[],"docTypes":["org.iso.18013.5.1.mDL"]},{"useCase":"learningCredential","vcts":["urn:eu.europa.ec.eudi:learning:credential:1"],"docTypes":[]}]}`  
 
+Alternatively, you can use the following environment variables for more fine-grained control:
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PID_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to PIDs.  
+Default value: none
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PID_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to PIDs.  
+Default value: none
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_QEAA_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to QEAAs.  
+Default value: none
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_QEAA_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to QEAAs.  
+Default value: none
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PUBEAA_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to PubEAAs.  
+Default value: none
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PUBEAA_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to PubEAAs.  
+Default value: none
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_USECASE`  
+Description: EAA use-case.  
+Examples: `mDL`, `learningCredential`, etc...
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_VCTS`  
+Description: Comma separated list of SD-JWT VC VCTs that corresponds to EAAs.  
+Default value: none
+
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_DOCTYPES`  
+Description: Comma separated list of MSO MDoc docTypes that corresponds to EAAs.  
+Default value: none
+
+> [!CAUTION]
+> 
+> The environment variable `VERIFIER_ATTESTATIONCLASSIFICATIONS` takes precedence over the fine-grained counterparts. 
+
 ### Proxy configuration  
 
 Variable: `VERIFIER_HTTP_PROXY_URL`  
