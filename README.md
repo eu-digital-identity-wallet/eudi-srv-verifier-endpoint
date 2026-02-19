@@ -714,41 +714,15 @@ Default value: none
 > 
 > This information is used when checking whether the issuer of the Verifiable Credential is trusted or not.
 
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PID_VCTS`  
-Description: Comma separated list of SD-JWT VC VCTs that corresponds to PIDs.  
-Default value: none  
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PID_DOCTYPES`  
-Description: Comma separated list of MSO MDoc docTypes that corresponds to PIDs.  
-Default value: none  
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_QEAA_VCTS`  
-Description: Comma separated list of SD-JWT VC VCTs that corresponds to QEAAs.  
-Default value: none  
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_QEAA_DOCTYPES`  
-Description: Comma separated list of MSO MDoc docTypes that corresponds to QEAAs.  
-Default value: none  
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PUBEAA_VCTS`  
-Description: Comma separated list of SD-JWT VC VCTs that corresponds to PubEAAs.  
-Default value: none
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_PUBEAA_DOCTYPES`  
-Description: Comma separated list of MSO MDoc docTypes that corresponds to PubEAAs.  
-Default value: none  
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_USECASE`  
-Description: EAA use-case.  
-Examples: `mDL`, `learningCredential`, etc...
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_VCTS`  
-Description: Comma separated list of SD-JWT VC VCTs that corresponds to EAAs.  
-Default value: none  
-
-Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS_EAA_XXX_DOCTYPES`  
-Description: Comma separated list of MSO MDoc docTypes that corresponds to EAAs.  
-Default value: none
+Variable: `VERIFIER_ATTESTATIONCLASSIFICATIONS`  
+Description: JSON object describing the supported/allowed attestation identifiers per classification.  
+Notes:
+* Each classification (`pid`, `qeaa`, `pubeaa`) contains identifiers for SD-JWT VC (`vcts`) and/or MSO mdoc (`docTypes`)  
+* The `eaa` classification is a list of entries and each entry must contain a `useCase` and optionally `vcts` and/or `docTypes`  
+* Any `AttestationIdentifiers` object may be empty (`{}`), meaning no identifiers are configured for that classification  
+* Double quotes (" ") characters must be escaped in the JSON string when creating an environment variable (preferably using single quotes)  
+* More information about the JSON structure can be found [here](src/main/resources/public/openapi.json#/components/schemas/AttestationIdentifiers/AttestationClassifications).
+Example: `{"pid":{"vcts":["eu.europa.ec.eudi.pid.1"]},"pubeaa":{"vcts":["urn:eudi:ehic:1"]},"eaa":[{"useCase":"mDL","docTypes":["org.iso.18013.5.1.mDL"]},{"useCase":"learningCredential","vcts":["urn:eu.europa.ec.eudi:learning:credential:1"]}]}`
 
 ### Proxy configuration  
 

@@ -480,7 +480,39 @@
           }
         }
       }
+    },
+    "/utilities/attestationClassifications": {
+      "get": {
+        "tags": [
+          "utility api"
+        ],
+        "summary": "Get available attestation classifications.",
+        "description": "Get available attestation classifications.",
+        "operationId": "availableAttestationClassifications",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/AttestationClassifications"
+                  },
+
+                "examples": {
+                  "AvailableAttestationClassifications": {
+                    "$ref": "#/components/examples/AvailableAttestationClassifications"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
     }
+
   },
   "components": {
     "schemas": {
@@ -1455,6 +1487,95 @@
           "UnexpectedError",
           "InvalidIssuerChain"
         ]
+      },
+      "AttestationClassifications": {
+        "description": "Attestation classifications container. The object can be empty.",
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "pid": {
+            "$ref": "#/components/schemas/AttestationIdentifiers"
+          },
+          "qeaa": {
+            "$ref": "#/components/schemas/AttestationIdentifiers"
+          },
+          "pubeaa": {
+            "$ref": "#/components/schemas/AttestationIdentifiers"
+          },
+          "eaa": {
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/EAAAttestationClassification"
+            }
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "AttestationIdentifiers": {
+        "description": "Identifiers for attestation formats (SD-JWT VC types and MSO mdoc docTypes). The object can be empty.",
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "vcts": {
+            "description": "List of SD-JWT VC type identifiers (vct).",
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string",
+              "nullable": false
+            },
+            "default": []
+          },
+          "docTypes": {
+            "description": "List of MSO mdoc docType identifiers.",
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string",
+              "nullable": false
+            },
+            "default": []
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "EAAAttestationClassification": {
+        "description": "An EAA attestation classification entry. The object itself is not empty because it must specify the use case; vcts/docTypes can be empty.",
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "useCase": {
+            "description": "Use case identifier for this EAA attestation classification (e.g., \"age_verification\").",
+            "type": "string",
+            "nullable": false,
+            "minLength": 1
+          },
+          "vcts": {
+            "description": "List of SD-JWT VC type identifiers (vct) applicable to this use case.",
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string",
+              "nullable": false
+            },
+            "default": []
+          },
+          "docTypes": {
+            "description": "List of MSO mdoc docType identifiers applicable to this use case.",
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string",
+              "nullable": false
+            },
+            "default": []
+          }
+        },
+        "required": ["useCase"],
+        "additionalProperties": false
       }
     },
     "examples": {
@@ -1836,6 +1957,35 @@
           "administrative_number": "888adb27-d4d5-4004-8c71-97f61273c203",
           "given_name": "Tyler",
           "issuing_jurisdiction": "GR-I"
+        }
+      },
+      "AvailableAttestationClassifications": {
+        "description": "The available attestation classifications.",
+        "value": {
+          "pid":{
+            "vcts":["urn:example:vct:pid:1"],
+            "docTypes":["org.iso.18013.5.1.mDL"]
+          },
+          "qeaa":{
+            "vcts":[ "urn:example:vct:qeaa:1" ],
+            "docTypes":[ "eu.europa.ec.eudi:qeaa" ]
+          },
+          "pubeaa":{
+            "vcts":[ "urn:example:vct:pubeaa:1" ],
+            "docTypes":[ "eu.europa.ec.eudi:pubeaa" ]
+          },
+          "eaa":[
+            {
+              "useCase":"age_verification",
+              "vcts":["urn:example:vct:eaa:age:1"],
+              "docTypes":["eu.europa.ec.eudi:eaa.age"]
+            },
+            {
+              "useCase":"address_verification",
+              "vcts":[],
+              "docTypes":["eu.europa.ec.eudi:eaa.address"]
+            }
+          ]
         }
       }
     },
