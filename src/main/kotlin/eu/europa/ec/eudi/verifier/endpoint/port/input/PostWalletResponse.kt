@@ -70,7 +70,6 @@ sealed interface WalletResponseValidationError {
     data class InvalidVpToken(val message: String, val cause: Throwable? = null) : WalletResponseValidationError
     data object MissingVpToken : WalletResponseValidationError
     data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
-    data object InvalidPresentationSubmission : WalletResponseValidationError
     data class InvalidEncryptedResponse(val error: BadJOSEException) : WalletResponseValidationError
 
     sealed interface HAIPValidationError : WalletResponseValidationError {

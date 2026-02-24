@@ -217,10 +217,6 @@ class WalletApi(
                     put("description", this@toJson.error.message)
                     put("cause", this@toJson.error.cause?.message)
                 }
-                WalletResponseValidationError.InvalidPresentationSubmission -> {
-                    put("error", "InvalidPresentationSubmission")
-                    put("description", "The 'presentation_submission' posted by wallet does not match vp_token")
-                }
                 is WalletResponseValidationError.InvalidVpToken -> {
                     put("error", "InvalidVpToken")
                     put("description", this@toJson.message)
