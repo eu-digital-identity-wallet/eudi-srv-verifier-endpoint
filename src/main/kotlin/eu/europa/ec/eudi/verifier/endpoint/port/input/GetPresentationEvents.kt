@@ -102,6 +102,9 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
         }
         is PresentationEvent.WalletFailedToPostResponse -> {
             put("cause", event.cause.asText())
+            if (null != event.vpToken) {
+                put("vp_token", event.vpToken)
+            }
         }
 
         is PresentationEvent.VerifierGotWalletResponse -> {
@@ -162,7 +165,6 @@ private fun WalletResponseValidationError.asText(): String =
         is WalletResponseValidationError.UnexpectedResponseMode -> "Unexpected response mode. Expected $expected, actual $actual"
         WalletResponseValidationError.RequiredCredentialSetNotSatisfied ->
             "vp_token does not satisfy all the required credential sets of the query"
-        WalletResponseValidationError.InvalidPresentationSubmission -> "Presentation submission is not valid"
         is WalletResponseValidationError.InvalidEncryptedResponse -> "Encrypted response is not valid: '${error.message}'"
         WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc -> {
             "DeviceResponse contains more than one MDocs"

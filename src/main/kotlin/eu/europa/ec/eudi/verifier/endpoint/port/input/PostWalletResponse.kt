@@ -21,6 +21,7 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import arrow.core.toNonEmptyListOrNull
+import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.proc.BadJOSEException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -37,6 +38,8 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifia
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Represent the Authorization Response placed by wallet
@@ -70,7 +73,6 @@ sealed interface WalletResponseValidationError {
     data class InvalidVpToken(val message: String, val cause: Throwable? = null) : WalletResponseValidationError
     data object MissingVpToken : WalletResponseValidationError
     data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
-    data object InvalidPresentationSubmission : WalletResponseValidationError
     data class InvalidEncryptedResponse(val error: BadJOSEException) : WalletResponseValidationError
 
     sealed interface HAIPValidationError : WalletResponseValidationError {
@@ -200,6 +202,8 @@ fun interface PostWalletResponse {
     ): Either<WalletResponseValidationError, WalletResponseAcceptedTO?>
 }
 
+private val log = LoggerFactory.getLogger(PostWalletResponse::class.java)
+
 class PostWalletResponseLive(
     private val loadPresentationByRequestId: LoadPresentationByRequestId,
     private val storePresentation: StorePresentation,
@@ -216,30 +220,31 @@ class PostWalletResponseLive(
         requestId: RequestId,
         walletResponse: AuthorisationResponse,
     ): Either<WalletResponseValidationError, WalletResponseAcceptedTO?> = either {
+        log.info(requestId, walletResponse)
+
         val presentation = loadPresentation(requestId).bind()
-        doInvoke(presentation, walletResponse)
-            .onLeft { cause -> logFailure(presentation, cause) }
+        ensure(presentation is RequestObjectRetrieved) {
+            WalletResponseValidationError.PresentationNotInExpectedState
+        }
+        log.info(presentation, walletResponse)
+
+        val responseObject = responseObject(walletResponse, presentation).bind()
+        log.info(presentation.id, responseObject)
+
+        submit(presentation, responseObject)
+            .onLeft { cause -> logFailure(presentation, responseObject, cause) }
             .onRight { (submitted, accepted) -> logWalletResponsePosted(submitted, accepted) }
             .map { (_, accepted) -> accepted }
             .bind()
     }
 
-    private suspend fun doInvoke(
-        presentation: Presentation,
-        walletResponse: AuthorisationResponse,
+    private suspend fun submit(
+        presentation: RequestObjectRetrieved,
+        responseObject: AuthorisationResponseTO,
     ): Either<WalletResponseValidationError, Pair<Submitted, WalletResponseAcceptedTO?>> =
         either {
-            ensure(presentation is RequestObjectRetrieved) {
-                WalletResponseValidationError.PresentationNotInExpectedState
-            }
-
-            val responseObject = responseObject(walletResponse, presentation).bind()
-
-            // Verify response `state` is RequestId
-            ensure(presentation.requestId.value == responseObject.state) { WalletResponseValidationError.IncorrectState }
-
             // Submit the response
-            val submitted = submit(presentation, responseObject)
+            val submitted = doSubmit(presentation, responseObject)
                 .bind()
                 .also { storePresentation(it) }
 
@@ -307,10 +312,13 @@ class PostWalletResponseLive(
         }
     }
 
-    private suspend fun submit(
+    private suspend fun doSubmit(
         presentation: RequestObjectRetrieved,
         responseObject: AuthorisationResponseTO,
     ): Either<WalletResponseValidationError, Submitted> = either {
+        // Verify response `state` is RequestId
+        ensure(presentation.requestId.value == responseObject.state) { WalletResponseValidationError.IncorrectState }
+
         // add the wallet response to the presentation
         val walletResponse = responseObject.toDomain(
             presentation,
@@ -331,8 +339,17 @@ class PostWalletResponseLive(
         publishPresentationEvent(event)
     }
 
-    private suspend fun logFailure(p: Presentation, cause: WalletResponseValidationError) {
-        val event = PresentationEvent.WalletFailedToPostResponse(p.id, clock.now(), cause)
+    private suspend fun logFailure(
+        presentation: RequestObjectRetrieved,
+        responseObject: AuthorisationResponseTO,
+        cause: WalletResponseValidationError,
+    ) {
+        val event = PresentationEvent.WalletFailedToPostResponse(
+            presentation.id,
+            clock.now(),
+            cause,
+            responseObject.vpToken,
+        )
         publishPresentationEvent(event)
     }
 }
@@ -344,3 +361,45 @@ private fun DCQL.satisfiedBy(response: Map<QueryId, List<VerifiablePresentation>
         ?.map { credentialSet -> credentialSet.options.any { option -> response.keys.containsAll(option.value) } }
         ?.fold(true, Boolean::and)
         ?: response.keys.containsAll(credentials.ids)
+
+private val AuthorisationResponse.encryptedResponseOrNull: Jwt?
+    get() = when (this) {
+        is AuthorisationResponse.DirectPost -> null
+        is AuthorisationResponse.DirectPostJwt -> encryptedResponse
+    }
+
+private val AuthorisationResponse.vpTokenOrNull: JsonObject?
+    get() = when (this) {
+        is AuthorisationResponse.DirectPost -> response.vpToken
+        is AuthorisationResponse.DirectPostJwt -> null
+    }
+
+private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
+    get() = when (responseMode) {
+        ResponseMode.DirectPost -> null
+        is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey
+    }
+
+private fun Logger.info(requestId: RequestId, walletResponse: AuthorisationResponse) {
+    info(
+        "RequestId(${requestId.value}):: Wallet posted response. \n" +
+            "Encrypted response: '${walletResponse.encryptedResponseOrNull}', \n" +
+            "VP Token: '${walletResponse.vpTokenOrNull}'",
+    )
+}
+
+private fun Logger.info(presentation: RequestObjectRetrieved, walletResponse: AuthorisationResponse) {
+    info(
+        "TransactionId(${presentation.id.value}):: Wallet posted response. \n" +
+            "Encrypted response: '${walletResponse.encryptedResponseOrNull}', \n" +
+            "Decryption Key: '${presentation.ephemeralResponseEncryptionKeyOrNull?.toJSONString()}', \n" +
+            "VP Token: '${walletResponse.vpTokenOrNull}'",
+    )
+}
+
+private fun Logger.info(transactionId: TransactionId, authorizationResponse: AuthorisationResponseTO) {
+    info(
+        "TransactionId(${transactionId.value}):: Wallet posted response. \n" +
+            "VP Token: '${authorizationResponse.vpToken}'",
+    )
+}
