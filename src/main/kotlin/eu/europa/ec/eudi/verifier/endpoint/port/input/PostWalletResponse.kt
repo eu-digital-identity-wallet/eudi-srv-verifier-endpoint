@@ -228,26 +228,23 @@ class PostWalletResponseLive(
         }
         log.info(presentation, walletResponse)
 
-        doInvoke(presentation, walletResponse)
-            .onLeft { cause -> logFailure(presentation, walletResponse, cause) }
+        val responseObject = responseObject(walletResponse, presentation).bind()
+        log.info(presentation.id, responseObject)
+
+        submit(presentation, responseObject)
+            .onLeft { cause -> logFailure(presentation, responseObject, cause) }
             .onRight { (submitted, accepted) -> logWalletResponsePosted(submitted, accepted) }
             .map { (_, accepted) -> accepted }
             .bind()
     }
 
-    private suspend fun doInvoke(
+    private suspend fun submit(
         presentation: RequestObjectRetrieved,
-        walletResponse: AuthorisationResponse,
+        responseObject: AuthorisationResponseTO,
     ): Either<WalletResponseValidationError, Pair<Submitted, WalletResponseAcceptedTO?>> =
         either {
-            val responseObject = responseObject(walletResponse, presentation).bind()
-            log.info(presentation.id, responseObject)
-
-            // Verify response `state` is RequestId
-            ensure(presentation.requestId.value == responseObject.state) { WalletResponseValidationError.IncorrectState }
-
             // Submit the response
-            val submitted = submit(presentation, responseObject)
+            val submitted = doSubmit(presentation, responseObject)
                 .bind()
                 .also { storePresentation(it) }
 
@@ -315,10 +312,13 @@ class PostWalletResponseLive(
         }
     }
 
-    private suspend fun submit(
+    private suspend fun doSubmit(
         presentation: RequestObjectRetrieved,
         responseObject: AuthorisationResponseTO,
     ): Either<WalletResponseValidationError, Submitted> = either {
+        // Verify response `state` is RequestId
+        ensure(presentation.requestId.value == responseObject.state) { WalletResponseValidationError.IncorrectState }
+
         // add the wallet response to the presentation
         val walletResponse = responseObject.toDomain(
             presentation,
@@ -341,20 +341,14 @@ class PostWalletResponseLive(
 
     private suspend fun logFailure(
         presentation: RequestObjectRetrieved,
-        walletResponse: AuthorisationResponse,
+        responseObject: AuthorisationResponseTO,
         cause: WalletResponseValidationError,
     ) {
-        val encryptedResponse = walletResponse.encryptedResponseOrNull
-        val vpToken = walletResponse.vpTokenOrNull
-        val decryptionKey = presentation.ephemeralResponseEncryptionKeyOrNull
-
         val event = PresentationEvent.WalletFailedToPostResponse(
             presentation.id,
             clock.now(),
             cause,
-            encryptedResponse,
-            decryptionKey,
-            vpToken,
+            responseObject.vpToken,
         )
         publishPresentationEvent(event)
     }
@@ -388,21 +382,24 @@ private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
 
 private fun Logger.info(requestId: RequestId, walletResponse: AuthorisationResponse) {
     info(
-        "RequestId(${requestId.value}):: Wallet posted response. " +
-            "Encrypted response: '${walletResponse.encryptedResponseOrNull}', " +
+        "RequestId(${requestId.value}):: Wallet posted response. \n" +
+            "Encrypted response: '${walletResponse.encryptedResponseOrNull}', \n" +
             "VP Token: '${walletResponse.vpTokenOrNull}'",
     )
 }
 
 private fun Logger.info(presentation: RequestObjectRetrieved, walletResponse: AuthorisationResponse) {
     info(
-        "TransactionId(${presentation.id.value}):: Wallet posted response. " +
-            "Encrypted response: '${walletResponse.encryptedResponseOrNull}', " +
-            "Decryption Key: '${presentation.ephemeralResponseEncryptionKeyOrNull?.toJSONString()}', " +
+        "TransactionId(${presentation.id.value}):: Wallet posted response. \n" +
+            "Encrypted response: '${walletResponse.encryptedResponseOrNull}', \n" +
+            "Decryption Key: '${presentation.ephemeralResponseEncryptionKeyOrNull?.toJSONString()}', \n" +
             "VP Token: '${walletResponse.vpTokenOrNull}'",
     )
 }
 
 private fun Logger.info(transactionId: TransactionId, authorizationResponse: AuthorisationResponseTO) {
-    info("TransactionId(${transactionId.value}):: Wallet posted response. '$authorizationResponse'")
+    info(
+        "TransactionId(${transactionId.value}):: Wallet posted response. \n" +
+            "VP Token: '${authorizationResponse.vpToken}'",
+    )
 }

@@ -17,7 +17,6 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.NonEmptyList
 import arrow.core.max
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationEvents
@@ -103,12 +102,6 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
         }
         is PresentationEvent.WalletFailedToPostResponse -> {
             put("cause", event.cause.asText())
-            if (null != event.encryptedResponse) {
-                put("encrypted_response", event.encryptedResponse)
-            }
-            if (null != event.decryptionKey) {
-                put("decryption_key", jsonSupport.parseToJsonElement(event.decryptionKey.toJSONString()))
-            }
             if (null != event.vpToken) {
                 put("vp_token", event.vpToken)
             }
