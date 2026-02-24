@@ -220,13 +220,13 @@ class PostWalletResponseLive(
         requestId: RequestId,
         walletResponse: AuthorisationResponse,
     ): Either<WalletResponseValidationError, WalletResponseAcceptedTO?> = either {
-        log.info(requestId, walletResponse)
+        log.debug(requestId, walletResponse)
 
         val presentation = loadPresentation(requestId).bind()
         ensure(presentation is RequestObjectRetrieved) {
             WalletResponseValidationError.PresentationNotInExpectedState
         }
-        log.info(presentation, walletResponse)
+        log.debug(presentation, walletResponse)
 
         val responseObject = responseObject(walletResponse, presentation).bind()
         log.info(presentation.id, responseObject)
@@ -380,26 +380,29 @@ private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
         is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey
     }
 
-private fun Logger.info(requestId: RequestId, walletResponse: AuthorisationResponse) {
-    info(
-        "RequestId(${requestId.value}):: Wallet posted response. \n" +
-            "Encrypted response: '${walletResponse.encryptedResponseOrNull}', \n" +
-            "VP Token: '${walletResponse.vpTokenOrNull}'",
+private fun Logger.debug(requestId: RequestId, walletResponse: AuthorisationResponse) {
+    debug(
+        "RequestId({}):: Wallet posted response. \nEncrypted response: '{}', \nVP Token: '{}'",
+        requestId.value,
+        walletResponse.encryptedResponseOrNull,
+        walletResponse.vpTokenOrNull,
     )
 }
 
-private fun Logger.info(presentation: RequestObjectRetrieved, walletResponse: AuthorisationResponse) {
-    info(
-        "TransactionId(${presentation.id.value}):: Wallet posted response. \n" +
-            "Encrypted response: '${walletResponse.encryptedResponseOrNull}', \n" +
-            "Decryption Key: '${presentation.ephemeralResponseEncryptionKeyOrNull?.toJSONString()}', \n" +
-            "VP Token: '${walletResponse.vpTokenOrNull}'",
+private fun Logger.debug(presentation: RequestObjectRetrieved, walletResponse: AuthorisationResponse) {
+    debug(
+        "TransactionId({}):: Wallet posted response. \nEncrypted response: '{}', \nDecryption Key: '{}', \nVP Token: '{}'",
+        presentation.id.value,
+        walletResponse.encryptedResponseOrNull,
+        presentation.ephemeralResponseEncryptionKeyOrNull?.toJSONString(),
+        walletResponse.vpTokenOrNull,
     )
 }
 
 private fun Logger.info(transactionId: TransactionId, authorizationResponse: AuthorisationResponseTO) {
     info(
-        "TransactionId(${transactionId.value}):: Wallet posted response. \n" +
-            "VP Token: '${authorizationResponse.vpToken}'",
+        "TransactionId({}):: Wallet posted response. \nVP Token: '{}'",
+        transactionId.value,
+        authorizationResponse.vpToken,
     )
 }
