@@ -45,12 +45,6 @@ sealed interface PresentationEvent {
         val cause: String,
     ) : PresentationEvent
 
-    data class FailedToRetrievePresentationDefinition(
-        override val transactionId: TransactionId,
-        override val timestamp: Instant,
-        val cause: String,
-    ) : PresentationEvent
-
     data class WalletResponsePosted(
         override val transactionId: TransactionId,
         override val timestamp: Instant,
