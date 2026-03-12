@@ -15,27 +15,26 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation
 
+import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationIdentifier
 import eu.europa.ec.eudi.etsi1196x2.consultation.CertificationChainValidation
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
-import eu.europa.ec.eudi.etsi1196x2.consultation.MDoc
-import eu.europa.ec.eudi.etsi1196x2.consultation.SDJwtVc
 
 suspend fun <CHAIN : Any, TRUST_ANCHOR : Any> IsChainTrustedForAttestation<CHAIN, TRUST_ANCHOR>.sdJwtVcIssuance(
     chain: CHAIN,
     vct: String,
-): CertificationChainValidation<TRUST_ANCHOR>? = issuance(chain, SDJwtVc(vct))
+): CertificationChainValidation<TRUST_ANCHOR>? = issuance(chain, AttestationIdentifier.SDJwtVc(vct))
 
 suspend fun <CHAIN : Any, TRUST_ANCHOR : Any> IsChainTrustedForAttestation<CHAIN, TRUST_ANCHOR>.sdJwtVcRevocation(
     chain: CHAIN,
     vct: String,
-): CertificationChainValidation<TRUST_ANCHOR>? = revocation(chain, SDJwtVc(vct))
+): CertificationChainValidation<TRUST_ANCHOR>? = revocation(chain, AttestationIdentifier.SDJwtVc(vct))
 
 suspend fun <CHAIN : Any, TRUST_ANCHOR : Any> IsChainTrustedForAttestation<CHAIN, TRUST_ANCHOR>.msoMdocIssuance(
     chain: CHAIN,
     docType: String,
-): CertificationChainValidation<TRUST_ANCHOR>? = issuance(chain, MDoc(docType))
+): CertificationChainValidation<TRUST_ANCHOR>? = issuance(chain, AttestationIdentifier.MDoc(docType))
 
 suspend fun <CHAIN : Any, TRUST_ANCHOR : Any> IsChainTrustedForAttestation<CHAIN, TRUST_ANCHOR>.msoMdocRevocation(
     chain: CHAIN,
     docType: String,
-): CertificationChainValidation<TRUST_ANCHOR>? = revocation(chain, MDoc(docType))
+): CertificationChainValidation<TRUST_ANCHOR>? = revocation(chain, AttestationIdentifier.MDoc(docType))

@@ -737,8 +737,8 @@ private fun AttestationIdentifierPredicate.Companion.of(
     vcts: List<String>,
     docTypes: List<String>,
 ): AttestationIdentifierPredicate {
-    val vctsPredicate = AttestationIdentifierPredicate.any(vcts.map { SDJwtVc(it) }.toSet())
-    val docTypesPredicate = AttestationIdentifierPredicate.any(docTypes.map { MDoc(it) }.toSet())
+    val vctsPredicate = AttestationIdentifierPredicate.any(vcts.map { AttestationIdentifier.SDJwtVc(it) }.toSet())
+    val docTypesPredicate = AttestationIdentifierPredicate.any(docTypes.map { AttestationIdentifier.MDoc(it) }.toSet())
     return vctsPredicate or docTypesPredicate
 }
 
