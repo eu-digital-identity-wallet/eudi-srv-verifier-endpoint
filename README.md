@@ -795,8 +795,8 @@ Example: `urn:eudi:pid:1`
 
 #### SD-JWT-VC Key Binding JWT configuration  
 
-Variable: `VERIFIER_VALIDATION_SDJWTVC_KBJWT_CLOCK_SKEW_DURATION`  
-Description: Clock skew duration to be used when validating the Key Binding JWT of an SD-JWT VC  
+Variable: `VERIFIER_VALIDATION_SDJWTVC_KBJWT_CLOCK_SKEW`  
+Description: Clock skew duration to be used when validating claim `iat` in Key Binding JWT of an SD-JWT VC, using duration notation    
 Default value: `PT5S`  
 
 #### SD-JWT-VC Type Metadata resolution
