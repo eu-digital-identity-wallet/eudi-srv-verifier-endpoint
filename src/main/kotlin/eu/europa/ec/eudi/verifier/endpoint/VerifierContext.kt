@@ -91,6 +91,7 @@ import kotlin.collections.toSet
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications as ConsultationAttestationClassifications
 
@@ -473,6 +474,8 @@ private fun SupplierContextDsl<*>.sdJwtVcValidator(
         audience = bean<VerifierConfig>().verifierId,
         statusListTokenValidator = beanProvider<StatusListTokenValidator>().ifAvailable,
         typeMetadataPolicy = bean<TypeMetadataPolicy>(),
+        clock = bean(),
+        skew = env.clockSkew(),
     )
 }
 
@@ -744,3 +747,6 @@ private fun AttestationIdentifierPredicate.Companion.of(
 
 private val EAAAttestationClassification.attestationIdentifierPredicate: AttestationIdentifierPredicate
     get() = AttestationIdentifierPredicate.of(vcts = vcts, docTypes = docTypes)
+
+private fun Environment.clockSkew(): Duration =
+    getProperty("verifier.validation.sdJwtVc.kbJwt.clock.skew.seconds")?.toLong()?.seconds ?: 5L.seconds

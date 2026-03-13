@@ -29,6 +29,7 @@ class ProcessSdJwtVc {
     private val verifier = DefaultSdJwtOps.SdJwtVcVerifier(
         IssuerVerificationMethod.usingCustom(DefaultSdJwtOps.NoSignatureValidation),
         TypeMetadataPolicy.NotUsed,
+        checkStatus = null,
     )
 
     suspend operator fun invoke(unprocessed: String): Either<Throwable, JsonObject> = Either.catch {

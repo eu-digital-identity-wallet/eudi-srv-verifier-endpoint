@@ -48,6 +48,8 @@ private fun descriptionOf(sdJwtError: VerificationError): String = when (sdJwtEr
     is VerificationError.SdJwtVcError -> when (val sdJwtVcError = sdJwtError.error) {
         is IssuerKeyVerificationError -> sdJwtVcError.description
         is TypeMetadataVerificationError -> sdJwtVcError.description
+        is SdJwtVcVerificationError.StatusVerificationError.NonValidStatus -> sdJwtVcError.status.explanation
+        is SdJwtVcVerificationError.StatusVerificationError.StatusCheckFailure -> sdJwtVcError.message
     }
 }
 

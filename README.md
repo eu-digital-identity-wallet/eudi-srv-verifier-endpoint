@@ -780,7 +780,9 @@ Variable: `VERIFIER_HTTP_PROXY_PASSWORD`
 Description: Password to authenticate against the proxy  
 Example: `passwd`
 
-### SD-JWT-VC Type Metadata policy
+### SD-JWT-VC Validation configuration
+
+#### SD-JWT-VC Type Metadata policy
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY`  
 Description: Choose SD-JWT VC Type Metadata policy. Information about the available policies can be found [here](https://github.com/eu-digital-identity-wallet/eudi-lib-jvm-sdjwt-kt?tab=readme-ov-file#type-metadata-resolution)  
@@ -790,6 +792,12 @@ Default value: `not_used`
 Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY_REQUIREDFOR`  
 Description: Comma separated list of VCTs for which Type Metadata are required for. Required when `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY` is set to `required_for`  
 Example: `urn:eudi:pid:1`  
+
+#### SD-JWT-VC Key Binding JWT configuration  
+
+Variable: `VERIFIER_VALIDATION_SDJWTVC_KBJWT_CLOCK_SKEW_SECONDS`  
+Description: Clock skew in seconds to be used when validating the Key Binding JWT of an SD-JWT VC  
+Default value: `5`  
 
 #### SD-JWT-VC Type Metadata resolution
 
