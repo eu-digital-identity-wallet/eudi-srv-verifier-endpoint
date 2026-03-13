@@ -91,7 +91,6 @@ import kotlin.collections.toSet
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications as ConsultationAttestationClassifications
 
@@ -749,4 +748,4 @@ private val EAAAttestationClassification.attestationIdentifierPredicate: Attesta
     get() = AttestationIdentifierPredicate.of(vcts = vcts, docTypes = docTypes)
 
 private fun Environment.clockSkew(): Duration =
-    getProperty("verifier.validation.sdJwtVc.kbJwt.clock.skew.seconds")?.toLong()?.seconds ?: 5L.seconds
+    Duration.parse(getProperty("verifier.validation.sdJwtVc.kbJwt.clock.skew.duration", "PT5S"))
