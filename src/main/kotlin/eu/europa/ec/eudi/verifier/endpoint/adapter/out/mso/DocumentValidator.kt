@@ -25,7 +25,6 @@ import com.upokecenter.cbor.CBORObject
 import eu.europa.ec.eudi.etsi1196x2.consultation.CertificationChainValidation
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.msoMdocIssuance
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Iso180135
@@ -35,9 +34,12 @@ import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
 import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
+import id.walt.mdoc.issuersigned.IssuerSignedItem
 import id.walt.mdoc.mdocauth.DeviceAuthentication
 import id.walt.mdoc.mso.DeviceKeyInfo
+import id.walt.mdoc.mso.DigestAlgorithm
 import id.walt.mdoc.mso.MSO
+import id.walt.mdoc.mso.MSO.Companion.digestItem
 import id.walt.mdoc.mso.ValidityInfo
 import kotlinx.datetime.toStdlibInstant
 import kotlinx.serialization.decodeFromByteArray
@@ -190,8 +192,21 @@ private fun Raise<DocumentError.InvalidIssuerSignedItems>.ensureDigestsOfIssuerS
     document: MDoc,
     issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe,
 ) {
-    if (issuerSignedItemsShouldBe == IssuerSignedItemsShouldBe.Verified) {
-        ensure(document.verifyIssuerSignedItems()) { DocumentError.InvalidIssuerSignedItems }
+    if (IssuerSignedItemsShouldBe.Verified == issuerSignedItemsShouldBe) {
+        val mso = checkNotNull(document.MSO)
+        val digestAlgorithm = DigestAlgorithm.entries.first { it.value == mso.digestAlgorithm.value }
+
+        val allDigestsMatch = document.issuerSigned.nameSpaces.orEmpty().all { nameSpace ->
+            val msoDigests = mso.getValueDigestsFor(nameSpace.key)
+            nameSpace.value.all {
+                val issuerSignedItem = it.decode<IssuerSignedItem>()
+                val digestId = issuerSignedItem.digestID.value.toInt()
+                val msoDigest = msoDigests[digestId]
+                val computedDigest by lazy { digestItem(it, digestAlgorithm) }
+                null != msoDigest && msoDigest.contentEquals(computedDigest)
+            }
+        }
+        ensure(allDigestsMatch) { DocumentError.InvalidIssuerSignedItems }
     }
 }
 
@@ -230,7 +245,7 @@ private suspend fun Raise<DocumentError.X5CNotTrusted>.ensureTrustedChain(
 ): Nel<X509Certificate> =
     when (isChainTrustedForAttestation.msoMdocIssuance(issuerChain, docType)) {
         is CertificationChainValidation.Trusted -> issuerChain
-        is CertificationChainValidation.NotTrusted -> raise(X5CNotTrusted("Issuer X5C not trusted"))
+        is CertificationChainValidation.NotTrusted -> raise(DocumentError.X5CNotTrusted("Issuer X5C not trusted"))
         null -> throw IllegalStateException("Could not find Attestation Classification for docType '$docType'")
     }
 
