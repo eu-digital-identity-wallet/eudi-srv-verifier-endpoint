@@ -748,4 +748,8 @@ private val EAAAttestationClassification.attestationIdentifierPredicate: Attesta
     get() = AttestationIdentifierPredicate.of(vcts = vcts, docTypes = docTypes)
 
 private fun Environment.clockSkew(): Duration =
-    Duration.parse(getProperty("verifier.validation.sdJwtVc.kbJwt.clock.skew", "PT5S"))
+    Duration.parse(getProperty("verifier.validation.sdJwtVc.kbJwt.clock.skew", "PT5S")).also {
+        require(!it.isNegative()) {
+            "Skew must be a positive duration"
+        }
+    }
