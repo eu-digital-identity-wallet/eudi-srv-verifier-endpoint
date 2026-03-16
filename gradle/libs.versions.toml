@@ -23,7 +23,7 @@ kover = "0.9.4"
 zxing = "3.5.3"
 uri = "0.0.19"
 aedile = "2.1.2"
-consultation = "0.3.0-alpha.2"
+consultation = "0.3.0-alpha.4"
 
 [libraries]
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
