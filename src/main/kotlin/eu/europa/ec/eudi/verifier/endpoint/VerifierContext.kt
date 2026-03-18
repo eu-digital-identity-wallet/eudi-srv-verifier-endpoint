@@ -74,7 +74,6 @@ import org.apache.http.ssl.SSLContextBuilder
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.BeanRegistrarDsl
 import org.springframework.beans.factory.BeanRegistrarDsl.SupplierContextDsl
-import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.bind.Name
 import org.springframework.boot.http.codec.CodecCustomizer
 import org.springframework.core.env.Environment
@@ -219,6 +218,8 @@ internal class AppBeans : BeanRegistrarDsl({
     }
 
     // Default IsChainTrustedForContextF
+    registerConfigurationPropertiesBean<VerifierEndpointConfigurationProperties>("verifier")
+
     registerBean {
         val config = bean<VerifierEndpointConfigurationProperties>()
         log.info("Using Attestation Classifications: ${config.attestationClassifications}")
@@ -688,7 +689,6 @@ private enum class TypeMetadataPolicyEnum {
     RequiredFor,
 }
 
-@ConfigurationProperties("verifier")
 data class VerifierEndpointConfigurationProperties(
     val validation: ValidationConfigurationProperties,
     val trustValidator: TrustValidatorConfigurationProperties? = null,
