@@ -27,6 +27,8 @@ import eu.europa.ec.eudi.etsi1196x2.consultation.*
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
+import eu.europa.ec.eudi.verifier.endpoint.adapter.SpringExtensions.nullableBean
+import eu.europa.ec.eudi.verifier.endpoint.adapter.SpringExtensions.registerConfigurationPropertiesBean
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
@@ -134,23 +136,17 @@ internal class AppBeans : BeanRegistrarDsl({
     //
     // Ktor
     //
-
-    val proxy = env.getProperty("verifier.http.proxy.url")?.let {
-        val url = Url(it)
-        val username = env.getProperty("verifier.http.proxy.username")
-        val password = env.getProperty("verifier.http.proxy.password")
-        HttpProxy(url, username, password)
-    }
+    registerConfigurationPropertiesBean<HttpProxy>("verifier.http.proxy")
 
     profile("self-signed") {
         log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification with proxy")
         registerBean<HttpClient> {
-            createHttpClient(trustSelfSigned = true, httpProxy = proxy)
+            createHttpClient(trustSelfSigned = true, httpProxy = nullableBean<HttpProxy, HttpClient>())
         }
     }
     profile("!self-signed") {
         registerBean<HttpClient> {
-            createHttpClient(httpProxy = proxy)
+            createHttpClient(httpProxy = nullableBean<HttpProxy, HttpClient>())
         }
     }
 
@@ -206,9 +202,17 @@ internal class AppBeans : BeanRegistrarDsl({
         registerBean<StatusListTokenValidator> {
             val selfSignedProfileActive = env.activeProfiles.contains("self-signed")
             val httpClient = if (selfSignedProfileActive) {
-                createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = true, httpProxy = proxy)
+                createHttpClient(
+                    withJsonContentNegotiation = false,
+                    trustSelfSigned = true,
+                    httpProxy = nullableBean<HttpProxy, StatusListTokenValidator>(),
+                )
             } else {
-                createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false, httpProxy = proxy)
+                createHttpClient(
+                    withJsonContentNegotiation = false,
+                    trustSelfSigned = false,
+                    httpProxy = nullableBean<HttpProxy, StatusListTokenValidator>(),
+                )
             }
             StatusListTokenValidator(httpClient, bean(), bean())
         }
