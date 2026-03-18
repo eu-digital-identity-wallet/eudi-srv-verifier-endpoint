@@ -34,6 +34,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPr
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.config.StringToAttestationsClassificationsConverter
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.Ignored
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.usingTrustAnchors
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.usingTrustValidatorService
@@ -76,6 +77,7 @@ import org.springframework.beans.factory.BeanRegistrarDsl
 import org.springframework.beans.factory.BeanRegistrarDsl.SupplierContextDsl
 import org.springframework.boot.context.properties.bind.Name
 import org.springframework.boot.http.codec.CodecCustomizer
+import org.springframework.core.convert.converter.Converter
 import org.springframework.core.env.Environment
 import org.springframework.core.env.getProperty
 import org.springframework.http.codec.json.KotlinSerializationJsonDecoder
@@ -219,7 +221,9 @@ internal class AppBeans : BeanRegistrarDsl({
 
     // Default IsChainTrustedForContextF
     registerConfigurationPropertiesBean<VerifierEndpointConfigurationProperties>("verifier")
-
+    registerBean<Converter<String, AttestationClassifications>> {
+        StringToAttestationsClassificationsConverter()
+    }
     registerBean {
         val config = bean<VerifierEndpointConfigurationProperties>()
         log.info("Using Attestation Classifications: ${config.attestationClassifications}")

@@ -17,12 +17,8 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.config
 
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.domain.AttestationClassifications
-import org.springframework.boot.context.properties.ConfigurationPropertiesBinding
 import org.springframework.core.convert.converter.Converter
-import org.springframework.stereotype.Component
 
-@ConfigurationPropertiesBinding
-@Component
 class StringToAttestationsClassificationsConverter : Converter<String, AttestationClassifications> {
     override fun convert(source: String): AttestationClassifications =
         jsonSupport.decodeFromString(source)
