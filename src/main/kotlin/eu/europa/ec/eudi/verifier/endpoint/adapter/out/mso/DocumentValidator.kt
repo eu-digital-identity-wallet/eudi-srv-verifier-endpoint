@@ -295,7 +295,7 @@ private fun Raise<DocumentError.DeviceKeyNotAuthorizedToSignItems>.ensureValidKe
                     .items
                     .filter {
                             (identifier, _) ->
-                        nameSpace !in fullyAuthorizedNameSpaces || identifier !in authorizedDataElementsPerNameSpace[nameSpace].orEmpty()
+                        nameSpace !in fullyAuthorizedNameSpaces && identifier !in authorizedDataElementsPerNameSpace[nameSpace].orEmpty()
                     }
                     .map { it.identifier }
                     .toNonEmptyListOrNull()

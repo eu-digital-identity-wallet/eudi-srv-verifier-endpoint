@@ -16,20 +16,25 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.NonEmptyList
+import arrow.core.getOrElse
 import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications
 import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationIdentifierPredicate
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForContextF
+import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.Ignored
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.usingTrustAnchors
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
+import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
 import eu.europa.ec.eudi.verifier.endpoint.domain.toJavaDate
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toInstant
 import org.springframework.core.io.DefaultResourceLoader
 import java.io.InputStream
+import java.net.URL
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import kotlin.test.Test
@@ -55,6 +60,22 @@ object Data {
     val MdlVP =
         """
         o2d2ZXJzaW9uYzEuMGlkb2N1bWVudHOBo2dkb2NUeXBldW9yZy5pc28uMTgwMTMuNS4xLm1ETGxpc3N1ZXJTaWduZWSiam5hbWVTcGFjZXOhcW9yZy5pc28uMTgwMTMuNS4xhNgYWImkZnJhbmRvbVhA749knalJ0xgtGBK1lVhhXe8D-beFtIiXyln1UhmTPKmbNmTwvolOya3h-_AyFE2MqCom3sBYs8VylU238nkOTGhkaWdlc3RJRA5sZWxlbWVudFZhbHVlaUFOREVSU1NPTnFlbGVtZW50SWRlbnRpZmllcmtmYW1pbHlfbmFtZdgYWIOkZnJhbmRvbVhAvzy0xTmV9BWSqTH1L5LO5KFazP-kCsBiHu3agh_dFhynMj0SLBaWYfNPrXPSK7wUIwuPquplYgA4Lb1zGEFzt2hkaWdlc3RJRBgmbGVsZW1lbnRWYWx1ZWNKQU5xZWxlbWVudElkZW50aWZpZXJqZ2l2ZW5fbmFtZdgYWI2kZnJhbmRvbVhAvDJWC3eMvjG57CkfQlaBdjIY7Yf2NNvTr27KpwdQ4kYrSSQhsOJATDiIXZeAP7bVqdvdO7Zni0NUIVDHSteSSGhkaWdlc3RJRBhCbGVsZW1lbnRWYWx1ZdkD7GoxOTg1LTAzLTMwcWVsZW1lbnRJZGVudGlmaWVyamJpcnRoX2RhdGXYGFiUpGZyYW5kb21YQO13H9R-OzlZjjFEcIwqERO9RaruJZWsGolT5X6qpSvMEGGCjBOMx1mVl2jl24K-C_pe-SdAEFhwc_KcXkoBI7VoZGlnZXN0SUQPbGVsZW1lbnRWYWx1ZcB0MjAwOS0wMS0wMVQwMDowMDowMFpxZWxlbWVudElkZW50aWZpZXJqaXNzdWVfZGF0ZWppc3N1ZXJBdXRohEOhASahGCFZAoUwggKBMIICJqADAgECAgkWSuWZAtwFEGQwCgYIKoZIzj0EAwIwWDELMAkGA1UEBhMCQkUxHDAaBgNVBAoTE0V1cm9wZWFuIENvbW1pc3Npb24xKzApBgNVBAMTIkVVIERpZ2l0YWwgSWRlbnRpdHkgV2FsbGV0IFRlc3QgQ0EwHhcNMjMwNTMwMTIzMDAwWhcNMjQwNTI5MTIzMDAwWjBlMQswCQYDVQQGEwJCRTEcMBoGA1UEChMTRXVyb3BlYW4gQ29tbWlzc2lvbjE4MDYGA1UEAxMvRVUgRGlnaXRhbCBJZGVudGl0eSBXYWxsZXQgVGVzdCBEb2N1bWVudCBTaWduZXIwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAR8kxP0waSqTrCz62gRpJlOWd5nmWQxwvOuCI63oQYctli9jDkSbBlZeskN-Z0HjT7zkTujS9ssvGmH0Cfpr538o4HLMIHIMB0GA1UdDgQWBBTRpLEkOTL7RXJymUjyUn2VWKdNLTAfBgNVHSMEGDAWgBQykesOHAEdFA52T2xP6kyWONr7BDAOBgNVHQ8BAf8EBAMCB4AwEgYDVR0lBAswCQYHKIGMXQUBAjAfBgNVHRIEGDAWhhRodHRwOi8vd3d3LmV1ZGl3LmRldjBBBgNVHR8EOjA4MDagNKAyhjBodHRwczovL3N0YXRpYy5ldWRpdy5kZXYvcGtpL2NybC9pc28xODAxMy1kcy5jcmwwCgYIKoZIzj0EAwIDSQAwRgIhAN5fmOce9ldSEmvyxLhP3t-B0kPKV7Fb0xiqufHr6z99AiEA_iL3MmtLV1j_Fv6G0zqNjSmIIWnaBJtaXiyAarFHCEhZBmTYGFkGX6ZndmVyc2lvbmMxLjBvZGlnZXN0QWxnb3JpdGhtZ1NIQS0yNTZnZG9jVHlwZXVvcmcuaXNvLjE4MDEzLjUuMS5tRExsdmFsdWVEaWdlc3RzoXFvcmcuaXNvLjE4MDEzLjUuMbglDlggkkOj-6hAjWfN8o9jhSncYFJQ0fDBxRBStdnWv_8nZB0YJlggHD3d1-rVoh_It7pmbn7ZZjSb1OtaHXET-vOpPKgXvdcYQlgg_PH--h2tMOyeAMIK_AyyAqgMeSmpqSyh-fKp-RzvR5UPWCAtYbt8x-FV3n8vug3QNaDzTW9NZYR6EKYxapriNQk-egpYID5ee-HsMz5HD4NRZYEYmqYhapqw3TILJx4tIjom6SvOBVgg_72Y-M6CJBy7beNYhE6bpTlEkRIbQ1A4p25E3_MrKQUYWVggHyw4N0q-2ZY-7HWGb4VNqCSJuQ7dCWN5P1VNuSjiPv4YZlggx1SWAXewxOaPu022Kcx7T7wTjc4y7vmLtgtKYOUuoHwYGVgg8hoS1uF5wPOckGMZ-uwJ5i_dfrB49w45fuP6WFrGnagIWCCpXnUkg0HFUsG2ooBy19RM2wMXZlC9fsDCgFu40KiDaBhAWCASqDJUAZeie5vDlaT-WVf6aQ5_TC225Gk0dFXPc1Uy7A1YIJTv_fqKHmZ1jVrB_Jh4rZLmgRQ4lMi59JqA6u45gaFLGDJYIANaiahebONUwWUXoizeac8ArnfaVjqaK3SOSkktKtNqGCFYIKJ--Ol3d5RmvL-C9lyTl-SLCyDLXFohrX0uZPn4F_ZDGD9YIOymcKB-tuLfl75WvkFgQ3V29nolL1wrR-VtuPUUiJZpGC5YIIYCq9EgqzXF_1xfpBomrXEv_UT1DJIZnpbkOYAFZjWaGElYIM8ineKdyI5xQH704kgiNsTwBPHqiX4Fl95h8aCm0ysHCVgglhk1fNxfOyp6WD7KQ9SxlYVvIZv71KdXUe2o3rOpmWEYJ1ggzNeoHyw9M_D7sAdqm_4Wk26gfRT4N_ECn95zZUDJlmsYX1ggU-obG-GsD2yYjRFJjW4Zzhpt1oWwCN6sw5cDkDnZU0UYKlggMJpODSrV3RosBjudUNh186RnBTJuE4mLsxy9BdJzssoYT1ggcj9wzitw_eHjhExGvXUnqLzzSRHKUzmVXkdheGyXjHQYSFgguv6QoagYTCfTHxwqejsNIddHIBr1epPrEtf6kmTFqggYPVggGSy9_z8QoAyHJWohY5qk6J1ts3uEOw2NZ7UzQ2hhhzsYU1ggelpUst7GN_S83C10Kl6TV-67vlp1KrCjQ1eUw_IOEZEYUFgg7l1_1kX6wsqid3gqMAmUpytUaF6rbvzJa8qBho5UtFsYQ1ggRFYV3ASPVs91_Pq49A8-FPBWMSlGfJEDtx6U9QGDdYcUWCCddIVod3NO1J-CianCUPazTCSmR5EoxYod8OICcR7M0BhSWCAg4D5ttNjoHKpkGFk9fXx7rzM5I8uK3-z3DesxaPW6Vxg5WCAYgBGGSyFyThlECkdExwQlV6vK-IaeGbxEcTZT1-jAaxhiWCA6joyHq7zvmdx5dGECtdbVbMde-zzoxNAsEs_0tISBKBFYIIJEG-CdR1CN7xp6lnwmj0y9yMX0UQAZfcy0rC48nKIxDFggRo6NNXweSIpoI8c4NSda5R9zHjO43AXc0bkiUofwnKkYOlggOyBuX5Her6s_ZFG9VRCaCX_ImtnSfzYF_MP8r9raUVUYTVggG9Sqh2I18AmWpxYTrGsfv4jh3PS_5o8zCOOLdTV5MUAYVlggKbH3AZnwQU6448Ef4-NV3dBwAkAYjkk6s0ezs0lE0mMYVFggR-sRxzD1B4U224dBR5Zk-vixJXwOFBIWXcysExJN99NtZGV2aWNlS2V5SW5mb6FpZGV2aWNlS2V5pAECIAEhWCBDDtpcwH3siSXBoDgBOGFYu_d7YJTeHlSEUvE3I851ASJYINkipi0KQaoI8x6Lu2WNQJLJY8WgUaT6n-WkEj1KiRm_bHZhbGlkaXR5SW5mb6Nmc2lnbmVkwHQyMDI0LTA5LTAzVDA5OjQ2OjE2Wml2YWxpZEZyb23AdDIwMjQtMDktMDNUMDk6NDY6MTZaanZhbGlkVW50aWzAdDIwMjUtMDktMDNUMDk6NDY6MTZaWEDrktGVkgavhQ4LnnkyDUi_YvxF1M4gJt15CUuYvjbPb6Qnsg8OpFC1GT_D2MdJhwYMEVbY4z-qCRqrA8yIWMJqbGRldmljZVNpZ25lZKJqbmFtZVNwYWNlc9gYQaBqZGV2aWNlQXV0aKFvZGV2aWNlU2lnbmF0dXJlhEOhASag9lhAQyIROFA1Q6OQx7eBYqxxBX52xAhYj_aMuTI9M8ZwoRfNP0RuMUn45LwrkeoaJGg4ksiD9rcqh1qG9NBF9nadu2ZzdGF0dXMA
+        """.trimIndent()
+
+    /**
+     * An mDL with Key Authorizations and Device Signed Items
+     */
+    val VPWithDeviceSignedItems =
+        """
+        o2d2ZXJzaW9uYzEuMGlkb2N1bWVudHOBo2dkb2NUeXBldW9yZy5pc28uMTgwMTMuNS4xLm1ETGxpc3N1ZXJTaWduZWSiam5hbWVTcGFjZXOhcW9yZy5pc28uMTgwMTMuNS4xgdgYWFCkZnJhbmRvbVCbXg8OphYpcFhqZpnohYjGaGRpZ2VzdElEAWxlbGVtZW50VmFsdWVjRG9lcWVsZW1lbnRJZGVudGlmaWVyaWxhc3RfbmFtZWppc3N1ZXJBdXRohEOhASahGCFZAbwwggG4MIIBXqADAgECAhQtcR1WXAuOpPNh2on-21C8_VljvDAKBggqhkjOPQQDAjARMQ8wDQYDVQQDDAZpc3N1ZXIwIBcNMjYwMTEzMDk0MzMzWhgPMjEyNTEyMjAwOTQzMzNaMBExDzANBgNVBAMMBmlzc3VlcjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABFqUfq83aL6mOIun8WRPP5T61kEzwRrdJH6Wx6rEyCND1CUPOTSCeZjAQgNDAegXHUDU4XJUbPdxie6FQ4gZzsejgZEwgY4wDwYDVR0TAQH_BAUwAwEB_zAdBgNVHQ4EFgQU0XcITcNuyeHM5TbbDTeN_radnjUwTAYDVR0jBEUwQ4AU0XcITcNuyeHM5TbbDTeN_radnjWhFaQTMBExDzANBgNVBAMMBmlzc3VlcoIULXEdVlwLjqTzYdqJ_ttQvP1ZY7wwDgYDVR0PAQH_BAQDAgEGMAoGCCqGSM49BAMCA0gAMEUCIQCyKoF-ZG2qVPOKi-77nK81JykfiLJdtX83MNKttJkprQIgTe8y-WFZs0hxZgqrLfKES3OgsS7tsDDRMzcc7kbn9LtZAbDYGFkBq6ZndmVyc2lvbmMxLjBvZGlnZXN0QWxnb3JpdGhtZ1NIQS0yNTZsdmFsdWVEaWdlc3RzoXFvcmcuaXNvLjE4MDEzLjUuMaIBWCDtgzieLiwS0I7lOFPlFp3qF70Yu5aUMnGseyE7zUqASwBYIPHlWj9Gy_058QKJKn5NptkF7qteKNpnMkxMrIaGVPlCbWRldmljZUtleUluZm-iaWRldmljZUtleaQBAiABIVggY-7-D1tppcAeeumcKCydGrJizZJTHIK1bpZWVO6q0ywiWCAjuuJozvRSCVBBTs23XV01ROn8DbkFeLlejoWr_G5843FrZXlBdXRob3JpemF0aW9uc6FqbmFtZVNwYWNlc4Fxb3JnLmlzby4xODAxMy41LjFnZG9jVHlwZXVvcmcuaXNvLjE4MDEzLjUuMS5tRExsdmFsaWRpdHlJbmZvo2ZzaWduZWTAdDIwMjYtMDMtMTlUMTQ6MTA6NDBaaXZhbGlkRnJvbcB0MjAyNi0wMy0xOVQxNDoxMDo0MFpqdmFsaWRVbnRpbMB0MjAzMS0wMy0xOFQxNDoxMDo0MFpYQKruudHtc9U1o8OmYrN__EwpiGg6pKPBtXsKQRKFj99Yf7OK9qwFoh3GeUar1DgC9PM8Fx72ZPMUhS5FSCTIys5sZGV2aWNlU2lnbmVkompuYW1lU3BhY2Vz2BhYIqFxb3JnLmlzby4xODAxMy41LjGhaWxhc3RfbmFtZWNEb2VqZGV2aWNlQXV0aKFvZGV2aWNlU2lnbmF0dXJlhEOhASag9lhA1fzZH8ysXSWPXTnjpx47Za9xrXuP5u6yaurytsByPi7uXbWZd4d7vL8yU4f16nMXdyKCt68qGEVEBLOJMyzzzmZzdGF0dXMA
+        """.trimIndent()
+
+    /**
+     * An mDL with Unauthorized Device Signed Items
+     */
+    val VPWithUnauthorizedDeviceSignedItems =
+        """
+        o2d2ZXJzaW9uYzEuMGlkb2N1bWVudHOBo2dkb2NUeXBldW9yZy5pc28uMTgwMTMuNS4xLm1ETGxpc3N1ZXJTaWduZWSiam5hbWVTcGFjZXOhcW9yZy5pc28uMTgwMTMuNS4xgdgYWFCkZnJhbmRvbVARFg8EFQupgCP58yGWfOusaGRpZ2VzdElEAWxlbGVtZW50VmFsdWVjRG9lcWVsZW1lbnRJZGVudGlmaWVyaWxhc3RfbmFtZWppc3N1ZXJBdXRohEOhASahGCFZAbwwggG4MIIBXqADAgECAhQtcR1WXAuOpPNh2on-21C8_VljvDAKBggqhkjOPQQDAjARMQ8wDQYDVQQDDAZpc3N1ZXIwIBcNMjYwMTEzMDk0MzMzWhgPMjEyNTEyMjAwOTQzMzNaMBExDzANBgNVBAMMBmlzc3VlcjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABFqUfq83aL6mOIun8WRPP5T61kEzwRrdJH6Wx6rEyCND1CUPOTSCeZjAQgNDAegXHUDU4XJUbPdxie6FQ4gZzsejgZEwgY4wDwYDVR0TAQH_BAUwAwEB_zAdBgNVHQ4EFgQU0XcITcNuyeHM5TbbDTeN_radnjUwTAYDVR0jBEUwQ4AU0XcITcNuyeHM5TbbDTeN_radnjWhFaQTMBExDzANBgNVBAMMBmlzc3VlcoIULXEdVlwLjqTzYdqJ_ttQvP1ZY7wwDgYDVR0PAQH_BAQDAgEGMAoGCCqGSM49BAMCA0gAMEUCIQCyKoF-ZG2qVPOKi-77nK81JykfiLJdtX83MNKttJkprQIgTe8y-WFZs0hxZgqrLfKES3OgsS7tsDDRMzcc7kbn9LtZAX_YGFkBeqZndmVyc2lvbmMxLjBvZGlnZXN0QWxnb3JpdGhtZ1NIQS0yNTZsdmFsdWVEaWdlc3RzoXFvcmcuaXNvLjE4MDEzLjUuMaIAWCA6_1UumseoDsBsV-bOHl9QVwiSJifR9GvcCu3ReGt05wFYIMs75_VWEoRHy-PQk2GCDboFOYqF1EEFotCwyv1LwEeBbWRldmljZUtleUluZm-haWRldmljZUtleaQBAiABIVggY-7-D1tppcAeeumcKCydGrJizZJTHIK1bpZWVO6q0ywiWCAjuuJozvRSCVBBTs23XV01ROn8DbkFeLlejoWr_G5842dkb2NUeXBldW9yZy5pc28uMTgwMTMuNS4xLm1ETGx2YWxpZGl0eUluZm-jZnNpZ25lZMB0MjAyNi0wMy0xOVQxNDoxNjo0N1ppdmFsaWRGcm9twHQyMDI2LTAzLTE5VDE0OjE2OjQ3Wmp2YWxpZFVudGlswHQyMDMxLTAzLTE4VDE0OjE2OjQ3WlhAe_EmQR9enATPbGKOcUHked59pFABIpsZmm3X5cDpJO_X6sP1JQLxFoC-swqP2_8ThXIO_wVNGaDw3P26ffdA62xkZXZpY2VTaWduZWSiam5hbWVTcGFjZXPYGFgioXFvcmcuaXNvLjE4MDEzLjUuMaFpbGFzdF9uYW1lY0RvZWpkZXZpY2VBdXRooW9kZXZpY2VTaWduYXR1cmWEQ6EBJqD2WEBVyD_q0eMTo4YJZzJ6NPhENNu-6Y2JEsISD7ThISTBaPlqfPNeLuNyljkStuqhBykJbDYIa9iPgoY4OY6tY8M_ZnN0YXR1cwA
         """.trimIndent()
 
     val caCerts: NonEmptyList<X509Certificate> by lazy {
@@ -175,6 +196,40 @@ class DeviceResponseValidatorTest {
 
         assertEquals(1, validDocuments.size)
     }
+
+    @Test
+    fun `device signed items in an authorized namespace are accepted`() = runTest {
+        val validDocuments = run {
+            val vpValidator = ignoreTrustDocumentValidator(clock)
+            val handoverInfo = deviceSignedHandoverInfo()
+
+            val validated = vpValidator.ensureValid(Data.VPWithDeviceSignedItems, handoverInfo = handoverInfo)
+            assertNotNull(validated.getOrElse { error -> error("Validation failed: $error") })
+        }
+
+        assertEquals(1, validDocuments.size)
+    }
+
+    @Test
+    fun `device signed items in an unauthorized namespace should fail`() = runTest {
+        val invalidDocument = run {
+            val vpValidator = ignoreTrustDocumentValidator(clock)
+            val handoverInfo = deviceSignedHandoverInfo()
+
+            val validated = vpValidator.ensureValid(Data.VPWithUnauthorizedDeviceSignedItems, handoverInfo = handoverInfo)
+            val invalidDocuments =
+                assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull()).invalidDocuments
+            assertEquals(1, invalidDocuments.size)
+            invalidDocuments.head
+        }
+
+        assertEquals(0, invalidDocument.index)
+        val documentError = run {
+            assertEquals(1, invalidDocument.errors.size)
+            invalidDocument.errors.head
+        }
+        assertIs<DocumentError.DeviceKeyNotAuthorizedToSignItems>(documentError)
+    }
 }
 
 private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, clock: Clock): DeviceResponseValidator {
@@ -187,6 +242,38 @@ private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, cloc
                 isRevocationEnabled = false
                 date = clock.now().toJavaDate()
             },
+            AttestationClassifications(
+                pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
+                eaAs = mapOf(
+                    "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
+                ),
+            ),
+        ),
+        statusListTokenValidator = null,
+    )
+    return DeviceResponseValidator(documentValidator)
+}
+
+private fun deviceSignedHandoverInfo(): HandoverInfo {
+    val verifierId = VerifierId.PreRegistered(
+        originalClientId = "client_id",
+        accessCertificate = TestContext.verifierId.accessCertificate,
+    )
+
+    return HandoverInfo.OpenID4VPHandoverInfo(
+        clientId = verifierId,
+        nonce = Nonce("nonce"),
+        ephemeralEncryptionKey = null,
+        responseUri = URL("https://example.com/direct_post"),
+    )
+}
+
+private fun ignoreTrustDocumentValidator(clock: Clock): DeviceResponseValidator {
+    val documentValidator = DocumentValidator(
+        clock = clock,
+        validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
+        isChainTrustedForAttestation = IsChainTrustedForAttestation(
+            IsChainTrustedForContextF.Ignored,
             AttestationClassifications(
                 pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
                 eaAs = mapOf(
