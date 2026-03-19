@@ -174,7 +174,7 @@ internal class AppBeans : BeanRegistrarDsl({
         )
     }
 
-    registerBean { RetrieveRequestObjectLive(bean(), bean(), bean(), bean(), bean(), bean(), bean()) }
+    registerBean<RetrieveRequestObjectLive>()
 
     registerBean {
         TimeoutPresentationsLive(
@@ -193,10 +193,10 @@ internal class AppBeans : BeanRegistrarDsl({
     }
 
     registerBean { GenerateResponseCode.Random }
-    registerBean { PostWalletResponseLive(bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean()) }
+    registerBean<PostWalletResponseLive>()
     registerBean { GenerateEphemeralEncryptionKeyPairNimbus(bean<VerifierConfig>().clientMetaData.responseEncryptionOption) }
-    registerBean { GetWalletResponseLive(bean(), bean(), bean()) }
-    registerBean { GetPresentationEventsLive(bean(), bean()) }
+    registerBean<GetWalletResponseLive>()
+    registerBean<GetPresentationEventsLive>()
 
     if (env.getProperty("verifier.validation.sdJwtVc.statusCheck.enabled", true)) {
         log.info("Enabling Status List Token validations")
@@ -359,8 +359,8 @@ internal class AppBeans : BeanRegistrarDsl({
     //
     // Scheduled
     //
-    registerBean { ScheduleTimeoutPresentations(bean()) }
-    registerBean { ScheduleDeleteOldPresentations(bean()) }
+    registerBean<ScheduleTimeoutPresentations>()
+    registerBean<ScheduleDeleteOldPresentations>()
 
     //
     // Config
