@@ -38,7 +38,4 @@ object SpringExtensions {
         }?.let {
             registerBean { it }
         }
-
-    inline fun <reified T : Any, reified R : Any> BeanRegistrarDsl.SupplierContextDsl<R>.nullableBean(): T? =
-        beanProvider<T>().ifAvailable
 }

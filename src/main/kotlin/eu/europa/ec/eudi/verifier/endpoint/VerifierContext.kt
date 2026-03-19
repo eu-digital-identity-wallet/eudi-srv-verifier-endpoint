@@ -27,7 +27,6 @@ import eu.europa.ec.eudi.etsi1196x2.consultation.*
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
-import eu.europa.ec.eudi.verifier.endpoint.adapter.SpringExtensions.nullableBean
 import eu.europa.ec.eudi.verifier.endpoint.adapter.SpringExtensions.registerConfigurationPropertiesBean
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
@@ -142,12 +141,12 @@ internal class AppBeans : BeanRegistrarDsl({
     profile("self-signed") {
         log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification with proxy")
         registerBean<HttpClient> {
-            createHttpClient(trustSelfSigned = true, httpProxy = nullableBean<HttpProxy, HttpClient>())
+            createHttpClient(trustSelfSigned = true, httpProxy = beanProvider<HttpProxy>().ifAvailable)
         }
     }
     profile("!self-signed") {
         registerBean<HttpClient> {
-            createHttpClient(httpProxy = nullableBean<HttpProxy, HttpClient>())
+            createHttpClient(httpProxy = beanProvider<HttpProxy>().ifAvailable)
         }
     }
 
@@ -206,13 +205,13 @@ internal class AppBeans : BeanRegistrarDsl({
                 createHttpClient(
                     withJsonContentNegotiation = false,
                     trustSelfSigned = true,
-                    httpProxy = nullableBean<HttpProxy, StatusListTokenValidator>(),
+                    httpProxy = beanProvider<HttpProxy>().ifAvailable,
                 )
             } else {
                 createHttpClient(
                     withJsonContentNegotiation = false,
                     trustSelfSigned = false,
-                    httpProxy = nullableBean<HttpProxy, StatusListTokenValidator>(),
+                    httpProxy = beanProvider<HttpProxy>().ifAvailable,
                 )
             }
             StatusListTokenValidator(httpClient, bean(), bean())
