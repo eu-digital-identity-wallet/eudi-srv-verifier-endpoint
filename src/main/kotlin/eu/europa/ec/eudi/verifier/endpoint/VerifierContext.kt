@@ -106,7 +106,7 @@ internal class AppBeans : BeanRegistrarDsl({
     // JOSE
     //
     registerBean { CreateJarNimbus() }
-    registerBean { VerifyEncryptedResponseWithNimbus(bean<VerifierConfig>().clientMetaData.responseEncryptionOption) }
+    registerBean<VerifyEncryptedResponseWithNimbus>()
 
     //
     // Persistence
@@ -172,25 +172,14 @@ internal class AppBeans : BeanRegistrarDsl({
             bean(),
         )
     }
-
     registerBean<RetrieveRequestObjectLive>()
-
-    registerBean {
-        TimeoutPresentationsLive(
-            bean(),
-            bean(),
-            bean<VerifierConfig>().maxAge,
-            bean(),
-            bean(),
-        )
-    }
+    registerBean<TimeoutPresentationsLive>()
     registerBean {
         val maxAge = Duration.parse(env.getProperty("verifier.presentations.cleanup.maxAge", "P10D"))
         require(maxAge.isPositive()) { "'verifier.presentations.cleanup.maxAge' cannot be zero or negative" }
 
         DeleteOldPresentationsLive(bean(), maxAge, bean())
     }
-
     registerBean { GenerateResponseCode.Random }
     registerBean<PostWalletResponseLive>()
     registerBean { GenerateEphemeralEncryptionKeyPairNimbus(bean<VerifierConfig>().clientMetaData.responseEncryptionOption) }
@@ -369,35 +358,17 @@ internal class AppBeans : BeanRegistrarDsl({
     //
     // End points
     //
-
+    registerBean<WalletApi>()
+    registerBean<VerifierApi>()
+    registerBean<UtilityApi>()
+    registerBean<StaticContent>()
+    registerBean<SwaggerUi>()
     registerBean {
-        val walletApi = WalletApi(
-            bean(),
-            bean(),
-            bean<VerifierConfig>().verifierId.accessCertificate.key,
-        )
-        val verifierApi = VerifierApi(
-            bean(),
-            bean(),
-            bean(),
-        )
-        val staticContent = StaticContent()
-        val swaggerUi = SwaggerUi(
-            publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),
-            webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern")
-                .removeSuffix("/**"),
-        )
-        val utilityApi = UtilityApi(
-            bean(),
-            bean(),
-            bean(),
-            bean<VerifierEndpointConfigurationProperties>().attestationClassifications,
-        )
-        walletApi.route
-            .and(verifierApi.route)
-            .and(staticContent.route)
-            .and(swaggerUi.route)
-            .and(utilityApi.route)
+        bean<WalletApi>().route
+            .and(bean<VerifierApi>().route)
+            .and(bean<StaticContent>().route)
+            .and(bean<SwaggerUi>().route)
+            .and(bean<UtilityApi>().route)
     }
 
     //

@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.timedOut
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadIncompletePresentationsOlderThan
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
@@ -33,10 +34,12 @@ fun interface TimeoutPresentations {
 class TimeoutPresentationsLive(
     private val loadIncompletePresentationsOlderThan: LoadIncompletePresentationsOlderThan,
     private val storePresentation: StorePresentation,
-    private val maxAge: Duration,
+    verifierConfig: VerifierConfig,
     private val clock: Clock,
     private val publishPresentationEvent: PublishPresentationEvent,
 ) : TimeoutPresentations {
+    private val maxAge: Duration = verifierConfig.maxAge
+
     override suspend operator fun invoke(): List<TransactionId> {
         val expireBefore = clock.now() - maxAge
         return loadIncompletePresentationsOlderThan(expireBefore).mapNotNull { timeout(it)?.id }

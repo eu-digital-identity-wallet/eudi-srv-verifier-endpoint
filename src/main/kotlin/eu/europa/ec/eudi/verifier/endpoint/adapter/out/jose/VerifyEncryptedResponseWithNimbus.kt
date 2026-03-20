@@ -40,9 +40,9 @@ import org.slf4j.LoggerFactory
  * Decrypts an encrypted JWT and maps the JWT claimSet to an AuthorisationResponseTO
  */
 class VerifyEncryptedResponseWithNimbus(
-    private val responseEncryptionOption: ResponseEncryptionOption,
+    verifierConfig: VerifierConfig,
 ) : VerifyEncryptedResponse {
-
+    private val responseEncryptionOption: ResponseEncryptionOption = verifierConfig.clientMetaData.responseEncryptionOption
     private val logger: Logger = LoggerFactory.getLogger(VerifyEncryptedResponseWithNimbus::class.java)
 
     override fun invoke(

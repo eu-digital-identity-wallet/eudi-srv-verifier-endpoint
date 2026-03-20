@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import org.slf4j.LoggerFactory
+import org.springframework.core.env.Environment
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.RouterFunction
@@ -34,9 +35,11 @@ private val log = LoggerFactory.getLogger(SwaggerUi::class.java)
  * @property route the routes handled by this web adapter
  */
 internal class SwaggerUi(
-    private val publicResourcesBasePath: String,
-    private val webJarResourcesBasePath: String,
+    env: Environment,
 ) {
+    private val publicResourcesBasePath: String = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**")
+    private val webJarResourcesBasePath: String = env.getRequiredProperty("spring.webflux.webjars-path-pattern").removeSuffix("/**")
+
     val route: RouterFunction<ServerResponse> = coRouter {
         (GET("") or GET("/")) {
             log.info("Redirecting to {}", SWAGGER_UI)

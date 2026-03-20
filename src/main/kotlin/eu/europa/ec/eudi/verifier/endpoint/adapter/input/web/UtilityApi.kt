@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps
+import eu.europa.ec.eudi.verifier.endpoint.VerifierEndpointConfigurationProperties
 import eu.europa.ec.eudi.verifier.endpoint.domain.AttestationClassifications
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -32,8 +33,10 @@ internal class UtilityApi(
     private val validateMsoMdocDeviceResponse: ValidateMsoMdocDeviceResponse,
     private val validateSdJwtVc: ValidateSdJwtVc,
     private val processSdJwtVc: ProcessSdJwtVc,
-    private val attestationClassifications: AttestationClassifications,
+    verifierEndpointConfigurationProperties: VerifierEndpointConfigurationProperties,
 ) {
+    private val attestationClassifications: AttestationClassifications = verifierEndpointConfigurationProperties.attestationClassifications
+
     val route: RouterFunction<ServerResponse> = coRouter {
         POST(
             VALIDATE_MSO_MDOC_DEVICE_RESPONSE_PATH,
