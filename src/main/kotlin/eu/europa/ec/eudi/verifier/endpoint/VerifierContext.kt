@@ -156,22 +156,8 @@ internal class AppBeans : BeanRegistrarDsl({
     //
     // Use cases
     //
-    registerBean {
-        InitTransactionLive(
-            bean(),
-            bean(),
-            bean(),
-            bean(),
-            bean(),
-            bean(),
-            bean(),
-            WalletApi.requestJwtByReference(env.publicUrl()),
-            bean(),
-            bean(),
-            bean(),
-            bean(),
-        )
-    }
+    registerBean<EmbedOption.ByReference<RequestId>> { WalletApi.requestJwtByReference(env.publicUrl()) }
+    registerBean<InitTransactionLive>()
     registerBean<RetrieveRequestObjectLive>()
     registerBean<TimeoutPresentationsLive>()
     registerBean {
