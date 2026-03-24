@@ -34,8 +34,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/wrapper-validation@v5
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/wrapper-validation@v6
+      - uses: gradle/actions/setup-gradle@v6
       - run: ./gradlew clean test koverXmlReport
       - uses: sonarsource/sonarqube-scan-action@v7.0.0
         if: (github.event_name == 'push'|| github.event_name == 'workflow_dispatch')
