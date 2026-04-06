@@ -42,12 +42,10 @@ private val REQUEST_OBJECT_MEDIA_TYPE = MediaType.parseMediaType(RFC9101.REQUEST
 class WalletApi(
     private val retrieveRequestObject: RetrieveRequestObject,
     private val postWalletResponse: PostWalletResponse,
-    verifierConfig: VerifierConfig,
+    private val signingKey: JWK,
 ) {
 
     private val logger: Logger = LoggerFactory.getLogger(WalletApi::class.java)
-
-    private val signingKey: JWK = verifierConfig.verifierId.accessCertificate.key
 
     /**
      * The routes available to the wallet

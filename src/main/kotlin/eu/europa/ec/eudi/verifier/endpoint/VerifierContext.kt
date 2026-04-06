@@ -344,9 +344,13 @@ internal class AppBeans : BeanRegistrarDsl({
     //
     // End points
     //
-    registerBean<WalletApi>()
+    registerBean<WalletApi> {
+        WalletApi(bean(), bean(), bean<VerifierConfig>().verifierId.accessCertificate.key)
+    }
     registerBean<VerifierApi>()
-    registerBean<UtilityApi>()
+    registerBean<UtilityApi> {
+        UtilityApi(bean(), bean(), bean(), bean<VerifierEndpointConfigurationProperties>().attestationClassifications)
+    }
     registerBean<StaticContent>()
     registerBean<SwaggerUi> { SwaggerUi(env) }
     registerBean {
