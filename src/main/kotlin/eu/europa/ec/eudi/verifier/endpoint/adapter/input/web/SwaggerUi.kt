@@ -24,6 +24,7 @@ import org.springframework.web.reactive.function.server.RouterFunction
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.coRouter
 import org.springframework.web.reactive.function.server.renderAndAwait
+import kotlin.String
 
 private val log = LoggerFactory.getLogger(SwaggerUi::class.java)
 
@@ -35,11 +36,9 @@ private val log = LoggerFactory.getLogger(SwaggerUi::class.java)
  * @property route the routes handled by this web adapter
  */
 internal class SwaggerUi(
-    env: Environment,
+    private val publicResourcesBasePath: String,
+    private val webJarResourcesBasePath: String,
 ) {
-    private val publicResourcesBasePath: String = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**")
-    private val webJarResourcesBasePath: String = env.getRequiredProperty("spring.webflux.webjars-path-pattern").removeSuffix("/**")
-
     val route: RouterFunction<ServerResponse> = coRouter {
         (GET("") or GET("/")) {
             log.info("Redirecting to {}", SWAGGER_UI)
@@ -66,3 +65,8 @@ internal class SwaggerUi(
         const val SWAGGER_UI = "/swagger-ui"
     }
 }
+
+internal operator fun SwaggerUi.Companion.invoke(env: Environment) = SwaggerUi(
+    publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),
+    webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern").removeSuffix("/**"),
+)

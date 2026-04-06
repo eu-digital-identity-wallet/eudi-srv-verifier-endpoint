@@ -348,7 +348,7 @@ internal class AppBeans : BeanRegistrarDsl({
     registerBean<VerifierApi>()
     registerBean<UtilityApi>()
     registerBean<StaticContent>()
-    registerBean<SwaggerUi>()
+    registerBean<SwaggerUi> { SwaggerUi(env) }
     registerBean {
         bean<WalletApi>().route
             .and(bean<VerifierApi>().route)
