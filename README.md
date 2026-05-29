@@ -272,7 +272,7 @@ curl -X POST -H "Content-type: application/json" -d '{
         },
         "claims": [
           {
-            "path": ["eu.europa.ec.eudi.pid.1", "family_name"],
+            "path": ["eu.europa.ec.eudi.pid.1", "family_name"]
           }
         ]
       }
@@ -321,7 +321,7 @@ curl -X POST -H "Content-type: application/json" -H "Accept: image/png" -d '{
         },
         "claims": [
           {
-            "path": ["eu.europa.ec.eudi.pid.1", "family_name"],
+            "path": ["eu.europa.ec.eudi.pid.1", "family_name"]
           }
         ]
       }
