@@ -177,7 +177,7 @@ internal class AppBeans : BeanRegistrarDsl({
         )
     }
 
-    registerBean { RetrieveRequestObjectLive(bean(), bean(), bean(), bean(), bean(), bean(), bean()) }
+    registerBean { RetrieveRequestObjectLive(bean(), bean(), bean(), bean(), bean(), bean()) }
 
     registerBean {
         TimeoutPresentationsLive(

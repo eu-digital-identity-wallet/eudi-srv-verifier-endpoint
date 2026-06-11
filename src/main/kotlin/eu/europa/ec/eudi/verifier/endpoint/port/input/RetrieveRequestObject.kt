@@ -81,10 +81,9 @@ class RetrieveRequestObjectLive(
     private val verifierConfig: VerifierConfig,
     private val clock: Clock,
     private val publishPresentationEvent: PublishPresentationEvent,
-    httpClient: HttpClient,
 ) : RetrieveRequestObject {
 
-    private val walletMetadataValidator = WalletMetadataValidator(verifierConfig, httpClient)
+    private val walletMetadataValidator = WalletMetadataValidator(verifierConfig)
 
     override suspend operator fun invoke(
         requestId: RequestId,
@@ -177,7 +176,7 @@ class RetrieveRequestObjectLive(
 /**
  * Validator for Wallet Metadata.
  */
-private class WalletMetadataValidator(private val verifierConfig: VerifierConfig, private val httpClient: HttpClient) {
+private class WalletMetadataValidator(private val verifierConfig: VerifierConfig) {
 
     suspend fun validate(
         metadata: WalletMetadataTO,
@@ -261,13 +260,8 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
     }
 
     private suspend fun Raise<RetrieveRequestObjectError>.encryptionRequirement(metadata: WalletMetadataTO): EncryptionRequirement {
-        ensure((null == metadata.jwks && null == metadata.jwksUri) || ((null != metadata.jwks) xor (null != metadata.jwksUri))) {
-            RetrieveRequestObjectError.InvalidWalletMetadata(
-                "Either none of or only one of '${RFC8414.JWKS}', '${RFC8414.JWKS_URI}' must be provided",
-            )
-        }
+        val jwks = metadata.jwks?.toJwks()?.bind()
 
-        val jwks = metadata.jwks?.toJwks()?.bind() ?: metadata.jwksUri?.let { httpClient.getJwks(it).bind() }
         return if (null == jwks) {
             EncryptionRequirement.NotRequired
         } else {
@@ -299,9 +293,6 @@ private data class WalletMetadataTO(
 
     @SerialName(RFC8414.JWKS)
     val jwks: JsonObject? = null,
-
-    @SerialName(RFC8414.JWKS_URI)
-    val jwksUri: String? = null,
 
     @SerialName(JarmSpec.AUTHORIZATION_ENCRYPTION_ALGORITHMS_SUPPORTED)
     val encryptionAlgorithmsSupported: List<String>? = null,
@@ -378,11 +369,6 @@ private fun JsonObject.toJwks(): Either<RetrieveRequestObjectError.InvalidWallet
     Either.catch {
         JWKSet.parse(jsonSupport.encodeToString(this))
     }.mapLeft { RetrieveRequestObjectError.InvalidWalletMetadata("Cannot convert JsonObject to JWKS", it) }
-
-private suspend fun HttpClient.getJwks(jwksLocation: String): Either<RetrieveRequestObjectError.InvalidWalletMetadata, JWKSet> =
-    Either.catch {
-        JWKSet.parse(get(jwksLocation).bodyAsText())
-    }.mapLeft { RetrieveRequestObjectError.InvalidWalletMetadata("Unable to fetch encryption JWKS", it) }
 
 private fun EncryptionRequirement.Required.Companion.create(
     jwks: List<JWK>,

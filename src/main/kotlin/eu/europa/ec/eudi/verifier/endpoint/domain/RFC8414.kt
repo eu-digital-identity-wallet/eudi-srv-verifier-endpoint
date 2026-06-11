@@ -22,7 +22,6 @@ object RFC8414 {
     const val RESPONSE_TYPES_SUPPORTED: String = "response_types_supported"
     const val RESPONSE_MODES_SUPPORTED: String = "response_modes_supported"
     const val JWKS: String = "jwks"
-    const val JWKS_URI: String = "jwks_uri"
 
     const val RESPONSE_MODE_QUERY = "query"
     const val RESPONSE_MODE_FRAGMENT = "fragment"
