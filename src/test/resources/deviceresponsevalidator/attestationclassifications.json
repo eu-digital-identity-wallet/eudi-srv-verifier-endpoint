@@ -1,0 +1,76 @@
+{
+  "pid": {
+    "vcts": [],
+    "docTypes": [
+      "eu.europa.ec.eudi.pid.1"
+    ]
+  },
+  "qeaa": {
+    "vcts": [],
+    "docTypes": []
+  },
+  "pubeaa": {
+    "vcts": [],
+    "docTypes": [
+      "eu.europa.ec.eudi.cor.1",
+      "eu.europa.ec.eudi.ehic.1",
+      "eu.europa.ec.eudi.hiid.1",
+      "eu.europa.ec.eudi.pda1.1",
+      "org.iso.23220.2.photoid.1",
+      "eu.europa.ec.eudi.por.1",
+      "eu.europa.ec.eudi.tax.1",
+      "org.iso.7367.2.1.mVC"
+    ]
+  },
+  "eaa": [
+    {
+      "useCase": "mDL",
+      "vcts": [],
+      "docTypes": [
+        "org.iso.18013.5.1.mDL"
+      ]
+    },
+    {
+      "useCase": "employeeID",
+      "vcts": [],
+      "docTypes": [
+        "eu.europa.ec.eudi.employee.1"
+      ]
+    },
+    {
+      "useCase": "iban",
+      "vcts": [],
+      "docTypes": [
+        "eu.europa.ec.eudi.iban.1"
+      ]
+    },
+    {
+      "useCase": "loyaltyCard",
+      "vcts": [],
+      "docTypes": [
+        "eu.europa.ec.eudi.loyalty.1"
+      ]
+    },
+    {
+      "useCase": "msisdn",
+      "vcts": [],
+      "docTypes": [
+        "eu.europa.ec.eudi.msisdn.1"
+      ]
+    },
+    {
+      "useCase": "seaFarer",
+      "vcts": [],
+      "docTypes": [
+        "eu.europa.ec.eudi.seafarer.1"
+      ]
+    },
+    {
+      "useCase": "bookingReservation",
+      "vcts": [],
+      "docTypes": [
+        "org.iso.18013.5.1.reservation"
+      ]
+    }
+  ]
+}

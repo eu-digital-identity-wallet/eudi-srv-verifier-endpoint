@@ -18,18 +18,14 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist
 import arrow.core.raise.catch
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
-import eu.europa.ec.eudi.statium.GetStatus
-import eu.europa.ec.eudi.statium.GetStatusListToken
-import eu.europa.ec.eudi.statium.Status
-import eu.europa.ec.eudi.statium.StatusReference
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.tokenStatusListReference
+import eu.europa.ec.eudi.statium.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.statusReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock.Companion.asKotlinClock
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
-import id.walt.mdoc.doc.MDoc
+import id.walt.mdoc.objects.mso.MobileSecurityObject
 import io.ktor.client.*
 
 data class StatusCheckException(val reason: String, val causedBy: Throwable) : Exception(reason, causedBy)
@@ -43,8 +39,11 @@ class StatusListTokenValidator(
     suspend fun validate(sdJwtVc: SdJwtAndKbJwt<SignedJWT>, transactionId: TransactionId?) =
         sdJwtVc.statusReference()?.validate(transactionId)
 
-    suspend fun validate(mdoc: MDoc, transactionId: TransactionId?) =
-        mdoc.issuerSigned.issuerAuth?.tokenStatusListReference()?.validate(transactionId)
+    suspend fun validate(mso: MobileSecurityObject, transactionId: TransactionId?) =
+        mso.status?.let {
+            val statusListReference = StatusReference(StatusIndex(it.statusList.index.toInt()), it.statusList.uri.string)
+            statusListReference.validate(transactionId)
+        }
 
     private suspend fun StatusReference.validate(transactionId: TransactionId?) {
         catch({

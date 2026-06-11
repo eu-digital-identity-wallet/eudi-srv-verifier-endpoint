@@ -108,10 +108,9 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
                     VerifierApiClient.initTransaction(client, initTransaction),
                 )
-            val requestId =
-                RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-            val requestObjectJsonResponse: JsonObject =
-                WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
+            checkNotNull(transactionInitialized.requestUri)
+            val requestId = RequestId(transactionInitialized.requestUri.removePrefix("http://localhost:0/wallet/request.jwt/"))
+            val requestObjectJsonResponse = WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri)
             val transactionId = TransactionId(transactionInitialized.transactionId)
 
             val supportedEncryptionMethods = assertNotNull(requestObjectJsonResponse.supportedEncryptionMethods())
@@ -199,10 +198,9 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
         ).copy(responseMode = ResponseModeTO.DirectPostJwt)
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
-        val requestId =
-            RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-        val requestObjectJsonResponse =
-            WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
+        checkNotNull(transactionInitialized.requestUri)
+        val requestId = RequestId(transactionInitialized.requestUri.removePrefix("http://localhost:0/wallet/request.jwt/"))
+        val requestObjectJsonResponse = WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri)
 
         val supportedEncryptionMethods = assertNotNull(requestObjectJsonResponse.supportedEncryptionMethods())
         assertEquals(config.clientMetaData.responseEncryptionOption.encryptionMethods, supportedEncryptionMethods)
@@ -255,7 +253,8 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
 
-        val requestId = RequestId(transactionDetails.requestUri!!.removePrefix("http://localhost:0/wallet/request.jwt/"))
+        checkNotNull(transactionDetails.requestUri)
+        val requestId = RequestId(transactionDetails.requestUri.removePrefix("http://localhost:0/wallet/request.jwt/"))
 
         val walletResponse = LinkedMultiValueMap<String, Any>()
             .apply {
@@ -286,7 +285,8 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         assertNotNull(ecKey.algorithm)
         val supportedAlgorithm = JWEAlgorithm.parse(ecKey.algorithm.name)
 
-        val requestId = RequestId(transactionDetails.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        checkNotNull(transactionDetails.requestUri)
+        val requestId = RequestId(transactionDetails.requestUri.removePrefix("http://localhost:0/wallet/request.jwt/"))
         val encryptedJwt = run {
             val jwtClaims: JWTClaimsSet = buildJsonObject {
                 put("state", requestId.value)
@@ -335,7 +335,7 @@ internal class DeviceResponseValidationTest {
         @Bean
         @Primary
         fun clock(): Clock = Clock.fixed(
-            now = Instant.fromEpochSeconds(1766135977L),
+            now = Instant.fromEpochSeconds(1768985337L),
             timeZone = ZoneOffset.ofHours(3).toKotlinFixedOffsetTimeZone(),
         )
 

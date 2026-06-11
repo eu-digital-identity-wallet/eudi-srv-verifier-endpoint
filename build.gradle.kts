@@ -1,5 +1,4 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
-import org.owasp.dependencycheck.gradle.extension.DependencyCheckExtension
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
@@ -21,6 +20,12 @@ repositories {
         url = uri("https://maven.waltid.dev/releases")
         mavenContent {
             releasesOnly()
+        }
+    }
+    maven {
+        url = uri("https://maven.waltid.dev/snapshots")
+        mavenContent {
+            snapshotsOnly()
         }
     }
 }
@@ -48,14 +53,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.webjars:webjars-locator-lite")
     implementation(libs.swagger.ui)
-    implementation(libs.waltid.mdoc.credentials) {
+    implementation(libs.kotlinx.datetime)
+    implementation(libs.waltid.mdoc.credentials2) {
         because("To verify CBOR credentials")
     }
-    implementation(libs.kotlinx.datetime) {
-        because("required by walt.id")
-    }
-    implementation(libs.cose.java) {
-        because("required by walt.id")
+    implementation(libs.waltid.crypto) {
+        because("To verify CBOR credentials")
     }
     implementation(libs.sd.jwt)
     implementation(libs.ktor.client.apache) {
@@ -110,6 +113,7 @@ kotlin {
             "kotlin.io.encoding.ExperimentalEncodingApi",
             "kotlin.contracts.ExperimentalContracts",
             "kotlin.time.ExperimentalTime",
+            "kotlin.ExperimentalUnsignedTypes",
         )
     }
 }
@@ -156,9 +160,7 @@ spotless {
     }
 }
 
-val nvdApiKey: String? = System.getenv("NVD_API_KEY") ?: properties["nvdApiKey"]?.toString()
-val dependencyCheckExtension = extensions.findByType(DependencyCheckExtension::class.java)
-dependencyCheckExtension?.apply {
+dependencyCheck {
     formats = mutableListOf("XML", "HTML")
-    nvd.apiKey = nvdApiKey ?: ""
+    nvd.apiKey = System.getenv("NVD_API_KEY") ?: properties["nvdApiKey"]?.toString() ?: ""
 }

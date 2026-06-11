@@ -255,7 +255,6 @@ class WalletApi(
                         "MSO uses unsupported revocation mechanisms. Used: '${used.joinToString()}', allowed: '${allowed.joinToString()}'",
                     )
                 }
-
                 WalletResponseValidationError.HAIPValidationError.SdJwtVcMustUseTokenStatusList -> {
                     put("error", "HAIPValidationError.SdJwtVcMustUseTokenStatusList")
                     put("description", "SD-JWT VC must use Token Status List as revocation mechanism")

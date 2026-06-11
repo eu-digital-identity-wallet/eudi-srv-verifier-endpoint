@@ -724,7 +724,7 @@ data class TrustValidatorConfigurationProperties(
     val serviceUrl: URL,
 )
 
-private fun AttestationClassifications.toConsultationAttestationClassifications(): ConsultationAttestationClassifications =
+internal fun AttestationClassifications.toConsultationAttestationClassifications(): ConsultationAttestationClassifications =
     ConsultationAttestationClassifications(
         pids = pid.attestationIdentifierPredicate,
         qEAAs = qeaa.attestationIdentifierPredicate,

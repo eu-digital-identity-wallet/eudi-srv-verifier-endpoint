@@ -16,22 +16,20 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.getOrElse
-import cbor.Cbor
 import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications
 import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationIdentifierPredicate
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForContextF
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.Ignored
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
-import id.walt.mdoc.dataelement.toDataElement
-import id.walt.mdoc.doc.MDoc
-import id.walt.mdoc.issuersigned.IssuerSigned
+import id.walt.cose.coseCompliantCbor
+import id.walt.mdoc.objects.document.Document
+import id.walt.mdoc.objects.document.IssuerSigned
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.toKotlinTimeZone
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.decodeFromHexString
 import java.time.ZonedDateTime
-import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test
 import kotlin.test.fail
@@ -79,18 +77,14 @@ class ExamplesTest {
             ),
             statusListTokenValidator = null,
         )
-        val document = MDoc.fromCBORHex(waltIdExample)
+        val document = coseCompliantCbor.decodeFromHexString<Document>(waltIdExample)
         documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
     }
 
     @OptIn(ExperimentalEncodingApi::class, ExperimentalSerializationApi::class)
     @Test
     fun `athlete example is valid, skipping x5c checks`() = runTest {
-        fun issuerSigned(): IssuerSigned {
-            val base64Dec = Base64.UrlSafe.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
-            val cbor = base64Dec.decode(authleteExample)
-            return Cbor.decodeFromByteArray<IssuerSigned>(cbor)
-        }
+        fun issuerSigned(): IssuerSigned = coseCompliantCbor.decodeFromCborBase64Url(authleteExample)
 
         val issuedAt = ZonedDateTime.parse("2024-08-02T16:22:19.252519705Z")
         val document = issuerSigned().asMDocWithDocType("org.iso.18013.5.1.mDL")
@@ -111,9 +105,4 @@ class ExamplesTest {
     }
 }
 
-private fun IssuerSigned.asMDocWithDocType(docType: String) =
-    MDoc(
-        docType = docType.toDataElement(),
-        issuerSigned = this,
-        deviceSigned = null,
-    )
+private fun IssuerSigned.asMDocWithDocType(docType: String) = Document(docType = docType, issuerSigned = this)

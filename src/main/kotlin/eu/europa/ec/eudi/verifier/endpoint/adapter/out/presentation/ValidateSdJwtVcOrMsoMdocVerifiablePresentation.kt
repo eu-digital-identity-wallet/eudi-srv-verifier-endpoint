@@ -38,9 +38,8 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusChe
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
-import id.walt.mdoc.dataelement.MapElement
-import id.walt.mdoc.dataelement.MapKey
-import id.walt.mdoc.dataelement.MapKeyType
+import kotlinx.serialization.cbor.CborMap
+import kotlinx.serialization.cbor.CborString
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -175,9 +174,8 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             val issuerSignature = ensureNotNull(document.issuerSigned.issuerAuth) {
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
             }
-
             if (null != vpFormatSupported.issuerAuthAlgorithms) {
-                ensure(issuerSignature.algorithm in vpFormatSupported.issuerAuthAlgorithms.map { it.value }) {
+                ensure(issuerSignature.protectedHeaders().algorithm in vpFormatSupported.issuerAuthAlgorithms.map { it.value }) {
                     WalletResponseValidationError.InvalidVpToken("IssuerSigned not signed with a supported algorithm")
                 }
             }
@@ -185,22 +183,26 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             val deviceSignature = ensureNotNull(document.deviceSigned?.deviceAuth?.deviceSignature) {
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains MSO MDoc documents without Device signature")
             }
-
             if (null != vpFormatSupported.deviceAuthAlgorithms) {
-                ensure(deviceSignature.algorithm in vpFormatSupported.deviceAuthAlgorithms.map { it.value }) {
+                ensure(deviceSignature.protectedHeaders().algorithm in vpFormatSupported.deviceAuthAlgorithms.map { it.value }) {
                     WalletResponseValidationError.InvalidVpToken("DeviceSigned not signed with a supported algorithm")
                 }
             }
 
-            val issuerSignaturePayload = checkNotNull(issuerSignature.decodePayloadAs<MapElement>())
-            val status = issuerSignaturePayload.value[MapKey(TokenStatusListSpec.STATUS)]
-            if (Profile.HAIP == presentation.profile && status is MapElement) {
-                val msoRevocationMechanisms = setOf("identifier_list", TokenStatusListSpec.STATUS_LIST)
-                ensure(status.value.keys.all { MapKeyType.string == it.type && it.str in msoRevocationMechanisms }) {
-                    WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism(
-                        used = status.value.keys.map { it.toString() }.toSet(),
-                        allowed = msoRevocationMechanisms,
-                    )
+            val mso = issuerSignature.decodeIsoPayload<CborMap>()
+            val status = mso["status"]
+            if (null != status) {
+                ensure(status is CborMap) {
+                    WalletResponseValidationError.InvalidVpToken("status is not a valid cbor map")
+                }
+                if (Profile.HAIP == presentation.profile) {
+                    val msoRevocationMechanisms = setOf(CborString("identifier_list"), CborString(TokenStatusListSpec.STATUS_LIST))
+                    ensure(status.keys.all { it in msoRevocationMechanisms }) {
+                        WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism(
+                            used = status.keys.map { it.toString() }.toSet(),
+                            allowed = msoRevocationMechanisms.map { it.toString() }.toSet(),
+                        )
+                    }
                 }
             }
         }

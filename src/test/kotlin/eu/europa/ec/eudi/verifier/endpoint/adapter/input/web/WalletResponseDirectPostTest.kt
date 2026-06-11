@@ -16,7 +16,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
-import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
@@ -61,9 +60,9 @@ internal class WalletResponseDirectPostTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-dcql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
-        RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        checkNotNull(transactionInitialized.requestUri)
         val requestObjectJsonResponse =
-            WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
+            WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri)
 
         assertNull(requestObjectJsonResponse.supportedEncryptionMethods())
         assertNull(requestObjectJsonResponse.ecKey(), "jwks must not contain EC key")

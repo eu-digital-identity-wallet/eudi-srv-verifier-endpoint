@@ -164,11 +164,9 @@ private fun WalletResponseValidationError.asText(): String =
         WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc -> {
             "DeviceResponse contains more than one MDocs"
         }
-
         is WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism -> {
             "MSO uses unsupported revocation mechanisms. Used: '${used.joinToString()}', allowed: '${allowed.joinToString()}'"
         }
-
         WalletResponseValidationError.HAIPValidationError.SdJwtVcMustUseTokenStatusList -> {
             "SD-JWT VC must use Token Status List as revocation mechanism"
         }

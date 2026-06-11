@@ -1,21 +1,20 @@
 [versions]
-coroutines = "1.10.2"
-kotlin = "2.3.0"
-springboot = "4.0.1"
-spotless = "7.0.2"
 java = "17"
-kotlinxSerialization = "1.9.0"
-kotlinxDatetime = "0.7.1-0.6.x-compat"
-cose = "1.1.0"
+kotlin = "2.3.20"
+coroutines = "1.10.2"
+kotlinxSerialization = "1.10.0-waltid-SNAPSHOT"
+kotlinxDatetime = "0.7.1"
+ktor = "3.4.2"
+arrow = "2.2.2.1"
+springboot = "4.0.5"
+spotless = "7.0.2"
 oauth2OidcSdk = "11.23.1"
 ktlintVersion = "0.50.0"
 bouncyCastle = "1.80"
-arrow = "2.2.1.1"
 dependencycheck = "12.1.1"
 swaggerUi = "5.30.2"
-waltid = "0.11.0"
+waltid = "0.18.2"
 sdJwt = "0.19.0"
-ktor = "3.3.3"
 jsonpathkt = "2.0.1"
 tink = "1.17.0"
 statium = "0.4.0"
@@ -42,7 +41,8 @@ ktor-client-serialization = { module = "io.ktor:ktor-serialization-kotlinx-json"
 nimbusds-oauth2-oidc-sdk = { module = "com.nimbusds:oauth2-oidc-sdk", version.ref = "oauth2OidcSdk" }
 bouncy-castle = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncyCastle" }
 swagger-ui = { module = "org.webjars:swagger-ui", version.ref = "swaggerUi" }
-waltid-mdoc-credentials = { module = "id.walt.mdoc-credentials:waltid-mdoc-credentials-jvm", version.ref = "waltid" }
+waltid-mdoc-credentials2 = { module = "id.walt.credentials:waltid-mdoc-credentials2-jvm", version.ref = "waltid" }
+waltid-crypto = { module = "id.walt.crypto:waltid-crypto-jvm", version.ref = "waltid" }
 sd-jwt = { module = "eu.europa.ec.eudi:eudi-lib-jvm-sdjwt-kt", version.ref = "sdJwt" }
 jsonpathkt = { module = "com.nfeld.jsonpathkt:jsonpathkt", version.ref = "jsonpathkt" }
 tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
@@ -50,7 +50,6 @@ statium = { module = "eu.europa.ec.eudi:eudi-lib-kmp-statium", version.ref = "st
 zxing = { module = "com.google.zxing:javase", version.ref = "zxing" }
 uri = { module = "com.eygraber:uri-kmp", version.ref = "uri" }
 aedile = { module = "com.sksamuel.aedile:aedile-core", version.ref = "aedile" }
-cose-java = { module = "com.augustcellars.cose:cose-java", version.ref = "cose" }
 consultation = { module = "eu.europa.ec.eudi:etsi-1196x2-consultation", version.ref = "consultation" }
 
 [plugins]

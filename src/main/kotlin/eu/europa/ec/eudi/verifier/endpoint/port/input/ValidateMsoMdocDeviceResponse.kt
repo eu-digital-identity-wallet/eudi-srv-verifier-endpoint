@@ -26,15 +26,15 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.InvalidDocument
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
-import id.walt.mdoc.dataelement.*
-import id.walt.mdoc.doc.MDoc
-import kotlinx.datetime.atStartOfDayIn
+import id.walt.mdoc.namespaces.MdocSignedMerger
+import id.walt.mdoc.objects.document.Document
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import org.slf4j.LoggerFactory
 import java.security.cert.X509Certificate
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 private val log = LoggerFactory.getLogger(ValidateMsoMdocDeviceResponse::class.java)
 
@@ -84,20 +84,18 @@ internal data class ValidationErrorTO(
  */
 @Serializable
 internal enum class DocumentErrorTO {
-    MissingValidityInfo,
-    ExpiredValidityInfo,
-    IssuerKeyIsNotEC,
-    InvalidIssuerSignature,
+    NoMatchingX5CValidator,
     X5CNotTrusted,
+    CannotBeDecoded,
+    ExpiredValidityInfo,
     DocumentTypeNotMatching,
     InvalidIssuerSignedItems,
-    NoMatchingX5CValidator,
+    UnsupportedKeyType,
+    InvalidIssuerSignature,
     DocumentHasBeenRevoked,
-    DeviceKeyIsNotEC,
-    DeviceKeyNotAuthorizedToSignItems,
-    DevicePublicKeyCannotBeParsed,
-    InvalidDeviceSignature,
     MissingDeviceSigned,
+    DeviceKeyNotAuthorizedToSignItems,
+    InvalidDeviceSignature,
 }
 
 /**
@@ -116,7 +114,7 @@ internal data class InvalidDocumentTO(
 @Serializable
 internal data class DocumentTO(
     val docType: String,
-    val attributes: Map<String, JsonObject> = emptyMap(),
+    val attributes: JsonObject,
 )
 
 /**
@@ -144,7 +142,7 @@ internal class ValidateMsoMdocDeviceResponse(
         val documents = validator.ensureValid(deviceResponse)
             .mapLeft { it.toValidationFailureTO() }
             .bind()
-            .map { Json.encodeToJsonElement(it.toDocumentTO(clock)) }
+            .map { Json.encodeToJsonElement(it.toDocumentTO()) }
             .let { JsonArray(it) }
 
         documents
@@ -172,57 +170,30 @@ private fun InvalidDocument.toInvalidDocumentTO(): InvalidDocumentTO =
 
 private fun DocumentError.toDocumentErrorTO(): DocumentErrorTO =
     when (this) {
-        DocumentError.MissingValidityInfo -> DocumentErrorTO.MissingValidityInfo
-        is DocumentError.ExpiredValidityInfo -> DocumentErrorTO.ExpiredValidityInfo
-        DocumentError.IssuerKeyIsNotEC -> DocumentErrorTO.IssuerKeyIsNotEC
-        DocumentError.InvalidIssuerSignature -> DocumentErrorTO.InvalidIssuerSignature
+        DocumentError.NoMatchingX5CShouldBe -> DocumentErrorTO.NoMatchingX5CValidator
         is DocumentError.X5CNotTrusted -> DocumentErrorTO.X5CNotTrusted
+        DocumentError.CannotBeDecoded -> DocumentErrorTO.CannotBeDecoded
+        is DocumentError.ExpiredValidityInfo -> DocumentErrorTO.ExpiredValidityInfo
         DocumentError.DocumentTypeNotMatching -> DocumentErrorTO.DocumentTypeNotMatching
         DocumentError.InvalidIssuerSignedItems -> DocumentErrorTO.InvalidIssuerSignedItems
-        DocumentError.NoMatchingX5CShouldBe -> DocumentErrorTO.NoMatchingX5CValidator
+        DocumentError.UnsupportedKeyType -> DocumentErrorTO.UnsupportedKeyType
+        DocumentError.InvalidIssuerSignature -> DocumentErrorTO.InvalidIssuerSignature
         DocumentError.DocumentHasBeenRevoked -> DocumentErrorTO.DocumentHasBeenRevoked
-        is DocumentError.DeviceKeyIsNotEC -> DocumentErrorTO.DeviceKeyIsNotEC
-        is DocumentError.DeviceKeyNotAuthorizedToSignItems -> DocumentErrorTO.DeviceKeyNotAuthorizedToSignItems
-        is DocumentError.DevicePublicKeyCannotBeParsed -> DocumentErrorTO.DevicePublicKeyCannotBeParsed
-        DocumentError.InvalidDeviceSignature -> DocumentErrorTO.InvalidDeviceSignature
         DocumentError.MissingDeviceSigned -> DocumentErrorTO.MissingDeviceSigned
+        is DocumentError.DeviceKeyNotAuthorizedToSignItems -> DocumentErrorTO.DeviceKeyNotAuthorizedToSignItems
+        DocumentError.InvalidDeviceSignature -> DocumentErrorTO.InvalidDeviceSignature
     }
 
-private fun MDoc.toDocumentTO(clock: Clock): DocumentTO = DocumentTO(
-    docType = docType.value,
-    attributes = nameSpaces.associateWith { namespace ->
-        buildJsonObject {
-            getIssuerSignedItems(namespace).map { item ->
-                put(item.elementIdentifier.value, item.elementValue.toJsonElement(clock))
-            }
-        }
+private fun Document.toDocumentTO(): DocumentTO = DocumentTO(
+    docType = docType,
+    attributes = run {
+        val issuerSigned = issuerSigned.namespacesToJson()
+        deviceSigned?.namespaces?.value?.namespacesToJson()?.let { deviceSigned ->
+            MdocSignedMerger.merge(
+                issuerSigned,
+                deviceSigned,
+                strategy = MdocSignedMerger.MdocDuplicatesMergeStrategy.OVERRIDE,
+            )
+        } ?: issuerSigned
     },
 )
-
-@OptIn(ExperimentalEncodingApi::class)
-private val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT_OPTIONAL)
-
-private fun Boolean.toJsonPrimitive() = JsonPrimitive(this)
-private fun Number.toJsonPrimitive() = JsonPrimitive(this)
-private fun String.toJsonPrimitive() = JsonPrimitive(this)
-private fun List<JsonElement>.toJsonArray() = JsonArray(this)
-private fun Map<String, JsonElement>.toJsonObject() = JsonObject(this)
-
-@OptIn(ExperimentalEncodingApi::class)
-private fun DataElement.toJsonElement(clock: Clock): JsonElement =
-    when (this) {
-        is BooleanElement -> value.toJsonPrimitive()
-        is ByteStringElement -> base64.encode(value).toJsonPrimitive()
-        is DateTimeElement -> value.toEpochMilliseconds().toJsonPrimitive()
-        is EncodedCBORElement -> base64.encode(value).toJsonPrimitive()
-        is FullDateElement -> value.atStartOfDayIn(clock.timeZone()).toEpochMilliseconds().toJsonPrimitive()
-        is ListElement -> value.map { it.toJsonElement(clock) }.toJsonArray()
-        is MapElement -> value.mapKeys { (key, _) -> key.str }.mapValues { (_, value) -> value.toJsonElement(clock) }.toJsonObject()
-        is NullElement -> JsonNull
-        is NumberElement -> value.toJsonPrimitive()
-        is StringElement -> value.toJsonPrimitive()
-        is TDateElement -> value.toEpochMilliseconds().toJsonPrimitive()
-
-        // Other unsupported DataElements
-        else -> this::class.java.simpleName.toJsonPrimitive()
-    }
