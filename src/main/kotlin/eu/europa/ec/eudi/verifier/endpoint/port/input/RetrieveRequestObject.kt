@@ -259,7 +259,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         }
     }
 
-    private suspend fun Raise<RetrieveRequestObjectError>.encryptionRequirement(metadata: WalletMetadataTO): EncryptionRequirement {
+    private fun Raise<RetrieveRequestObjectError>.encryptionRequirement(metadata: WalletMetadataTO): EncryptionRequirement {
         val jwks = metadata.jwks?.toJwks()?.bind()
 
         return if (null == jwks) {
