@@ -23,7 +23,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationErrorCode
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
@@ -141,7 +140,6 @@ private fun SdJwtVcValidationError.toSdJwtVcValidationError(): SdJwtVcValidation
         reason = reason.toSdJwtVcValidationErrorCodeTO(),
         description = when (cause) {
             is SdJwtVerificationException -> cause.description
-            is StatusCheckException -> cause.reason
             else -> "an unexpected error occurred${cause.message?.let { ": $it" } ?: ""}"
         },
         cause = cause.cause,

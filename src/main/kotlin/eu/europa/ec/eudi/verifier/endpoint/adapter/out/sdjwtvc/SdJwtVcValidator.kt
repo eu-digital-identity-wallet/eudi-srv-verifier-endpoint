@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 
 import arrow.core.*
+import arrow.core.raise.either
 import com.nimbusds.jose.JOSEObjectType
 import com.nimbusds.jose.proc.BadJOSEException
 import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier
@@ -30,8 +31,8 @@ import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.IssuerKeyVerificationError
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.TypeMetadataVerificationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.sdJwtVcIssuance
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
@@ -83,7 +84,6 @@ internal data class SdJwtVcValidationError(val reason: SdJwtVcValidationErrorCod
 private fun Throwable.toSdJwtVcValidationErrorCode(): SdJwtVcValidationErrorCode =
     when (this) {
         is SdJwtVerificationException -> toSdJwtVcValidationErrorCode()
-        is StatusCheckException -> SdJwtVcValidationErrorCode.StatusCheckFailed
         else -> SdJwtVcValidationErrorCode.UnexpectedError
     }
 
@@ -228,21 +228,37 @@ internal class SdJwtVcValidator(
         challenge: ChallengePredicate,
         transactionId: TransactionId?,
     ): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> =
-        unverified.fold(
-            ifLeft = { Either.catch { verify(it, challenge).getOrThrow() } },
-            ifRight = { Either.catch { verify(it, challenge).getOrThrow() } },
-        ).flatMap {
-            Either.catch {
-                statusListTokenValidator?.validate(it, transactionId)
-                it
-            }
+        either {
+            val verified = unverified.fold(
+                ifLeft = { Either.catch { verify(it, challenge).getOrThrow() } },
+                ifRight = { Either.catch { verify(it, challenge).getOrThrow() } },
+            ).bind()
+
+            statusListTokenValidator
+                ?.validate(verified, transactionId)
+                ?.mapLeft { statusValidationError ->
+                    val reason = when (statusValidationError) {
+                        is StatusValidationError.StatusNotValid ->
+                            SdJwtVcVerificationError.StatusVerificationError.NonValidStatus(
+                                Status.NonValid(statusValidationError.status.toUByte(), "Status is not Valid"),
+                            )
+                        is StatusValidationError.StatusCheckException ->
+                            SdJwtVcVerificationError.StatusVerificationError.StatusCheckFailure(
+                                "Status List Token could not be checked",
+                                statusValidationError,
+                            )
+                    }
+                    VerificationError.SdJwtVcError(reason).asException()
+                }
+                ?.bind()
+
+            verified
         }
 }
 
 private val Throwable.description: String
     get() = when (this) {
         is SdJwtVerificationException -> description
-        is StatusCheckException -> reason
         else -> message ?: "n/a"
     }
 

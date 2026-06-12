@@ -98,6 +98,7 @@ internal enum class DocumentErrorTO {
     DevicePublicKeyCannotBeParsed,
     InvalidDeviceSignature,
     MissingDeviceSigned,
+    DocumentStatusCheckFailed,
 }
 
 /**
@@ -186,6 +187,7 @@ private fun DocumentError.toDocumentErrorTO(): DocumentErrorTO =
         is DocumentError.DevicePublicKeyCannotBeParsed -> DocumentErrorTO.DevicePublicKeyCannotBeParsed
         DocumentError.InvalidDeviceSignature -> DocumentErrorTO.InvalidDeviceSignature
         DocumentError.MissingDeviceSigned -> DocumentErrorTO.MissingDeviceSigned
+        is DocumentError.DocumentStatusCheckFailed -> DocumentErrorTO.DocumentStatusCheckFailed
     }
 
 private fun MDoc.toDocumentTO(clock: Clock): DocumentTO = DocumentTO(

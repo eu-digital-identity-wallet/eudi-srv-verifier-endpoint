@@ -34,7 +34,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.status
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
@@ -270,7 +269,6 @@ private fun Collection<SdJwtVcValidationError>.toJson(): JsonArray =
                 put("error", error.reason.name)
                 val (description, cause) = when (val cause = error.cause) {
                     is SdJwtVerificationException -> cause.description to null
-                    is StatusCheckException -> cause.reason to cause.causedBy
                     else -> "an unexpected error occurred${cause.message?.let { ": $it" } ?: ""}" to cause
                 }
                 put("description", description)

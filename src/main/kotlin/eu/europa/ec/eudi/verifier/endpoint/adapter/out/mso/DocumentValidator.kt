@@ -19,6 +19,7 @@ import COSE.AlgorithmID
 import COSE.OneKey
 import arrow.core.*
 import arrow.core.raise.*
+import arrow.core.raise.context.bind
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
 import com.upokecenter.cbor.CBORObject
@@ -26,6 +27,7 @@ import eu.europa.ec.eudi.etsi1196x2.consultation.CertificationChainValidation
 import eu.europa.ec.eudi.etsi1196x2.consultation.IsChainTrustedForAttestation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.consultation.msoMdocIssuance
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusValidationError
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Iso180135
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
@@ -78,6 +80,7 @@ sealed interface DocumentError {
     class DevicePublicKeyCannotBeParsed(val cause: Throwable) : DocumentError
     class DeviceKeyIsNotEC(val cause: Throwable) : DocumentError
     data object InvalidDeviceSignature : DocumentError
+    class DocumentStatusCheckFailed(val cause: Throwable) : DocumentError
 }
 
 private val log = LoggerFactory.getLogger(DocumentValidator::class.java)
@@ -249,18 +252,20 @@ private suspend fun Raise<DocumentError.X5CNotTrusted>.ensureTrustedChain(
         null -> throw IllegalStateException("Could not find Attestation Classification for docType '$docType'")
     }
 
-private suspend fun Raise<DocumentError.DocumentHasBeenRevoked>.ensureNotRevoked(
+private suspend fun Raise<DocumentError>.ensureNotRevoked(
     document: MDoc,
     statusListTokenValidator: StatusListTokenValidator?,
     transactionId: TransactionId?,
 ) {
-    if (null != statusListTokenValidator) {
-        catch({
-            statusListTokenValidator.validate(document, transactionId)
-        }) {
-            raise(DocumentError.DocumentHasBeenRevoked)
+    statusListTokenValidator
+        ?.validate(document, transactionId)
+        ?.mapLeft {
+            when (it) {
+                is StatusValidationError.StatusCheckException -> DocumentError.DocumentStatusCheckFailed(it)
+                is StatusValidationError.StatusNotValid -> DocumentError.DocumentHasBeenRevoked
+            }
         }
-    }
+        ?.bind()
 }
 
 private fun Raise<Nel<DocumentError>>.ensureValidDeviceSigned(document: MDoc, handoverInfo: HandoverInfo): MDoc {
