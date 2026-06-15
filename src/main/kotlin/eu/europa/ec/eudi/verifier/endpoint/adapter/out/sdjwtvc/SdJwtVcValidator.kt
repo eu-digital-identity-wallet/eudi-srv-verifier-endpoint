@@ -230,9 +230,9 @@ internal class SdJwtVcValidator(
     ): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> =
         either {
             val verified = unverified.fold(
-                ifLeft = { Either.catch { verify(it, challenge).getOrThrow() } },
-                ifRight = { Either.catch { verify(it, challenge).getOrThrow() } },
-            ).bind()
+                ifLeft = { verify(it, challenge) },
+                ifRight = { verify(it, challenge) },
+            ).getOrElse { raise(it) }
 
             statusListTokenValidator
                 ?.validate(verified, transactionId)
