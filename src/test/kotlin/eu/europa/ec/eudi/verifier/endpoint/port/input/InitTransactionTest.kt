@@ -19,6 +19,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.getOrElse
 import arrow.core.left
+import arrow.core.raise.either
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApiClient
@@ -67,7 +68,7 @@ class InitTransactionTest {
 
             val jwtSecuredAuthorizationRequest =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
-                    useCase(input).getOrElse { fail("Unexpected $it") },
+                    either { useCase(input) }.getOrElse { fail("Unexpected $it") },
                 )
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
             assertNotNull(jwtSecuredAuthorizationRequest.request)
@@ -107,7 +108,7 @@ class InitTransactionTest {
 
             val jwtSecuredAuthorizationRequest =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
-                    useCase(input).getOrElse { fail("Unexpected $it") },
+                    either { useCase(input) }.getOrElse { fail("Unexpected $it") },
                 )
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
             assertEquals(uri.toExternalForm(), jwtSecuredAuthorizationRequest.requestUri)
@@ -162,7 +163,7 @@ class InitTransactionTest {
 
             val jwtSecuredAuthorizationRequest =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
-                    useCase(input).getOrElse { fail("Unexpected $it") },
+                    either { useCase(input) }.getOrElse { fail("Unexpected $it") },
                 )
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
             assertNotNull(jwtSecuredAuthorizationRequest.request)
@@ -194,7 +195,7 @@ class InitTransactionTest {
             // and the Presentation to be in state Requested
             val jwtSecuredAuthorizationRequest =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
-                    useCase(input).getOrElse { fail("Unexpected $it") },
+                    either { useCase(input) }.getOrElse { fail("Unexpected $it") },
                 )
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
             assertNull(jwtSecuredAuthorizationRequest.request)
@@ -219,7 +220,7 @@ class InitTransactionTest {
                     redirectUriTemplate = "https://client.example.org/cb#response_code=#CODE#",
                 )
 
-            useCase(invalidPlaceHolderInput)
+            either { useCase(invalidPlaceHolderInput) }
                 .onLeft {
                     assertTrue(
                         "Should fail with ValidationError.InvalidWalletResponseTemplate",
@@ -236,7 +237,7 @@ class InitTransactionTest {
                         "hts:/client.example.org/cb%response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
                 )
 
-            useCase(invalidUrlInput)
+            either { useCase(invalidUrlInput) }
                 .onLeft {
                     assertTrue(
                         "Should fail with ValidationError.InvalidWalletResponseTemplate",
@@ -264,7 +265,7 @@ class InitTransactionTest {
                 )
 
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
-                useCase(input).getOrElse { fail("Unexpected $it") },
+                either { useCase(input) }.getOrElse { fail("Unexpected $it") },
             )
             val presentation = loadPresentationById(testTransactionId)
             assertIs<Presentation.RequestObjectRetrieved>(presentation)
@@ -287,7 +288,7 @@ class InitTransactionTest {
                 )
 
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
-                useCase(input).getOrElse { fail("Unexpected $it") },
+                either { useCase(input) }.getOrElse { fail("Unexpected $it") },
             )
             val presentation = loadPresentationById(testTransactionId)
             assertIs<Presentation.RequestObjectRetrieved>(presentation)
@@ -310,7 +311,7 @@ class InitTransactionTest {
                             "00-dcql.json",
                         ).copy(transactionData = listOf(transactionData))
 
-                val result = useCase(input)
+                val result = either { useCase(input) }
                 assertEquals(ValidationError.InvalidTransactionData.left(), result)
             }
 
@@ -351,8 +352,8 @@ class InitTransactionTest {
                             baseInput,
                         ).copy(transactionData = listOf(transactionData))
 
-                val result = useCase(input)
-                assertEquals(ValidationError.InvalidTransactionData.left(), result)
+                val result = either { useCase(input) }.leftOrNull()
+                assertEquals(ValidationError.InvalidTransactionData, result)
             }
 
             test("00-dcql.json", "_foo_wa_driver_license")
@@ -386,15 +387,17 @@ class InitTransactionTest {
                             baseInput,
                         ).copy(transactionData = listOf(transactionData))
 
-                val result = useCase(input)
-                val response = assertNotNull(assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(result.getOrNull()))
+                val result = either { useCase(input) }
+                val response =
+                    assertNotNull(assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(result.getOrNull()))
                 val jar =
                     assertNotNull(response.request).let {
                         SignedJWT.parse(it).jwtClaimsSet
                     }
                 val jarTransactionData =
                     run {
-                        val jarTransactionDataList = assertNotNull(jar.getStringListClaim(OpenId4VPSpec.TRANSACTION_DATA))
+                        val jarTransactionDataList =
+                            assertNotNull(jar.getStringListClaim(OpenId4VPSpec.TRANSACTION_DATA))
                         assertEquals(1, jarTransactionDataList.size)
                         val encodedJarTransactionData = jarTransactionDataList.first()
                         val decodedJarTransactionData = base64UrlNoPadding.decodeToByteString(encodedJarTransactionData)
@@ -418,7 +421,12 @@ class InitTransactionTest {
     private fun testWithInvalidInput(
         input: InitTransactionTO,
         expectedError: ValidationError,
-    ) = input.toDomain(verifierConfig.transactionDataHashAlgorithm, verifierConfig.clientMetaData.vpFormatsSupported).fold(
+    ) = either {
+        input.toDomain(
+            verifierConfig.transactionDataHashAlgorithm,
+            verifierConfig.clientMetaData.vpFormatsSupported,
+        )
+    }.fold(
         ifRight = { fail("Invalid input accepted") },
         ifLeft = { error -> assertEquals(expectedError, error) },
     )

@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import arrow.core.raise.effect
+import arrow.core.raise.fold
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.Required
@@ -54,7 +56,7 @@ internal class VerifierApi(
         request: ServerRequest,
         version: VerifierApiVersion,
     ): ServerResponse =
-        try {
+        effect {
             val accept = request.headers().accept()
             val output =
                 when {
@@ -64,42 +66,47 @@ internal class VerifierApi(
             val input = request.awaitBody<InitTransactionTO>().copy(output = output)
 
             logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
-            initTransaction(input).fold(
-                ifRight = {
-                    when (it) {
-                        is InitTransactionResponse.JwtSecuredAuthorizationRequestTO -> {
-                            logger.info("Initiated transaction tx ${it.transactionId}")
-                            val response =
-                                when (version) {
-                                    VerifierApiVersion.V1 -> JwtSecuredAuthorizationRequestV1TO.from(it)
-                                    VerifierApiVersion.V2 -> it
+            initTransaction(input)
+        }.fold(
+            transform = {
+                when (it) {
+                    is InitTransactionResponse.JwtSecuredAuthorizationRequestTO -> {
+                        logger.info("Initiated transaction tx ${it.transactionId}")
+                        val response =
+                            when (version) {
+                                VerifierApiVersion.V1 -> JwtSecuredAuthorizationRequestV1TO.from(it)
+                                VerifierApiVersion.V2 -> it
+                            }
+                        ok()
+                            .json()
+                            .header(TRANSACTION_ID_HEADER, it.transactionId)
+                            .apply {
+                                if (VerifierApiVersion.V2 == version) {
+                                    header(AUTHORIZATION_REQUEST_URI_HEADER, it.authorizationRequestUri)
                                 }
-                            ok()
-                                .json()
-                                .header(TRANSACTION_ID_HEADER, it.transactionId)
-                                .apply {
-                                    if (VerifierApiVersion.V2 == version) {
-                                        header(AUTHORIZATION_REQUEST_URI_HEADER, it.authorizationRequestUri)
-                                    }
-                                }.bodyValueAndAwait(response)
-                        }
-
-                        is InitTransactionResponse.QrCode -> {
-                            logger.info("Initiated transaction with qr image")
-                            ok()
-                                .contentType(IMAGE_PNG)
-                                .header(TRANSACTION_ID_HEADER, it.transactionId)
-                                .header(AUTHORIZATION_REQUEST_URI_HEADER, it.authorizationRequestUri)
-                                .bodyValueAndAwait(it.qrCode)
-                        }
+                            }.bodyValueAndAwait(response)
                     }
-                },
-                ifLeft = { it.asBadRequest() },
-            )
-        } catch (t: SerializationException) {
-            logger.warn("While handling InitTransaction", t)
-            badRequest().buildAndAwait()
-        }
+
+                    is InitTransactionResponse.QrCode -> {
+                        logger.info("Initiated transaction with qr image")
+                        ok()
+                            .contentType(IMAGE_PNG)
+                            .header(TRANSACTION_ID_HEADER, it.transactionId)
+                            .header(AUTHORIZATION_REQUEST_URI_HEADER, it.authorizationRequestUri)
+                            .bodyValueAndAwait(it.qrCode)
+                    }
+                }
+            },
+            recover = { it.asBadRequest() },
+            catch = { t ->
+                if (t is SerializationException) {
+                    logger.warn("While handling InitTransaction", t)
+                    badRequest().buildAndAwait()
+                } else {
+                    throw t
+                }
+            },
+        )
 
     /**
      * Handles a request placed by verifier, input order to obtain
