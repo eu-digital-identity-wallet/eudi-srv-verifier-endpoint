@@ -133,7 +133,8 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
 
                 // Request JWT encrypted with ECDH-ES
                 val jweHeader =
-                    JWEHeader.Builder(supportedAlgorithm, supportedEncryptionMethods.first())
+                    JWEHeader
+                        .Builder(supportedAlgorithm, supportedEncryptionMethods.first())
                         .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
                         .build()
                 log.info("header = ${jweHeader.toJSONObject()}")
@@ -197,9 +198,10 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
         runBlocking {
             // given
             val initTransaction =
-                VerifierApiClient.loadInitTransactionTO(
-                    "02-dcql.json",
-                ).copy(responseMode = ResponseModeTO.DirectPostJwt)
+                VerifierApiClient
+                    .loadInitTransactionTO(
+                        "02-dcql.json",
+                    ).copy(responseMode = ResponseModeTO.DirectPostJwt)
             val transactionInitialized =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
                     VerifierApiClient.initTransaction(
@@ -319,7 +321,8 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
                         }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
                     val jweHeader =
-                        JWEHeader.Builder(supportedAlgorithm, supportedEncryptionMethods.first())
+                        JWEHeader
+                            .Builder(supportedAlgorithm, supportedEncryptionMethods.first())
                             .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
                             .build()
 
@@ -420,11 +423,12 @@ internal class DeviceResponseValidationTest {
                         }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
                     val jweHeader =
-                        JWEHeader.Builder(
-                            JWEAlgorithm(Config.ephemeralEncryptionKey.algorithm.name),
-                            config.clientMetaData.responseEncryptionOption.encryptionMethods.first(),
-                        )
-                            .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
+                        JWEHeader
+                            .Builder(
+                                JWEAlgorithm(Config.ephemeralEncryptionKey.algorithm.name),
+                                config.clientMetaData.responseEncryptionOption.encryptionMethods
+                                    .first(),
+                            ).agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
                             .build()
 
                     EncryptedJWT(jweHeader, jwtClaims)
@@ -475,11 +479,12 @@ internal class DeviceResponseValidationTest {
                         }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
                     val jweHeader =
-                        JWEHeader.Builder(
-                            JWEAlgorithm(Config.ephemeralEncryptionKey.algorithm.name),
-                            config.clientMetaData.responseEncryptionOption.encryptionMethods.first(),
-                        )
-                            .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
+                        JWEHeader
+                            .Builder(
+                                JWEAlgorithm(Config.ephemeralEncryptionKey.algorithm.name),
+                                config.clientMetaData.responseEncryptionOption.encryptionMethods
+                                    .first(),
+                            ).agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
                             .build()
 
                     EncryptedJWT(jweHeader, jwtClaims)

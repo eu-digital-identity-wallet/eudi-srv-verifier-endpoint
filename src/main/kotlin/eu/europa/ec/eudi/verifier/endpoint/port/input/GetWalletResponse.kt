@@ -54,16 +54,18 @@ internal fun WalletResponse.toTO(): WalletResponseTO {
         }
 
     return when (this) {
-        is WalletResponse.VpToken ->
+        is WalletResponse.VpToken -> {
             WalletResponseTO(
                 vpToken = verifiablePresentations.toJsonObject(),
             )
+        }
 
-        is WalletResponse.Error ->
+        is WalletResponse.Error -> {
             WalletResponseTO(
                 error = value,
                 errorDescription = description,
             )
+        }
     }
 }
 
@@ -85,10 +87,13 @@ class GetWalletResponseLive(
     override suspend fun invoke(
         transactionId: TransactionId,
         responseCode: ResponseCode?,
-    ): QueryResponse<WalletResponseTO> {
-        return when (val presentation = loadPresentationById(transactionId)) {
-            null -> NotFound
-            is Presentation.Submitted ->
+    ): QueryResponse<WalletResponseTO> =
+        when (val presentation = loadPresentationById(transactionId)) {
+            null -> {
+                NotFound
+            }
+
+            is Presentation.Submitted -> {
                 when (responseCode) {
                     null,
                     presentation.responseCode,
@@ -96,10 +101,12 @@ class GetWalletResponseLive(
 
                     else -> responseCodeMismatch(presentation, responseCode)
                 }
+            }
 
-            else -> invalidState(presentation)
+            else -> {
+                invalidState(presentation)
+            }
         }
-    }
 
     private suspend fun found(presentation: Presentation.Submitted): Found<WalletResponseTO> {
         val walletResponse = presentation.walletResponse.toTO()

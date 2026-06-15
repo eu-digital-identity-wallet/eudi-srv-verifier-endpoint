@@ -20,5 +20,7 @@ sealed interface QueryResponse<out T : Any> {
 
     data object InvalidState : QueryResponse<Nothing>
 
-    data class Found<T : Any>(val value: T) : QueryResponse<T>
+    data class Found<T : Any>(
+        val value: T,
+    ) : QueryResponse<T>
 }

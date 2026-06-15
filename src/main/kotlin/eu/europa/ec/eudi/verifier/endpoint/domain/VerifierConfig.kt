@@ -50,7 +50,9 @@ typealias PresentationRelatedUrlBuilder<ID> = (ID) -> URL
 sealed interface EmbedOption<in ID> {
     data object ByValue : EmbedOption<Any>
 
-    data class ByReference<ID>(val buildUrl: PresentationRelatedUrlBuilder<ID>) : EmbedOption<ID>
+    data class ByReference<ID>(
+        val buildUrl: PresentationRelatedUrlBuilder<ID>,
+    ) : EmbedOption<ID>
 
     companion object {
         fun <ID> byReference(urlBuilder: PresentationRelatedUrlBuilder<ID>): ByReference<ID> = ByReference(urlBuilder)
@@ -105,7 +107,9 @@ data class ResponseEncryptionOption(
 
 @Serializable
 @JvmInline
-value class CoseAlgorithm(val value: Int)
+value class CoseAlgorithm(
+    val value: Int,
+)
 
 /**
  * Verifiable Presentation formats supported by Verifier Endpoint.
@@ -200,9 +204,10 @@ data class AccessCertificate(
         require(algorithm in JWSAlgorithm.Family.SIGNATURE) { "'${algorithm.name}' is not a valid signature algorithm" }
 
         // Verify a JWSSigner can be instantiated with the provided key/algorithm combo
-        Either.catch {
-            DefaultJWSSignerFactory().createJWSSigner(key, algorithm)
-        }.getOrThrow { IllegalArgumentException("Invalid configuration", it) }
+        Either
+            .catch {
+                DefaultJWSSignerFactory().createJWSSigner(key, algorithm)
+            }.getOrThrow { IllegalArgumentException("Invalid configuration", it) }
     }
 
     /**
@@ -277,7 +282,9 @@ sealed interface VerifierId {
 /**
  * Hashing algorithms.
  */
-enum class HashAlgorithm(val ianaName: String) {
+enum class HashAlgorithm(
+    val ianaName: String,
+) {
     SHA_256("sha-256"),
     SHA_384("sha-384"),
     SHA_512("sha-512"),

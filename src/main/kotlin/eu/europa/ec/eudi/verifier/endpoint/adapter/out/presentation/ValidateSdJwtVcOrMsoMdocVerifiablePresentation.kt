@@ -65,28 +65,31 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 Format.SdJwtVc -> {
                     val vpFormatSupported = checkNotNull(vpFormatsSupported.sdJwtVc)
                     val validator = sdJwtVcValidatorFactory(presentation.issuerChain)
-                    validator.validateSdJwtVcVerifiablePresentation(
-                        vpFormatSupported,
-                        verifiablePresentation,
-                        presentation.nonce,
-                        transactionData,
-                        presentation.id,
-                        presentation.profile,
-                    ).bind()
+                    validator
+                        .validateSdJwtVcVerifiablePresentation(
+                            vpFormatSupported,
+                            verifiablePresentation,
+                            presentation.nonce,
+                            transactionData,
+                            presentation.id,
+                            presentation.profile,
+                        ).bind()
                 }
 
                 Format.MsoMdoc -> {
                     val vpFormatSupported = checkNotNull(vpFormatsSupported.msoMdoc)
                     val validator = deviceResponseValidatorFactory(presentation.issuerChain)
-                    validator.validateMsoMdocVerifiablePresentation(
-                        presentation,
-                        verifiablePresentation,
-                        vpFormatSupported,
-                    ).bind()
+                    validator
+                        .validateMsoMdocVerifiablePresentation(
+                            presentation,
+                            verifiablePresentation,
+                            vpFormatSupported,
+                        ).bind()
                 }
 
-                else ->
+                else -> {
                     throw IllegalArgumentException("unsupported format '${verifiablePresentation.format}'")
+                }
             }
         }
 
@@ -107,19 +110,21 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
 
             val (sdJwt, kbJwt) =
                 when (verifiablePresentation) {
-                    is VerifiablePresentation.Str ->
+                    is VerifiablePresentation.Str -> {
                         validate(
                             unverified = verifiablePresentation.value,
                             nonce = nonce,
                             transactionId = transactionId,
                         )
+                    }
 
-                    is VerifiablePresentation.Json ->
+                    is VerifiablePresentation.Json -> {
                         validate(
                             unverified = verifiablePresentation.value,
                             nonce = nonce,
                             transactionId = transactionId,
                         )
+                    }
                 }.mapLeft { errors -> invalidVpToken(errors) }.bind()
 
             val status = sdJwt.status()
@@ -168,8 +173,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                     .mapLeft { error ->
                         log.warn("Failed to validate MsoMdoc VC. Reason: '$error'")
                         error.toWalletResponseValidationError()
-                    }
-                    .bind()
+                    }.bind()
 
             if (Profile.HAIP == presentation.profile) {
                 ensure(1 == documents.size) {
@@ -206,7 +210,10 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                     val msoRevocationMechanisms = setOf("identifier_list", TokenStatusListSpec.STATUS_LIST)
                     ensure(status.value.keys.all { MapKeyType.string == it.type && it.str in msoRevocationMechanisms }) {
                         WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism(
-                            used = status.value.keys.map { it.toString() }.toSet(),
+                            used =
+                                status.value.keys
+                                    .map { it.toString() }
+                                    .toSet(),
                             allowed = msoRevocationMechanisms,
                         )
                     }
@@ -233,7 +240,8 @@ private fun <Error> Raise<Error>.ensureValidTransactionDataHashes(
     convert: (String) -> Error,
 ) {
     val actualHashAlgorithm =
-        keyBindingJwt.jwtClaimsSet.stringClaim(OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS)
+        keyBindingJwt.jwtClaimsSet
+            .stringClaim(OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS)
             .getOrElse {
                 raise(convert(it.message ?: "'${OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS}' claim is not a string"))
             }
@@ -247,7 +255,8 @@ private fun <Error> Raise<Error>.ensureValidTransactionDataHashes(
             base64UrlNoPadding.encode(hash)
         }
     val actualHashes =
-        keyBindingJwt.jwtClaimsSet.stringListClaim(OpenId4VPSpec.TRANSACTION_DATA_HASHES)
+        keyBindingJwt.jwtClaimsSet
+            .stringListClaim(OpenId4VPSpec.TRANSACTION_DATA_HASHES)
             .getOrElse {
                 raise(convert(it.message ?: "'${OpenId4VPSpec.TRANSACTION_DATA_HASHES}' claim is not a string list"))
             }
@@ -259,7 +268,10 @@ private fun <Error> Raise<Error>.ensureValidTransactionDataHashes(
 private fun DeviceResponseError.toWalletResponseValidationError(): WalletResponseValidationError.InvalidVpToken {
     val error =
         when (this) {
-            DeviceResponseError.CannotBeDecoded -> "DeviceResponse cannot be decoded"
+            DeviceResponseError.CannotBeDecoded -> {
+                "DeviceResponse cannot be decoded"
+            }
+
             is DeviceResponseError.InvalidDocuments -> {
                 val deviceResponseErrors =
                     invalidDocuments.joinToString { invalidDocument ->
@@ -270,7 +282,10 @@ private fun DeviceResponseError.toWalletResponseValidationError(): WalletRespons
 
                 "DeviceResponse contains invalid documents: $deviceResponseErrors"
             }
-            is DeviceResponseError.NotOkDeviceResponseStatus -> "Unexpected DeviceResponse status: '$status'"
+
+            is DeviceResponseError.NotOkDeviceResponseStatus -> {
+                "Unexpected DeviceResponse status: '$status'"
+            }
         }
 
     return WalletResponseValidationError.InvalidVpToken(error)

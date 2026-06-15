@@ -52,9 +52,13 @@ data class AuthorisationResponseTO(
 )
 
 sealed interface AuthorisationResponse {
-    data class DirectPost(val response: AuthorisationResponseTO) : AuthorisationResponse
+    data class DirectPost(
+        val response: AuthorisationResponseTO,
+    ) : AuthorisationResponse
 
-    data class DirectPostJwt(val encryptedResponse: Jwt) : AuthorisationResponse
+    data class DirectPostJwt(
+        val encryptedResponse: Jwt,
+    ) : AuthorisationResponse
 }
 
 private fun AuthorisationResponse.DirectPost.isErrorResponse(): Boolean = null != response.error
@@ -72,18 +76,26 @@ sealed interface WalletResponseValidationError {
 
     data object IncorrectState : WalletResponseValidationError
 
-    data class InvalidVpToken(val message: String, val cause: Throwable? = null) : WalletResponseValidationError
+    data class InvalidVpToken(
+        val message: String,
+        val cause: Throwable? = null,
+    ) : WalletResponseValidationError
 
     data object MissingVpToken : WalletResponseValidationError
 
     data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
 
-    data class InvalidEncryptedResponse(val error: BadJOSEException) : WalletResponseValidationError
+    data class InvalidEncryptedResponse(
+        val error: BadJOSEException,
+    ) : WalletResponseValidationError
 
     sealed interface HAIPValidationError : WalletResponseValidationError {
         data object DeviceResponseContainsMoreThanOneMDoc : HAIPValidationError
 
-        data class UnsupportedMsoRevocationMechanism(val used: Set<String>, val allowed: Set<String>) : HAIPValidationError
+        data class UnsupportedMsoRevocationMechanism(
+            val used: Set<String>,
+            val allowed: Set<String>,
+        ) : HAIPValidationError
 
         data object SdJwtVcMustUseTokenStatusList : HAIPValidationError
     }
@@ -116,11 +128,14 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
 
         suspend fun JsonObject.toVerifiablePresentations(): Map<QueryId, List<VerifiablePresentation>> {
             val vpToken =
-                Either.catch {
-                    Json.decodeFromJsonElement<Map<QueryId, List<JsonElement>>>(this)
-                }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
+                Either
+                    .catch {
+                        Json.decodeFromJsonElement<Map<QueryId, List<JsonElement>>>(this)
+                    }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
 
-            val credentialQueries = presentation.query.credentials.value.associateBy { it.id }
+            val credentialQueries =
+                presentation.query.credentials.value
+                    .associateBy { it.id }
             return vpToken.mapValues { (queryId, value) ->
                 val format =
                     credentialQueries[queryId]?.format
@@ -132,9 +147,10 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                         )
                 val unvalidatedVerifiablePresentations = value.map { it.toVerifiablePresentation(format).bind() }
                 val applicableTransactionData =
-                    presentation.transactionData?.filter {
-                        queryId.value in it.credentialIds
-                    }?.toNonEmptyListOrNull()
+                    presentation.transactionData
+                        ?.filter {
+                            queryId.value in it.credentialIds
+                        }?.toNonEmptyListOrNull()
                 ensure(vpFormatsSupported.supports(format)) {
                     WalletResponseValidationError.InvalidVpToken(
                         "vp_token contains a Verifiable Presentation in an unsupported format",
@@ -178,14 +194,18 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
                     VerifiablePresentation.Str(element.content, format)
                 }
 
-                is JsonObject -> VerifiablePresentation.Json(element, format)
-                else ->
+                is JsonObject -> {
+                    VerifiablePresentation.Json(element, format)
+                }
+
+                else -> {
                     raise(
                         WalletResponseValidationError.InvalidVpToken(
                             "vp_token must contain either json strings, or json objects",
                             null,
                         ),
                     )
+                }
             }
 
         val element = this@toVerifiablePresentation
@@ -262,14 +282,17 @@ class PostWalletResponseLive(
 
             val accepted =
                 when (val getWalletResponseMethod = presentation.getWalletResponseMethod) {
-                    is GetWalletResponseMethod.Redirect ->
+                    is GetWalletResponseMethod.Redirect -> {
                         with(createQueryWalletResponseRedirectUri) {
                             requireNotNull(submitted.responseCode) { "ResponseCode expected in Submitted state but not found" }
                             val redirectUri = getWalletResponseMethod.redirectUri(submitted.responseCode)
                             WalletResponseAcceptedTO(redirectUri.toString())
                         }
+                    }
 
-                    GetWalletResponseMethod.Poll -> null
+                    GetWalletResponseMethod.Poll -> {
+                        null
+                    }
                 }
             submitted to accepted
         }
@@ -310,7 +333,7 @@ class PostWalletResponseLive(
                             walletResponse.response
                         }
 
-                        is AuthorisationResponse.DirectPostJwt ->
+                        is AuthorisationResponse.DirectPostJwt -> {
                             verifyEncryptedResponse(
                                 ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
                                 encryptedResponse = walletResponse.encryptedResponse,
@@ -321,6 +344,7 @@ class PostWalletResponseLive(
                                     else -> throw it
                                 }
                             }
+                        }
                     }
                 }
             }
@@ -336,11 +360,12 @@ class PostWalletResponseLive(
 
             // add the wallet response to the presentation
             val walletResponse =
-                responseObject.toDomain(
-                    presentation,
-                    validateVerifiablePresentation,
-                    verifierConfig.clientMetaData.vpFormatsSupported,
-                ).bind()
+                responseObject
+                    .toDomain(
+                        presentation,
+                        validateVerifiablePresentation,
+                        verifierConfig.clientMetaData.vpFormatsSupported,
+                    ).bind()
 
             val responseCode =
                 when (presentation.getWalletResponseMethod) {

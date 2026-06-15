@@ -224,8 +224,7 @@ class InitTransactionTest {
                     assertTrue(
                         "Should fail with ValidationError.InvalidWalletResponseTemplate",
                     ) { it == ValidationError.InvalidWalletResponseTemplate }
-                }
-                .onRight {
+                }.onRight {
                     fail("Should fail with ValidationError.InvalidWalletResponseTemplate")
                 }
 
@@ -242,8 +241,7 @@ class InitTransactionTest {
                     assertTrue(
                         "Should fail with ValidationError.InvalidWalletResponseTemplate",
                     ) { it == ValidationError.InvalidWalletResponseTemplate }
-                }
-                .onRight {
+                }.onRight {
                     fail("Should fail with ValidationError.InvalidWalletResponseTemplate")
                 }
         }
@@ -307,9 +305,10 @@ class InitTransactionTest {
 
             suspend fun test(transactionData: JsonObject) {
                 val input =
-                    VerifierApiClient.loadInitTransactionTO(
-                        "00-dcql.json",
-                    ).copy(transactionData = listOf(transactionData))
+                    VerifierApiClient
+                        .loadInitTransactionTO(
+                            "00-dcql.json",
+                        ).copy(transactionData = listOf(transactionData))
 
                 val result = useCase(input)
                 assertEquals(ValidationError.InvalidTransactionData.left(), result)
@@ -347,9 +346,10 @@ class InitTransactionTest {
                     }
 
                 val input =
-                    VerifierApiClient.loadInitTransactionTO(
-                        baseInput,
-                    ).copy(transactionData = listOf(transactionData))
+                    VerifierApiClient
+                        .loadInitTransactionTO(
+                            baseInput,
+                        ).copy(transactionData = listOf(transactionData))
 
                 val result = useCase(input)
                 assertEquals(ValidationError.InvalidTransactionData.left(), result)
@@ -381,9 +381,10 @@ class InitTransactionTest {
                     }
 
                 val input =
-                    VerifierApiClient.loadInitTransactionTO(
-                        baseInput,
-                    ).copy(transactionData = listOf(transactionData))
+                    VerifierApiClient
+                        .loadInitTransactionTO(
+                            baseInput,
+                        ).copy(transactionData = listOf(transactionData))
 
                 val result = useCase(input)
                 val response = assertNotNull(assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(result.getOrNull()))

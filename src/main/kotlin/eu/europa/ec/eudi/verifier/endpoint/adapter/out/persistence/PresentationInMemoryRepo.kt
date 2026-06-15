@@ -56,7 +56,10 @@ class PresentationInMemoryRepo(
 
     val loadIncompletePresentationsOlderThan: LoadIncompletePresentationsOlderThan by lazy {
         LoadIncompletePresentationsOlderThan { at ->
-            presentations.values.map { it.presentation }.toList().filter { it.isExpired(at) }
+            presentations.values
+                .map { it.presentation }
+                .toList()
+                .filter { it.isExpired(at) }
         }
     }
 
@@ -98,7 +101,8 @@ class PresentationInMemoryRepo(
 
     val deletePresentationsInitiatedBefore: DeletePresentationsInitiatedBefore by lazy {
         DeletePresentationsInitiatedBefore { at ->
-            presentations.filter { (_, presentationAndEvents) -> presentationAndEvents.presentation.initiatedAt < at }
+            presentations
+                .filter { (_, presentationAndEvents) -> presentationAndEvents.presentation.initiatedAt < at }
                 .keys
                 .onEach { presentations.remove(it) }
                 .toList()

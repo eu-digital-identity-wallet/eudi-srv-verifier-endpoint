@@ -47,12 +47,16 @@ sealed interface DeviceResponseError {
     /**
      * Device response didn't have an OK status
      */
-    data class NotOkDeviceResponseStatus(val status: Number) : DeviceResponseError
+    data class NotOkDeviceResponseStatus(
+        val status: Number,
+    ) : DeviceResponseError
 
     /**
      * Invalid documents found within device response
      */
-    data class InvalidDocuments(val invalidDocuments: NonEmptyList<InvalidDocument>) : DeviceResponseError
+    data class InvalidDocuments(
+        val invalidDocuments: NonEmptyList<InvalidDocument>,
+    ) : DeviceResponseError
 }
 
 class DeviceResponseValidator(
@@ -104,9 +108,12 @@ private suspend fun Raise<DeviceResponseError.InvalidDocuments>.ensureValidDocum
     transactionId: TransactionId?,
     handoverInfo: HandoverInfo?,
 ): List<MDoc> =
-    deviceResponse.documents.withIndex().mapOrAccumulate { (index, document) ->
-        documentValidator
-            .ensureValid(document, transactionId, handoverInfo)
-            .mapLeft { documentErrors -> InvalidDocument(index, document.docType.value, documentErrors) }
-            .bind()
-    }.mapLeft(DeviceResponseError::InvalidDocuments).bind()
+    deviceResponse.documents
+        .withIndex()
+        .mapOrAccumulate { (index, document) ->
+            documentValidator
+                .ensureValid(document, transactionId, handoverInfo)
+                .mapLeft { documentErrors -> InvalidDocument(index, document.docType.value, documentErrors) }
+                .bind()
+        }.mapLeft(DeviceResponseError::InvalidDocuments)
+        .bind()

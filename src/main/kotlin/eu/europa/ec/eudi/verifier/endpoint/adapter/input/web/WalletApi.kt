@@ -74,7 +74,10 @@ class WalletApi(
     private suspend fun handleRetrieveRequestObject(req: ServerRequest): ServerResponse {
         suspend fun ServerRequest.invocationMethod(): RetrieveRequestObjectMethod =
             when (method()) {
-                HttpMethod.GET -> RetrieveRequestObjectMethod.Get
+                HttpMethod.GET -> {
+                    RetrieveRequestObjectMethod.Get
+                }
+
                 HttpMethod.POST -> {
                     val form = awaitFormData()
                     RetrieveRequestObjectMethod.Post(
@@ -82,7 +85,10 @@ class WalletApi(
                         walletNonce = form.getFirst(OpenId4VPSpec.WALLET_NONCE),
                     )
                 }
-                else -> error("Allowed HTTP Method: GET, POST")
+
+                else -> {
+                    error("Allowed HTTP Method: GET, POST")
+                }
             }
 
         suspend fun requestObjectFound(jwt: String) = ok().contentType(REQUEST_OBJECT_MEDIA_TYPE).bodyValueAndAwait(jwt)
@@ -221,32 +227,39 @@ class WalletApi(
                         put("error", "IncorrectState")
                         put("description", "Wallet responded with a 'state' that does not match the expected one.")
                     }
+
                     is WalletResponseValidationError.InvalidEncryptedResponse -> {
                         put("error", "InvalidEncryptedResponse")
                         put("description", this@toJson.error.message)
                         put("cause", this@toJson.error.cause?.message)
                     }
+
                     is WalletResponseValidationError.InvalidVpToken -> {
                         put("error", "InvalidVpToken")
                         put("description", this@toJson.message)
                         this@toJson.cause?.let { put("cause", message) }
                     }
+
                     WalletResponseValidationError.MissingVpToken -> {
                         put("error", "MissingVpToken")
                         put("description", "Expected 'vp_token' to be posted by wallet but was not.")
                     }
+
                     WalletResponseValidationError.PresentationNotFound -> {
                         put("error", "PresentationNotFound")
                         put("description", "The referenced presentation transaction does not exist or has expired.")
                     }
+
                     WalletResponseValidationError.PresentationNotInExpectedState -> {
                         put("error", "PresentationNotInExpectedState")
                         put("description", "The referenced presentation transaction is not in state to accept wallet response.")
                     }
+
                     WalletResponseValidationError.RequiredCredentialSetNotSatisfied -> {
                         put("error", "RequiredCredentialSetNotSatisfied")
                         put("description", "One or more of the required clauses of the DCQL presentation query was not answered.")
                     }
+
                     is WalletResponseValidationError.UnexpectedResponseMode -> {
                         put("error", "UnexpectedResponseMode")
                         val description =

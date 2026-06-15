@@ -20,7 +20,9 @@ import arrow.core.Either
 typealias PNGImage = ByteArray
 
 @JvmInline
-value class Pixels(val size: UInt) {
+value class Pixels(
+    val size: UInt,
+) {
     init {
         require(size > 0u)
     }
@@ -34,7 +36,10 @@ value class Pixels(val size: UInt) {
     }
 }
 
-data class Dimensions(val width: Pixels, val height: Pixels)
+data class Dimensions(
+    val width: Pixels,
+    val height: Pixels,
+)
 
 infix fun Pixels.by(height: Pixels): Dimensions = Dimensions(this, height)
 

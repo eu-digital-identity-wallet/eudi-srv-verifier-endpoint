@@ -120,9 +120,13 @@ internal data class DocumentTO(
  * The outcome of trying to validate a DeviceResponse.
  */
 internal sealed interface DeviceResponseValidationResult {
-    data class Valid(val documents: JsonArray) : DeviceResponseValidationResult
+    data class Valid(
+        val documents: JsonArray,
+    ) : DeviceResponseValidationResult
 
-    data class Invalid(val error: ValidationErrorTO) : DeviceResponseValidationResult
+    data class Invalid(
+        val error: ValidationErrorTO,
+    ) : DeviceResponseValidationResult
 }
 
 /**
@@ -145,7 +149,8 @@ internal class ValidateMsoMdocDeviceResponse(
                     }
 
             val documents =
-                validator.ensureValid(deviceResponse)
+                validator
+                    .ensureValid(deviceResponse)
                     .mapLeft { it.toValidationFailureTO() }
                     .bind()
                     .map { Json.encodeToJsonElement(it.toDocumentTO(clock)) }
@@ -223,20 +228,51 @@ private fun Map<String, JsonElement>.toJsonObject() = JsonObject(this)
 @OptIn(ExperimentalEncodingApi::class)
 private fun DataElement.toJsonElement(clock: Clock): JsonElement =
     when (this) {
-        is BooleanElement -> value.toJsonPrimitive()
-        is ByteStringElement -> base64.encode(value).toJsonPrimitive()
-        is DateTimeElement -> value.toStdlibInstant().toEpochMilliseconds().toJsonPrimitive()
-        is EncodedCBORElement -> base64.encode(value).toJsonPrimitive()
-        is FullDateElement -> value.atStartOfDayIn(clock.timeZone()).toEpochMilliseconds().toJsonPrimitive()
-        is ListElement -> value.map { it.toJsonElement(clock) }.toJsonArray()
-        is MapElement ->
-            value.mapKeys { (key, _) -> key.str }.mapValues { (_, value) -> value.toJsonElement(clock) }
-                .toJsonObject()
+        is BooleanElement -> {
+            value.toJsonPrimitive()
+        }
 
-        is NullElement -> JsonNull
-        is NumberElement -> value.toJsonPrimitive()
-        is StringElement -> value.toJsonPrimitive()
+        is ByteStringElement -> {
+            base64.encode(value).toJsonPrimitive()
+        }
+
+        is DateTimeElement -> {
+            value.toStdlibInstant().toEpochMilliseconds().toJsonPrimitive()
+        }
+
+        is EncodedCBORElement -> {
+            base64.encode(value).toJsonPrimitive()
+        }
+
+        is FullDateElement -> {
+            value.atStartOfDayIn(clock.timeZone()).toEpochMilliseconds().toJsonPrimitive()
+        }
+
+        is ListElement -> {
+            value.map { it.toJsonElement(clock) }.toJsonArray()
+        }
+
+        is MapElement -> {
+            value
+                .mapKeys { (key, _) -> key.str }
+                .mapValues { (_, value) -> value.toJsonElement(clock) }
+                .toJsonObject()
+        }
+
+        is NullElement -> {
+            JsonNull
+        }
+
+        is NumberElement -> {
+            value.toJsonPrimitive()
+        }
+
+        is StringElement -> {
+            value.toJsonPrimitive()
+        }
 
         // Other unsupported DataElements
-        else -> this::class.java.simpleName.toJsonPrimitive()
+        else -> {
+            this::class.java.simpleName.toJsonPrimitive()
+        }
     }

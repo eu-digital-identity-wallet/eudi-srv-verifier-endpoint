@@ -49,21 +49,29 @@ object VerifierApiClient {
             }
 
         val responseSpec =
-            client.post().uri(VerifierApi.INIT_TRANSACTION_PATH_V2)
+            client
+                .post()
+                .uri(VerifierApi.INIT_TRANSACTION_PATH_V2)
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(accept)
                 .bodyValue(initTransactionTO)
                 .exchange()
 
         return when (output) {
-            Output.Json ->
-                responseSpec.expectStatus().isOk()
+            Output.Json -> {
+                responseSpec
+                    .expectStatus()
+                    .isOk()
                     .expectBody<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>()
                     .returnResult()
                     .responseBody!!
+            }
+
             Output.QrCode -> {
                 val response =
-                    responseSpec.expectStatus().isOk()
+                    responseSpec
+                        .expectStatus()
+                        .isOk()
                         .expectBody<ByteArray>()
                         .returnResult()
 
@@ -98,7 +106,9 @@ object VerifierApiClient {
 
         // when
         val responseSpec =
-            client.get().uri(walletResponseUri)
+            client
+                .get()
+                .uri(walletResponseUri)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
         val returnResult = responseSpec.expectBody<WalletResponseTO>().returnResult()
@@ -124,7 +134,9 @@ object VerifierApiClient {
 
         // when
         val responseSpec =
-            client.get().uri(walletResponseUri)
+            client
+                .get()
+                .uri(walletResponseUri)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
         return responseSpec.expectBody<WalletResponseTO>().returnResult()

@@ -45,7 +45,9 @@ typealias Base64UrlSafe = String
  * Wrapper for a JsonObject that contains Transaction Data.
  */
 @JvmInline
-value class TransactionData private constructor(val value: JsonObject) {
+value class TransactionData private constructor(
+    val value: JsonObject,
+) {
     val type: String
         get() = value[OpenId4VPSpec.TRANSACTION_DATA_TYPE]!!.jsonPrimitive.content
 
@@ -153,7 +155,9 @@ private fun JsonElement?.isNonEmptyArray(): Boolean {
  */
 @Serializable
 @JvmInline
-internal value class SignatureQualifier(val value: String) {
+internal value class SignatureQualifier(
+    val value: String,
+) {
     init {
         require(value.isNotEmpty())
     }
@@ -192,7 +196,9 @@ internal value class SignatureQualifier(val value: String) {
  */
 @Serializable
 @JvmInline
-internal value class CredentialId(val value: String) {
+internal value class CredentialId(
+    val value: String,
+) {
     init {
         require(value.isNotEmpty())
     }
@@ -205,7 +211,9 @@ internal value class CredentialId(val value: String) {
  */
 @Serializable
 @JvmInline
-internal value class Label(val value: String) {
+internal value class Label(
+    val value: String,
+) {
     init {
         require(value.isNotEmpty())
     }
@@ -218,7 +226,9 @@ internal value class Label(val value: String) {
  */
 @Serializable
 @JvmInline
-internal value class HashAlgorithmOID(val value: String) {
+internal value class HashAlgorithmOID(
+    val value: String,
+) {
     init {
         require(value.isNotEmpty())
     }
@@ -247,7 +257,9 @@ internal object URLStringSerializer : KSerializer<URL> {
  */
 @Serializable
 @JvmInline
-internal value class AccessMode(val value: String) {
+internal value class AccessMode(
+    val value: String,
+) {
     init {
         require(value.isNotEmpty())
     }
@@ -277,7 +289,9 @@ internal value class AccessMode(val value: String) {
  */
 @Serializable
 @JvmInline
-internal value class OneTimePassword(val value: String) {
+internal value class OneTimePassword(
+    val value: String,
+) {
     init {
         require(value.isNotEmpty())
     }
@@ -357,7 +371,9 @@ internal data class DocumentDigest(
  */
 @Serializable
 @JvmInline
-internal value class ProcessId(val value: String) {
+internal value class ProcessId(
+    val value: String,
+) {
     init {
         require(value.isNotEmpty())
     }

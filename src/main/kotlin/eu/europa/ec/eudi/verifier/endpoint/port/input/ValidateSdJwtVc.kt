@@ -73,12 +73,16 @@ internal sealed interface SdJwtVcValidationResult {
     /**
      * Successfully validated an SD-JWT Verifiable Credential.
      */
-    data class Valid(val payload: SdJwtAndKbJwt<SignedJWT>) : SdJwtVcValidationResult
+    data class Valid(
+        val payload: SdJwtAndKbJwt<SignedJWT>,
+    ) : SdJwtVcValidationResult
 
     /**
      * SD-JWT Verifiable Credential validation failed.
      */
-    data class Invalid(val errors: NonEmptyList<SdJwtVcValidationErrorDetailsTO>) : SdJwtVcValidationResult
+    data class Invalid(
+        val errors: NonEmptyList<SdJwtVcValidationErrorDetailsTO>,
+    ) : SdJwtVcValidationResult
 }
 
 /**
@@ -111,13 +115,14 @@ internal class ValidateSdJwtVc(
                     return SdJwtVcValidationResult.Invalid(nonEmptyListOf(it.toInvalidIssuersChainSdJwtVcValidationError()))
                 }
 
-        return unverified.fold(
-            ifLeft = { sdJwtVcValidator.validate(it, nonce, null) },
-            ifRight = { sdJwtVcValidator.validate(it, nonce, null) },
-        ).fold(
-            ifLeft = { errors -> SdJwtVcValidationResult.Invalid(errors.map { it.toSdJwtVcValidationError() }) },
-            ifRight = { SdJwtVcValidationResult.Valid(it) },
-        )
+        return unverified
+            .fold(
+                ifLeft = { sdJwtVcValidator.validate(it, nonce, null) },
+                ifRight = { sdJwtVcValidator.validate(it, nonce, null) },
+            ).fold(
+                ifLeft = { errors -> SdJwtVcValidationResult.Invalid(errors.map { it.toSdJwtVcValidationError() }) },
+                ifRight = { SdJwtVcValidationResult.Valid(it) },
+            )
     }
 
     private fun sdJwtVcValidator(issuerChain: String?): Either<Throwable, SdJwtVcValidator> =

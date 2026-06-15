@@ -67,10 +67,11 @@ private operator fun PresentationEventsTO.Companion.invoke(
     transactionId = transactionId.value,
     lastUpdated = lastUpdated.toEpochMilliseconds(),
     events =
-        events.map { event ->
-            require(event.transactionId == transactionId)
-            toTransferObject(event)
-        }.toList(),
+        events
+            .map { event ->
+                require(event.transactionId == transactionId)
+                toTransferObject(event)
+            }.toList(),
 )
 
 private fun toTransferObject(event: PresentationEvent) =
@@ -94,6 +95,7 @@ private fun toTransferObject(event: PresentationEvent) =
             is PresentationEvent.WalletResponsePosted -> {
                 put("wallet_response", event.walletResponse.json())
             }
+
             is PresentationEvent.WalletFailedToPostResponse -> {
                 put("cause", event.cause.asText())
                 if (null != event.vpToken) {
@@ -151,15 +153,38 @@ private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
 
 private fun WalletResponseValidationError.asText(): String =
     when (this) {
-        WalletResponseValidationError.IncorrectState -> "Incorrect state"
-        WalletResponseValidationError.MissingVpToken -> "Missing vp_token"
-        is WalletResponseValidationError.InvalidVpToken -> "vp_token is not valid: ${message}${cause?.message?.let { ", $it"}}"
-        is WalletResponseValidationError.PresentationNotFound -> "Presentation not found"
-        is WalletResponseValidationError.PresentationNotInExpectedState -> "Presentation non in expected state"
-        is WalletResponseValidationError.UnexpectedResponseMode -> "Unexpected response mode. Expected $expected, actual $actual"
-        WalletResponseValidationError.RequiredCredentialSetNotSatisfied ->
+        WalletResponseValidationError.IncorrectState -> {
+            "Incorrect state"
+        }
+
+        WalletResponseValidationError.MissingVpToken -> {
+            "Missing vp_token"
+        }
+
+        is WalletResponseValidationError.InvalidVpToken -> {
+            "vp_token is not valid: ${message}${cause?.message?.let { ", $it"}}"
+        }
+
+        is WalletResponseValidationError.PresentationNotFound -> {
+            "Presentation not found"
+        }
+
+        is WalletResponseValidationError.PresentationNotInExpectedState -> {
+            "Presentation non in expected state"
+        }
+
+        is WalletResponseValidationError.UnexpectedResponseMode -> {
+            "Unexpected response mode. Expected $expected, actual $actual"
+        }
+
+        WalletResponseValidationError.RequiredCredentialSetNotSatisfied -> {
             "vp_token does not satisfy all the required credential sets of the query"
-        is WalletResponseValidationError.InvalidEncryptedResponse -> "Encrypted response is not valid: '${error.message}'"
+        }
+
+        is WalletResponseValidationError.InvalidEncryptedResponse -> {
+            "Encrypted response is not valid: '${error.message}'"
+        }
+
         WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc -> {
             "DeviceResponse contains more than one MDocs"
         }

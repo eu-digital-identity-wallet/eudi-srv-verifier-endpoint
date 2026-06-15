@@ -75,7 +75,8 @@ class CreateJarNimbusTest {
                 .generate()
 
         val jwt =
-            createJar.sign(clientMetaData, ResponseMode.DirectPostJwt(ecKey), requestObject, null)
+            createJar
+                .sign(clientMetaData, ResponseMode.DirectPostJwt(ecKey), requestObject, null)
                 .getOrThrow()
                 .serialize()
                 .also { println(it) }
@@ -90,13 +91,12 @@ class CreateJarNimbusTest {
         assertEquals(JWKSet(ecKey).toPublicJWKSet(), clientMetadata.jwkSet)
     }
 
-    private fun decode(jwt: String): Result<SignedJWT> {
-        return runCatching {
+    private fun decode(jwt: String): Result<SignedJWT> =
+        runCatching {
             val signedJWT = SignedJWT.parse(jwt)
             signedJWT.verify(verifier)
             signedJWT
         }
-    }
 
     private fun assertEqualsRequestObjectJWTClaimSet(
         r: RequestObject,
@@ -106,7 +106,11 @@ class CreateJarNimbusTest {
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
         assertEquals(
             r.dcqlQuery,
-            c.getJSONObjectClaim(OpenId4VPSpec.DCQL_QUERY).toJsonObject().decodeAs<DCQL>().getOrThrow(),
+            c
+                .getJSONObjectClaim(OpenId4VPSpec.DCQL_QUERY)
+                .toJsonObject()
+                .decodeAs<DCQL>()
+                .getOrThrow(),
         )
         assertEquals(r.scope.joinToString(separator = " "), c.getStringClaim("scope"))
         assertEquals(r.nonce, c.getStringClaim("nonce"))

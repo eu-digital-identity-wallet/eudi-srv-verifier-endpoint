@@ -41,13 +41,15 @@ internal class SwaggerUi(
         coRouter {
             (GET("") or GET("/")) {
                 log.info("Redirecting to {}", SWAGGER_UI)
-                ServerResponse.status(HttpStatus.TEMPORARY_REDIRECT)
+                ServerResponse
+                    .status(HttpStatus.TEMPORARY_REDIRECT)
                     .renderAndAwait("redirect:$SWAGGER_UI")
             }
 
             GET(SWAGGER_UI, contentType(MediaType.ALL) and accept(MediaType.TEXT_HTML)) {
                 log.info("Displaying Swagger UI")
-                ServerResponse.ok()
+                ServerResponse
+                    .ok()
                     .contentType(MediaType.TEXT_HTML)
                     .renderAndAwait(
                         name = "swagger-ui",

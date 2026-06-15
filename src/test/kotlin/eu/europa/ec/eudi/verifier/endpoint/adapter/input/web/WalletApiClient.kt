@@ -81,12 +81,15 @@ object WalletApiClient {
 
         // get the DCQL query
         val getResponse =
-            client.get()
+            client
+                .get()
                 .uri(relativeRequestUri)
                 .accept(MediaType.parseMediaType(RFC9101.REQUEST_OBJECT_MEDIA_TYPE))
                 .exchange()
-                .expectStatus().isOk()
-                .expectBody<String>().returnResult()
+                .expectStatus()
+                .isOk()
+                .expectBody<String>()
+                .returnResult()
 
         assertNotNull(getResponse.responseBody, "getResponseString is null")
         log.info("response: $getResponse.responseBody")
@@ -111,7 +114,8 @@ object WalletApiClient {
         formEncodedBody: MultiValueMap<String, Any>,
         vararg consumers: ResponseSpecConsumer,
     ) {
-        client.post()
+        client
+            .post()
             .uri { builder -> builder.path(WalletApi.WALLET_RESPONSE_PATH).build(requestId.value) }
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .accept(MediaType.APPLICATION_JSON)
@@ -119,7 +123,8 @@ object WalletApiClient {
             .exchange()
             // then
             .expectAll(*consumers)
-            .expectStatus().isOk()
+            .expectStatus()
+            .isOk()
     }
 
     /**
@@ -133,13 +138,15 @@ object WalletApiClient {
         requestId: RequestId,
         formEncodedBody: MultiValueMap<String, Any>,
     ) {
-        client.post()
+        client
+            .post()
             .uri { builder -> builder.path(WalletApi.WALLET_RESPONSE_PATH).build(requestId.value) }
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(formEncodedBody))
             .exchange()
             // then
-            .expectStatus().isOk()
+            .expectStatus()
+            .isOk()
     }
 }

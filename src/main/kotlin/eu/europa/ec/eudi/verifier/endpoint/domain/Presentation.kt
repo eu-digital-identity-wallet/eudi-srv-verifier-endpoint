@@ -22,7 +22,9 @@ import java.security.cert.X509Certificate
 import kotlin.time.Instant
 
 @JvmInline
-value class TransactionId(val value: String) {
+value class TransactionId(
+    val value: String,
+) {
     init {
         require(value.isNotBlank())
     }
@@ -35,14 +37,18 @@ value class TransactionId(val value: String) {
  * send from wallet with a [Presentation]
  */
 @JvmInline
-value class RequestId(val value: String) {
+value class RequestId(
+    val value: String,
+) {
     init {
         require(value.isNotBlank())
     }
 }
 
 @JvmInline
-value class Nonce(val value: String) {
+value class Nonce(
+    val value: String,
+) {
     init {
         require(value.isNotBlank())
     }
@@ -62,13 +68,19 @@ data class VpTokenRequest(
 sealed interface VerifiablePresentation {
     val format: Format
 
-    data class Str(val value: String, override val format: Format) : VerifiablePresentation {
+    data class Str(
+        val value: String,
+        override val format: Format,
+    ) : VerifiablePresentation {
         init {
             require(value.isNotBlank()) { "VpToken cannot be blank" }
         }
     }
 
-    data class Json(val value: JsonObject, override val format: Format) : VerifiablePresentation {
+    data class Json(
+        val value: JsonObject,
+        override val format: Format,
+    ) : VerifiablePresentation {
         init {
             require(value.isNotEmpty()) { "VpToken must contain claims" }
         }
@@ -79,7 +91,9 @@ sealed interface VerifiablePresentation {
  * The Wallet's response to a 'vp_token' request.
  */
 @JvmInline
-value class VerifiablePresentations(val value: Map<QueryId, List<VerifiablePresentation>>) {
+value class VerifiablePresentations(
+    val value: Map<QueryId, List<VerifiablePresentation>>,
+) {
     init {
         require(value.isNotEmpty())
         require(value.values.all { it.isNotEmpty() })
@@ -91,16 +105,23 @@ sealed interface WalletResponse {
         val verifiablePresentations: VerifiablePresentations,
     ) : WalletResponse
 
-    data class Error(val value: String, val description: String?) : WalletResponse
+    data class Error(
+        val value: String,
+        val description: String?,
+    ) : WalletResponse
 }
 
 @JvmInline
-value class ResponseCode(val value: String)
+value class ResponseCode(
+    val value: String,
+)
 
 sealed interface GetWalletResponseMethod {
     data object Poll : GetWalletResponseMethod
 
-    data class Redirect(val redirectUriTemplate: String) : GetWalletResponseMethod
+    data class Redirect(
+        val redirectUriTemplate: String,
+    ) : GetWalletResponseMethod
 }
 
 /**

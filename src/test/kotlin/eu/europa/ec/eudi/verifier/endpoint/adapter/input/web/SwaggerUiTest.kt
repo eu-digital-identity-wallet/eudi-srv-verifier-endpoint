@@ -40,11 +40,14 @@ internal class SwaggerUiTest {
     @Test
     fun `confirm Swagger UI is accessible`() {
         val responseBody =
-            client.get()
+            client
+                .get()
                 .uri("/swagger-ui")
                 .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.TEXT_HTML)
+                .expectStatus()
+                .isOk()
+                .expectHeader()
+                .contentType(MediaType.TEXT_HTML)
                 .expectBody<String>()
                 .returnResult()
                 .responseBody

@@ -276,10 +276,11 @@ class InitTransactionLive(
         either {
             // validate input
             val (nonce, type) =
-                initTransactionTO.toDomain(
-                    verifierConfig.transactionDataHashAlgorithm,
-                    verifierConfig.clientMetaData.vpFormatsSupported,
-                ).bind()
+                initTransactionTO
+                    .toDomain(
+                        verifierConfig.transactionDataHashAlgorithm,
+                        verifierConfig.clientMetaData.vpFormatsSupported,
+                    ).bind()
 
             // if response mode is direct post jwt then generate ephemeral key
             val responseMode = responseMode(initTransactionTO)
@@ -322,7 +323,10 @@ class InitTransactionLive(
 
             val response =
                 when (initTransactionTO.output) {
-                    Output.Json -> request
+                    Output.Json -> {
+                        request
+                    }
+
                     Output.QrCode -> {
                         InitTransactionResponse.QrCode(
                             generateQrCode(request.authorizationRequestUri, size = (250.pixels by 250.pixels)).getOrThrow(),
@@ -380,11 +384,12 @@ class InitTransactionLive(
                         verifierConfig.verifierId.clientId,
                         requestUri,
                         requestedPresentation.requestUriMethod.toTO(),
-                        authorizationRequestUri.resolve(
-                            verifierConfig.verifierId,
-                            Uri.parse(requestUri.toString()),
-                            requestedPresentation.requestUriMethod,
-                        ).toURI(),
+                        authorizationRequestUri
+                            .resolve(
+                                verifierConfig.verifierId,
+                                Uri.parse(requestUri.toString()),
+                                requestedPresentation.requestUriMethod,
+                            ).toURI(),
                     )
             }
         }
@@ -412,7 +417,10 @@ class InitTransactionLive(
             }
 
         return when (responseModeOption) {
-            ResponseModeOption.DirectPost -> ResponseMode.DirectPost
+            ResponseModeOption.DirectPost -> {
+                ResponseMode.DirectPost
+            }
+
             ResponseModeOption.DirectPostJwt -> {
                 val responseEncryptionKey = generateEphemeralEncryptionKeyPair().getOrThrow()
                 ResponseMode.DirectPostJwt(responseEncryptionKey)
@@ -453,9 +461,10 @@ class InitTransactionLive(
     }
 
     private fun issuerChain(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
-        Either.catch {
-            initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it).getOrThrow() }
-        }.mapLeft { ValidationError.InvalidIssuerChain }
+        Either
+            .catch {
+                initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it).getOrThrow() }
+            }.mapLeft { ValidationError.InvalidIssuerChain }
 
     /**
      * Gets the [UnresolvedAuthorizationRequestUri] for the provided [InitTransactionTO].
@@ -466,20 +475,25 @@ class InitTransactionLive(
     private fun authorizationRequestUri(initTransaction: InitTransactionTO): Either<ValidationError, UnresolvedAuthorizationRequestUri> =
         either {
             when {
-                null != initTransaction.authorizationRequestUri && null != initTransaction.authorizationRequestScheme ->
+                null != initTransaction.authorizationRequestUri && null != initTransaction.authorizationRequestScheme -> {
                     raise(ValidationError.ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme)
+                }
 
-                null != initTransaction.authorizationRequestUri ->
+                null != initTransaction.authorizationRequestUri -> {
                     UnresolvedAuthorizationRequestUri.fromUri(initTransaction.authorizationRequestUri).getOrElse {
                         raise(ValidationError.InvalidAuthorizationRequestUri)
                     }
+                }
 
-                null != initTransaction.authorizationRequestScheme ->
+                null != initTransaction.authorizationRequestScheme -> {
                     UnresolvedAuthorizationRequestUri.fromScheme(initTransaction.authorizationRequestScheme).getOrElse {
                         raise(ValidationError.InvalidAuthorizationRequestScheme)
                     }
+                }
 
-                else -> verifierConfig.authorizationRequestUri
+                else -> {
+                    verifierConfig.authorizationRequestUri
+                }
             }
         }
 }
@@ -517,20 +531,21 @@ internal fun InitTransactionTO.toDomain(
                 }
             }
 
-            return transactionData?.map {
-                TransactionData.validate(JsonObject(it + (OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS to hashAlgorithms)), credentialIds)
-                    .flatMap { transactionData ->
-                        Either.catch {
-                            when (transactionData.type) {
-                                QesAuthorization.TYPE -> QesAuthorization.serializer()
-                                QCertCreationAcceptance.TYPE -> QCertCreationAcceptance.serializer()
-                                else -> null
-                            }?.let { deserializer -> it.decodeAs(deserializer) }
-                            transactionData
-                        }
-                    }
-                    .getOrElse { raise(ValidationError.InvalidTransactionData) }
-            }?.toNonEmptyListOrNull()
+            return transactionData
+                ?.map {
+                    TransactionData
+                        .validate(JsonObject(it + (OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS to hashAlgorithms)), credentialIds)
+                        .flatMap { transactionData ->
+                            Either.catch {
+                                when (transactionData.type) {
+                                    QesAuthorization.TYPE -> QesAuthorization.serializer()
+                                    QCertCreationAcceptance.TYPE -> QCertCreationAcceptance.serializer()
+                                    else -> null
+                                }?.let { deserializer -> it.decodeAs(deserializer) }
+                                transactionData
+                            }
+                        }.getOrElse { raise(ValidationError.InvalidTransactionData) }
+                }?.toNonEmptyListOrNull()
         }
 
         val query = requiredQuery()
@@ -607,7 +622,10 @@ private fun interface ProfileValidator {
                 ensure(config.verifierId is VerifierId.X509Hash) {
                     ValidationError.HaipNotSupported.ClientIdPrefixX509HashMustBeUsed
                 }
-                ensure(!config.verifierId.accessCertificate.certificate.isSelfSigned()) {
+                ensure(
+                    !config.verifierId.accessCertificate.certificate
+                        .isSelfSigned(),
+                ) {
                     ValidationError.HaipNotSupported.SelfSignedCertificateMustNotBeUsed
                 }
 

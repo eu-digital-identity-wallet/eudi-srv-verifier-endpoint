@@ -35,7 +35,8 @@ object TestUtils {
     private val jsonFormat: Json = Json { prettyPrint = true }
 
     fun loadResource(f: String): String =
-        TestUtils::class.java.classLoader.getResourceAsStream(f)
+        TestUtils::class.java.classLoader
+            .getResourceAsStream(f)
             .let { String(it!!.readBytes()) }
 
     /**
@@ -78,9 +79,10 @@ object TestUtils {
 
 fun JsonObject.ecKey(): ECKey? =
     fromClientMetaData { clientMetaData ->
-        clientMetaData["jwks"]?.let { jwkSetJson ->
-            JWKSet.parse(jwkSetJson.toString()).keys.firstOrNull { jwk -> jwk.keyType == KeyType.EC }
-        }?.toECKey()
+        clientMetaData["jwks"]
+            ?.let { jwkSetJson ->
+                JWKSet.parse(jwkSetJson.toString()).keys.firstOrNull { jwk -> jwk.keyType == KeyType.EC }
+            }?.toECKey()
     }
 
 fun JsonObject.supportedEncryptionMethods(): List<EncryptionMethod>? =
@@ -92,6 +94,4 @@ fun JsonObject.supportedEncryptionMethods(): List<EncryptionMethod>? =
         }
     }
 
-fun <A> JsonObject.fromClientMetaData(extract: (JsonObject) -> A): A? {
-    return this["client_metadata"]?.jsonObject?.let { extract(it) }
-}
+fun <A> JsonObject.fromClientMetaData(extract: (JsonObject) -> A): A? = this["client_metadata"]?.jsonObject?.let { extract(it) }

@@ -118,7 +118,8 @@ internal class JweTest {
         // (wallet) generate JWT with claims
         val now = Date()
         val jwtClaims: JWTClaimsSet =
-            JWTClaimsSet.Builder()
+            JWTClaimsSet
+                .Builder()
                 .issuer("Verifier")
                 .subject("john doe")
                 .audience(listOf("https://eudi.com", "https://eudi.org"))

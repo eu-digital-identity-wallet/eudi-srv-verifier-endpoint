@@ -26,7 +26,9 @@ import org.springframework.scheduling.config.ScheduledTaskRegistrar
 import kotlin.time.Duration.Companion.minutes
 
 @EnableScheduling
-class ScheduleDeleteOldPresentations(private val deleteOldPresentations: DeleteOldPresentations) : SchedulingConfigurer {
+class ScheduleDeleteOldPresentations(
+    private val deleteOldPresentations: DeleteOldPresentations,
+) : SchedulingConfigurer {
     private val logger: Logger = LoggerFactory.getLogger(ScheduleDeleteOldPresentations::class.java)
 
     override fun configureTasks(taskRegistrar: ScheduledTaskRegistrar) {

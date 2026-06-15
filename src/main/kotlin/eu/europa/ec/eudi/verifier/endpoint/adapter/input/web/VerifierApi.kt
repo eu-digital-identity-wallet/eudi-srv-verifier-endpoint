@@ -74,18 +74,20 @@ internal class VerifierApi(
                                     VerifierApiVersion.V1 -> JwtSecuredAuthorizationRequestV1TO.from(it)
                                     VerifierApiVersion.V2 -> it
                                 }
-                            ok().json()
+                            ok()
+                                .json()
                                 .header(TRANSACTION_ID_HEADER, it.transactionId)
                                 .apply {
                                     if (VerifierApiVersion.V2 == version) {
                                         header(AUTHORIZATION_REQUEST_URI_HEADER, it.authorizationRequestUri)
                                     }
-                                }
-                                .bodyValueAndAwait(response)
+                                }.bodyValueAndAwait(response)
                         }
+
                         is InitTransactionResponse.QrCode -> {
                             logger.info("Initiated transaction with qr image")
-                            ok().contentType(IMAGE_PNG)
+                            ok()
+                                .contentType(IMAGE_PNG)
                                 .header(TRANSACTION_ID_HEADER, it.transactionId)
                                 .header(AUTHORIZATION_REQUEST_URI_HEADER, it.authorizationRequestUri)
                                 .bodyValueAndAwait(it.qrCode)
@@ -151,40 +153,73 @@ internal class VerifierApi(
         private suspend fun ValidationError.asBadRequest(): ServerResponse {
             val error =
                 when (this) {
-                    ValidationError.MissingPresentationQuery ->
+                    ValidationError.MissingPresentationQuery -> {
                         "MissingPresentationQuery"
-                    ValidationError.MissingNonce ->
+                    }
+
+                    ValidationError.MissingNonce -> {
                         "MissingNonce"
-                    ValidationError.InvalidWalletResponseTemplate ->
+                    }
+
+                    ValidationError.InvalidWalletResponseTemplate -> {
                         "InvalidWalletResponseTemplate"
-                    ValidationError.InvalidTransactionData ->
+                    }
+
+                    ValidationError.InvalidTransactionData -> {
                         "InvalidTransactionData"
-                    ValidationError.UnsupportedFormat ->
+                    }
+
+                    ValidationError.UnsupportedFormat -> {
                         "UnsupportedFormat"
-                    ValidationError.InvalidIssuerChain ->
+                    }
+
+                    ValidationError.InvalidIssuerChain -> {
                         "InvalidIssuerChain"
-                    ValidationError.ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme ->
+                    }
+
+                    ValidationError.ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme -> {
                         "ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme"
-                    ValidationError.InvalidAuthorizationRequestUri ->
+                    }
+
+                    ValidationError.InvalidAuthorizationRequestUri -> {
                         "InvalidAuthorizationRequestUri"
-                    ValidationError.InvalidAuthorizationRequestScheme ->
+                    }
+
+                    ValidationError.InvalidAuthorizationRequestScheme -> {
                         "InvalidAuthorizationRequestScheme"
-                    ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported ->
+                    }
+
+                    ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported -> {
                         "HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported"
-                    ValidationError.HaipNotSupported.JwsAlgorithmES256MustBeSupported ->
+                    }
+
+                    ValidationError.HaipNotSupported.JwsAlgorithmES256MustBeSupported -> {
                         "HaipNotSupported.JwsAlgorithmES256MustBeSupported"
-                    ValidationError.HaipNotSupported.ClientIdPrefixX509HashMustBeUsed ->
+                    }
+
+                    ValidationError.HaipNotSupported.ClientIdPrefixX509HashMustBeUsed -> {
                         "HaipNotSupported.ClientIdPrefixX509HashMustBeUsed"
-                    ValidationError.HaipNotSupported.SelfSignedCertificateMustNotBeUsed ->
+                    }
+
+                    ValidationError.HaipNotSupported.SelfSignedCertificateMustNotBeUsed -> {
                         "HaipNotSupported.SelfSignedCertificateMustNotBeUsed"
-                    ValidationError.HaipNotSupported.EncryptionAlgorithmECDHESMustBeSupported ->
+                    }
+
+                    ValidationError.HaipNotSupported.EncryptionAlgorithmECDHESMustBeSupported -> {
                         "HaipNotSupported.EncryptionAlgorithmECDHESMustBeSupported"
-                    ValidationError.HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported ->
+                    }
+
+                    ValidationError.HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported -> {
                         "HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported"
-                    ValidationError.HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed ->
+                    }
+
+                    ValidationError.HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed -> {
                         "HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed"
-                    ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference ->
+                    }
+
+                    ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference -> {
                         "HaipNotSupported.AuthorizationRequestMustBeProvidedByReference"
+                    }
                 }
             return badRequest().json().bodyValueAndAwait(mapOf("error" to error))
         }

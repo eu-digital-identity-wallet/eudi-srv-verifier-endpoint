@@ -26,7 +26,9 @@ import java.net.URL
 
 @Serializable
 @JvmInline
-value class Format(val value: String) {
+value class Format(
+    val value: String,
+) {
     init {
         require(value.isNotBlank()) { "Format cannot be blank" }
     }
@@ -63,7 +65,9 @@ data class DCQL(
  */
 @Serializable
 @JvmInline
-value class Credentials(val value: List<CredentialQuery>) : java.io.Serializable {
+value class Credentials(
+    val value: List<CredentialQuery>,
+) : java.io.Serializable {
     init {
         require(value.isNotEmpty()) { "${OpenId4VPSpec.DCQL_CREDENTIALS} cannot be empty" }
         value.ensureUniqueIds()
@@ -92,7 +96,9 @@ value class Credentials(val value: List<CredentialQuery>) : java.io.Serializable
  */
 @Serializable
 @JvmInline
-value class CredentialSets(val value: List<CredentialSetQuery>) : java.io.Serializable {
+value class CredentialSets(
+    val value: List<CredentialSetQuery>,
+) : java.io.Serializable {
     init {
         require(value.isNotEmpty()) {
             "${OpenId4VPSpec.DCQL_CREDENTIAL_SETS} cannot be empty, if provided"
@@ -108,17 +114,18 @@ value class CredentialSets(val value: List<CredentialSetQuery>) : java.io.Serial
     fun ensureKnownIds(credentials: Credentials): CredentialSets =
         apply {
             val violations =
-                value.mapIndexedNotNull { index, credentialSet ->
-                    val invaliOptions =
-                        credentialSet.options.mapIndexedNotNull { optionIndex, option ->
-                            option.unknownIds(credentials).takeIf { it.isNotEmpty() }?.let { unknownIds ->
-                                optionIndex to unknownIds
+                value
+                    .mapIndexedNotNull { index, credentialSet ->
+                        val invaliOptions =
+                            credentialSet.options.mapIndexedNotNull { optionIndex, option ->
+                                option.unknownIds(credentials).takeIf { it.isNotEmpty() }?.let { unknownIds ->
+                                    optionIndex to unknownIds
+                                }
                             }
+                        invaliOptions.takeIf { it.isNotEmpty() }?.let {
+                            index to invaliOptions
                         }
-                    invaliOptions.takeIf { it.isNotEmpty() }?.let {
-                        index to invaliOptions
-                    }
-                }.toMap()
+                    }.toMap()
             require(violations.isEmpty()) {
                 buildString {
                     appendLine("The following credential set queries have invalid options:")
@@ -144,7 +151,9 @@ value class CredentialSets(val value: List<CredentialSetQuery>) : java.io.Serial
 
 @Serializable
 @JvmInline
-value class TrustedAuthorityType(val value: String) : java.io.Serializable {
+value class TrustedAuthorityType(
+    val value: String,
+) : java.io.Serializable {
     init {
         require(value.isNotBlank()) { "TrustedAuthorityType cannot be blank" }
     }
@@ -186,7 +195,9 @@ data class TrustedAuthority(
  */
 @Serializable
 @JvmInline
-value class QueryId(val value: String) : java.io.Serializable {
+value class QueryId(
+    val value: String,
+) : java.io.Serializable {
     init {
         DCQLId.ensureValid(value)
     }
@@ -334,7 +345,9 @@ data class CredentialQuery(
 
 @Serializable
 @JvmInline
-value class ClaimSet(val value: List<ClaimId>) : java.io.Serializable {
+value class ClaimSet(
+    val value: List<ClaimId>,
+) : java.io.Serializable {
     init {
         value.ensureValid()
     }
@@ -405,7 +418,9 @@ data class CredentialSetQuery(
  */
 @Serializable
 @JvmInline
-value class CredentialQueryIds(val value: List<QueryId>) : java.io.Serializable {
+value class CredentialQueryIds(
+    val value: List<QueryId>,
+) : java.io.Serializable {
     init {
         value.ensureValid()
     }
@@ -435,7 +450,9 @@ value class CredentialQueryIds(val value: List<QueryId>) : java.io.Serializable 
 
 @Serializable
 @JvmInline
-value class ClaimId(val value: String) : java.io.Serializable {
+value class ClaimId(
+    val value: String,
+) : java.io.Serializable {
     init {
         DCQLId.ensureValid(value)
     }
@@ -449,7 +466,8 @@ data class ClaimsQuery(
     @Required @SerialName(OpenId4VPSpec.DCQL_PATH) val path: ClaimPath,
     @SerialName(OpenId4VPSpec.DCQL_VALUES) val values: JsonArray? = null,
     @SerialName(OpenId4VPSpec.DCQL_MSO_MDOC_INTENT_TO_RETAIN) override val intentToRetain: Boolean? = null,
-) : MsoMdocClaimsQueryExtension, java.io.Serializable {
+) : MsoMdocClaimsQueryExtension,
+    java.io.Serializable {
     init {
         values?.ensureContainsOnlyPrimitives()
     }
@@ -533,7 +551,9 @@ data class DCQLMetaSdJwtVcExtensions(
 
 @Serializable
 @JvmInline
-value class MsoMdocDocType(val value: String) : java.io.Serializable {
+value class MsoMdocDocType(
+    val value: String,
+) : java.io.Serializable {
     init {
         require(value.isNotBlank()) { "Doctype can't be blank" }
     }

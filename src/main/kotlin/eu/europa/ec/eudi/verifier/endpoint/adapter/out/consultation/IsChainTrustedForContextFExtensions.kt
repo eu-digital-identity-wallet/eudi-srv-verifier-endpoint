@@ -51,15 +51,16 @@ fun IsChainTrustedForContextF.Companion.usingTrustValidatorService(
 ): IsChainTrustedForContextF<NonEmptyList<X509Certificate>, VerificationContext, TrustAnchor> =
     IsChainTrustedForContextF { chain, context ->
         val response =
-            httpClient.post {
-                expectSuccess = true
+            httpClient
+                .post {
+                    expectSuccess = true
 
-                url(service)
-                contentType(ContentType.Application.Json)
-                setBody(TrustQueryTO(chain, VerificationContextTO.from(context), context.useCaseOrNull))
+                    url(service)
+                    contentType(ContentType.Application.Json)
+                    setBody(TrustQueryTO(chain, VerificationContextTO.from(context), context.useCaseOrNull))
 
-                accept(ContentType.Application.Json)
-            }.body<TrustResponseTO>()
+                    accept(ContentType.Application.Json)
+                }.body<TrustResponseTO>()
 
         val trustAnchor = response.trustAnchor?.let { TrustAnchor(it, null) }
         if (response.trusted)

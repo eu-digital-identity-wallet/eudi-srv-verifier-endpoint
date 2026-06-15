@@ -67,13 +67,18 @@ enum class IssuerSignedItemsShouldBe {
 sealed interface DocumentError {
     data object MissingValidityInfo : DocumentError
 
-    data class ExpiredValidityInfo(val validFrom: Instant, val validTo: Instant) : DocumentError
+    data class ExpiredValidityInfo(
+        val validFrom: Instant,
+        val validTo: Instant,
+    ) : DocumentError
 
     data object IssuerKeyIsNotEC : DocumentError
 
     data object InvalidIssuerSignature : DocumentError
 
-    data class X5CNotTrusted(val cause: String?) : DocumentError
+    data class X5CNotTrusted(
+        val cause: String?,
+    ) : DocumentError
 
     data object DocumentTypeNotMatching : DocumentError
 
@@ -85,16 +90,23 @@ sealed interface DocumentError {
 
     data object MissingDeviceSigned : DocumentError
 
-    data class DeviceKeyNotAuthorizedToSignItems(val unauthorized: Map<NameSpace, NonEmptyList<DataElementIdentifier>>) :
-        DocumentError
+    data class DeviceKeyNotAuthorizedToSignItems(
+        val unauthorized: Map<NameSpace, NonEmptyList<DataElementIdentifier>>,
+    ) : DocumentError
 
-    class DevicePublicKeyCannotBeParsed(val cause: Throwable) : DocumentError
+    class DevicePublicKeyCannotBeParsed(
+        val cause: Throwable,
+    ) : DocumentError
 
-    class DeviceKeyIsNotEC(val cause: Throwable) : DocumentError
+    class DeviceKeyIsNotEC(
+        val cause: Throwable,
+    ) : DocumentError
 
     data object InvalidDeviceSignature : DocumentError
 
-    class DocumentStatusCheckFailed(val cause: Throwable) : DocumentError
+    class DocumentStatusCheckFailed(
+        val cause: Throwable,
+    ) : DocumentError
 }
 
 private val log = LoggerFactory.getLogger(DocumentValidator::class.java)
@@ -150,11 +162,17 @@ private fun Raise<DocumentError>.ensureNotExpiredValidityInfo(
 
     val validityInfo = document.MSO?.validityInfo
     when (validityInfoShouldBe) {
-        ValidityInfoShouldBe.NotExpired ->
+        ValidityInfoShouldBe.NotExpired -> {
             ensureNotNull(validityInfo) { DocumentError.MissingValidityInfo }.notExpired()
+        }
 
-        ValidityInfoShouldBe.NotExpiredIfPresent -> validityInfo?.notExpired()
-        ValidityInfoShouldBe.Ignored -> Unit
+        ValidityInfoShouldBe.NotExpiredIfPresent -> {
+            validityInfo?.notExpired()
+        }
+
+        ValidityInfoShouldBe.Ignored -> {
+            Unit
+        }
     }
 }
 
@@ -278,8 +296,7 @@ private suspend fun Raise<DocumentError>.ensureNotRevoked(
                 is StatusValidationError.StatusCheckException -> DocumentError.DocumentStatusCheckFailed(it)
                 is StatusValidationError.StatusNotValid -> DocumentError.DocumentHasBeenRevoked
             }
-        }
-        ?.bind()
+        }?.bind()
 }
 
 private fun Raise<Nel<DocumentError>>.ensureValidDeviceSigned(
@@ -323,8 +340,7 @@ private fun Raise<DocumentError.DeviceKeyNotAuthorizedToSignItems>.ensureValidKe
                         .filter { (identifier, _) ->
                             nameSpace !in fullyAuthorizedNameSpaces &&
                                 identifier !in authorizedDataElementsPerNameSpace[nameSpace].orEmpty()
-                        }
-                        .map { it.identifier }
+                        }.map { it.identifier }
                         .toNonEmptyListOrNull()
                         ?.let { put(nameSpace, it) }
                 }
@@ -387,7 +403,9 @@ private fun ListElement.toDataElementsArray(): DataElementsArray =
     checkNotNull(value.map { (it as StringElement).value }.toNonEmptyListOrNull())
 
 @JvmInline
-private value class AuthorizedDataElements(val value: Map<NameSpace, DataElementsArray>) {
+private value class AuthorizedDataElements(
+    val value: Map<NameSpace, DataElementsArray>,
+) {
     init {
         require(value.isNotEmpty()) { "AuthorizedDataElements must contain at least one NameSpace" }
         require(value.values.all { it.distinct().size == it.size }) {
@@ -403,7 +421,10 @@ private fun MapElement.toAuthorizedDataElements(): AuthorizedDataElements =
         }
     }.let { AuthorizedDataElements(it) }
 
-private data class KeyAuthorizations(val nameSpaces: AuthorizedNameSpaces?, val dataElements: AuthorizedDataElements?) {
+private data class KeyAuthorizations(
+    val nameSpaces: AuthorizedNameSpaces?,
+    val dataElements: AuthorizedDataElements?,
+) {
     init {
         require(null != nameSpaces || null != dataElements) {
             "KeyAuthorizations must contain either AuthorizedNameSpaces or AuthorizedDataElements"
@@ -440,7 +461,9 @@ private fun MapElement.toDeviceNameSpaces(): DeviceNameSpaces =
     }
 
 @JvmInline
-private value class DeviceSignedItems(val items: NonEmptyList<DeviceSignedItem>) {
+private value class DeviceSignedItems(
+    val items: NonEmptyList<DeviceSignedItem>,
+) {
     init {
         val identifiers = items.map { it.identifier }
         require(identifiers.distinct().size == identifiers.size) { "DeviceSignedItems identifiers must be unique" }
@@ -448,11 +471,15 @@ private value class DeviceSignedItems(val items: NonEmptyList<DeviceSignedItem>)
 }
 
 private fun MapElement.toDeviceSignedItems(): DeviceSignedItems =
-    value.map { (identifier, value) -> DeviceSignedItem(identifier.str, value) }
+    value
+        .map { (identifier, value) -> DeviceSignedItem(identifier.str, value) }
         .toNonEmptyListOrNull()
         .let { DeviceSignedItems(checkNotNull(it)) }
 
-private data class DeviceSignedItem(val identifier: DataElementIdentifier, val value: AnyDataElement)
+private data class DeviceSignedItem(
+    val identifier: DataElementIdentifier,
+    val value: AnyDataElement,
+)
 
 private data class SessionTranscript(
     val deviceEngagementBytes: ByteArray?,

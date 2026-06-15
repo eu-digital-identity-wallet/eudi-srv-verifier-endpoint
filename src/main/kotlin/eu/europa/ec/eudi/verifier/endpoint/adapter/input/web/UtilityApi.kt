@@ -72,13 +72,17 @@ internal class UtilityApi(
         val issuerChain = form["issuer_chain"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
 
         return when (val result = validateMsoMdocDeviceResponse(deviceResponse = deviceResponse, issuerChain = issuerChain)) {
-            is DeviceResponseValidationResult.Valid ->
-                ok().json()
+            is DeviceResponseValidationResult.Valid -> {
+                ok()
+                    .json()
                     .bodyValueAndAwait(result.documents)
+            }
 
-            is DeviceResponseValidationResult.Invalid ->
-                badRequest().json()
+            is DeviceResponseValidationResult.Invalid -> {
+                badRequest()
+                    .json()
                     .bodyValueAndAwait(result.error)
+            }
         }
     }
 
@@ -103,11 +107,16 @@ internal class UtilityApi(
             is SdJwtVcValidationResult.Valid -> {
                 val reCreated =
                     with(NimbusSdJwtOps) {
-                        result.payload.sdJwt.recreateClaimsAndDisclosuresPerClaim().first
+                        result.payload.sdJwt
+                            .recreateClaimsAndDisclosuresPerClaim()
+                            .first
                     }
                 ok().json().bodyValueAndAwait(reCreated)
             }
-            is SdJwtVcValidationResult.Invalid -> badRequest().json().bodyValueAndAwait(result.toJson())
+
+            is SdJwtVcValidationResult.Invalid -> {
+                badRequest().json().bodyValueAndAwait(result.toJson())
+            }
         }
     }
 

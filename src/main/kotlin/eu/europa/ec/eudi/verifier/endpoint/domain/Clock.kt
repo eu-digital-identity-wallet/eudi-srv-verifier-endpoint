@@ -39,7 +39,9 @@ interface Clock {
     companion object {
         val System: Clock =
             object : Clock {
-                override fun now(): Instant = kotlin.time.Clock.System.now()
+                override fun now(): Instant =
+                    kotlin.time.Clock.System
+                        .now()
 
                 override fun timeZone(): TimeZone = TimeZone.currentSystemDefault()
             }

@@ -19,12 +19,15 @@ import com.eygraber.uri.Uri
 import com.eygraber.uri.toURI
 
 @JvmInline
-value class UnresolvedAuthorizationRequestUri private constructor(val value: Uri) {
+value class UnresolvedAuthorizationRequestUri private constructor(
+    val value: Uri,
+) {
     fun resolve(
         verifierId: VerifierId,
         request: Jwt,
     ): Uri =
-        value.buildUpon()
+        value
+            .buildUpon()
             .appendQueryParameter(RFC6749.CLIENT_ID, verifierId.clientId)
             .appendQueryParameter(RFC9101.REQUEST, request)
             .build()
@@ -34,7 +37,8 @@ value class UnresolvedAuthorizationRequestUri private constructor(val value: Uri
         requestUri: Uri,
         requestUriMethod: RequestUriMethod,
     ): Uri =
-        value.buildUpon()
+        value
+            .buildUpon()
             .appendQueryParameter(RFC6749.CLIENT_ID, verifierId.clientId)
             .appendQueryParameter(RFC9101.REQUEST_URI, requestUri.toURI().toString())
             .apply {
@@ -44,8 +48,7 @@ value class UnresolvedAuthorizationRequestUri private constructor(val value: Uri
                         RequestUriMethod.Post, RequestUriMethod.PostOrGet -> OpenId4VPSpec.REQUEST_URI_METHOD_POST
                     }
                 appendQueryParameter(OpenId4VPSpec.REQUEST_URI_METHOD, requestUriMethod)
-            }
-            .build()
+            }.build()
 
     companion object {
         val DisallowedQueryParameters = setOf(RFC6749.CLIENT_ID, RFC9101.REQUEST, RFC9101.REQUEST_URI, OpenId4VPSpec.REQUEST_URI_METHOD)

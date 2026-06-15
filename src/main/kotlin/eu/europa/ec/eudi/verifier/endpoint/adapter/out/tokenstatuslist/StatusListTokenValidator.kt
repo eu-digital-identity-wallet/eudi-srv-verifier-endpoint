@@ -41,7 +41,9 @@ sealed interface StatusValidationError {
     /**
      * Indicate the Status of a Document is not Valid. (i.e. most likely has been Revoked, or Suspended, etc...)
      */
-    data class StatusNotValid(val status: Status) : StatusValidationError {
+    data class StatusNotValid(
+        val status: Status,
+    ) : StatusValidationError {
         init {
             require(Status.Valid != status)
         }
@@ -50,7 +52,11 @@ sealed interface StatusValidationError {
     /**
      * Indicates the Status List Token could not be checked
      */
-    class StatusCheckException(message: String, cause: Throwable) : Exception(message, cause), StatusValidationError
+    class StatusCheckException(
+        message: String,
+        cause: Throwable,
+    ) : Exception(message, cause),
+        StatusValidationError
 }
 
 class StatusListTokenValidator(
@@ -62,7 +68,8 @@ class StatusListTokenValidator(
         sdJwtVc: SdJwtAndKbJwt<SignedJWT>,
         transactionId: TransactionId?,
     ): Either<StatusValidationError, Status.Valid> =
-        sdJwtVc.statusReference()
+        sdJwtVc
+            .statusReference()
             ?.validate(transactionId, StatusListTokenFormat.JWT)
             ?: Status.Valid.right()
 
@@ -96,21 +103,23 @@ class StatusListTokenValidator(
     private fun getStatus(format: StatusListTokenFormat): GetStatus {
         val getStatusListToken =
             when (format) {
-                StatusListTokenFormat.JWT ->
+                StatusListTokenFormat.JWT -> {
                     GetStatusListToken.usingJwt(
                         clock = clock.asKotlinClock(),
                         httpClient = httpClient,
                         verifyStatusListTokenSignature = { _, _ -> Result.success(Unit) },
                         allowedClockSkew = 15.seconds,
                     )
+                }
 
-                StatusListTokenFormat.CWT ->
+                StatusListTokenFormat.CWT -> {
                     GetStatusListToken.usingCwt(
                         clock = clock.asKotlinClock(),
                         httpClient = httpClient,
                         verifyStatusListTokenSignature = { _, _ -> Result.success(Unit) },
                         allowedClockSkew = 15.seconds,
                     )
+                }
             }
         return GetStatus(getStatusListToken)
     }

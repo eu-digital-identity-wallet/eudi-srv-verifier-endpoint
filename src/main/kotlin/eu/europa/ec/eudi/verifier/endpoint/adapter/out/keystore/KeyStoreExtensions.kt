@@ -32,7 +32,8 @@ fun loadKeyStore(
     val keystoreResource =
         run {
             val keystoreResource =
-                DefaultResourceLoader().getResource(location)
+                DefaultResourceLoader()
+                    .getResource(location)
                     .some()
                     .filter { it.exists() }
                     .getOrNull()
