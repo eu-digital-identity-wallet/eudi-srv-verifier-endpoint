@@ -16,7 +16,9 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 
 import arrow.core.*
-import arrow.core.raise.either
+import arrow.core.raise.catch
+import arrow.core.raise.effect
+import arrow.core.raise.toEither
 import com.nimbusds.jose.JOSEObjectType
 import com.nimbusds.jose.proc.BadJOSEException
 import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier
@@ -228,15 +230,15 @@ internal class SdJwtVcValidator(
         challenge: ChallengePredicate,
         transactionId: TransactionId?,
     ): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> =
-        either {
+        effect<Throwable, SdJwtAndKbJwt<SignedJWT>> {
             val verified = unverified.fold(
                 ifLeft = { verify(it, challenge) },
                 ifRight = { verify(it, challenge) },
-            ).getOrElse { raise(it) }
+            ).getOrThrow()
 
             statusListTokenValidator
                 ?.validate(verified, transactionId)
-                ?.mapLeft { statusValidationError ->
+                ?.getOrElse { statusValidationError ->
                     val reason = when (statusValidationError) {
                         is StatusValidationError.StatusNotValid ->
                             SdJwtVcVerificationError.StatusVerificationError.NonValidStatus(
@@ -248,12 +250,13 @@ internal class SdJwtVcValidator(
                                 statusValidationError,
                             )
                     }
-                    VerificationError.SdJwtVcError(reason).asException()
+                    raise(VerificationError.SdJwtVcError(reason).asException())
                 }
-                ?.bind()
 
             verified
         }
+            .catch { raise(it) }
+            .toEither()
 }
 
 private val Throwable.description: String
