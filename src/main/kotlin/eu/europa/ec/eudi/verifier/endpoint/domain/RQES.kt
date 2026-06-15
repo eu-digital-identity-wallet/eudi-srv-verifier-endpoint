@@ -43,7 +43,6 @@ object RQES {
     const val DOCUMENT_DIGEST_SIGNED_PROPERTIES = "signed_props"
     const val DOCUMENT_DIGEST_CIRCUMSTANTIAL_DATA = "circumstantialData"
 
-
     const val TYPE_QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION = "https://cloudsignatureconsortium.org/2025/qesapproval"
     const val QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER = "signatureQualifier"
     const val QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_CREDENTIAL_ID = "credentialID"

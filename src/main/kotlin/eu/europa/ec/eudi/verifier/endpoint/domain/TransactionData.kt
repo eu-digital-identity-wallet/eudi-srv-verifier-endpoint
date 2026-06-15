@@ -314,7 +314,7 @@ internal data class AccessControlMethod(
     }
 }
 
-// TODO: Does analysis here has a mistake as per example of etsi? 
+// TODO: Does analysis here has a mistake as per example of etsi?
 
 /**
  * Data of a document to be signed.
