@@ -38,7 +38,6 @@ import io.ktor.client.*
 import kotlin.time.Duration.Companion.seconds
 
 sealed interface StatusValidationError {
-
     /**
      * Indicate the Status of a Document is not Valid. (i.e. most likely has been Revoked, or Suspended, etc...)
      */
@@ -59,13 +58,18 @@ class StatusListTokenValidator(
     private val clock: Clock,
     private val publishPresentationEvent: PublishPresentationEvent,
 ) {
-
-    suspend fun validate(sdJwtVc: SdJwtAndKbJwt<SignedJWT>, transactionId: TransactionId?): Either<StatusValidationError, Status.Valid> =
+    suspend fun validate(
+        sdJwtVc: SdJwtAndKbJwt<SignedJWT>,
+        transactionId: TransactionId?,
+    ): Either<StatusValidationError, Status.Valid> =
         sdJwtVc.statusReference()
             ?.validate(transactionId, StatusListTokenFormat.JWT)
             ?: Status.Valid.right()
 
-    suspend fun validate(mdoc: MDoc, transactionId: TransactionId?): Either<StatusValidationError, Status.Valid> =
+    suspend fun validate(
+        mdoc: MDoc,
+        transactionId: TransactionId?,
+    ): Either<StatusValidationError, Status.Valid> =
         mdoc.issuerSigned.issuerAuth
             ?.tokenStatusListReference()
             ?.validate(transactionId, StatusListTokenFormat.CWT)
@@ -90,30 +94,40 @@ class StatusListTokenValidator(
         }
 
     private fun getStatus(format: StatusListTokenFormat): GetStatus {
-        val getStatusListToken = when (format) {
-            StatusListTokenFormat.JWT -> GetStatusListToken.usingJwt(
-                clock = clock.asKotlinClock(),
-                httpClient = httpClient,
-                verifyStatusListTokenSignature = { _, _ -> Result.success(Unit) },
-                allowedClockSkew = 15.seconds,
-            )
+        val getStatusListToken =
+            when (format) {
+                StatusListTokenFormat.JWT ->
+                    GetStatusListToken.usingJwt(
+                        clock = clock.asKotlinClock(),
+                        httpClient = httpClient,
+                        verifyStatusListTokenSignature = { _, _ -> Result.success(Unit) },
+                        allowedClockSkew = 15.seconds,
+                    )
 
-            StatusListTokenFormat.CWT -> GetStatusListToken.usingCwt(
-                clock = clock.asKotlinClock(),
-                httpClient = httpClient,
-                verifyStatusListTokenSignature = { _, _ -> Result.success(Unit) },
-                allowedClockSkew = 15.seconds,
-            )
-        }
+                StatusListTokenFormat.CWT ->
+                    GetStatusListToken.usingCwt(
+                        clock = clock.asKotlinClock(),
+                        httpClient = httpClient,
+                        verifyStatusListTokenSignature = { _, _ -> Result.success(Unit) },
+                        allowedClockSkew = 15.seconds,
+                    )
+            }
         return GetStatus(getStatusListToken)
     }
 
-    private suspend fun logStatusCheckSuccess(transactionId: TransactionId, statusReference: StatusReference) {
+    private suspend fun logStatusCheckSuccess(
+        transactionId: TransactionId,
+        statusReference: StatusReference,
+    ) {
         val event = PresentationEvent.AttestationStatusCheckSuccessful(transactionId, clock.now(), statusReference)
         publishPresentationEvent(event)
     }
 
-    private suspend fun logStatusCheckFailed(transactionId: TransactionId, statusReference: StatusReference, error: Throwable) {
+    private suspend fun logStatusCheckFailed(
+        transactionId: TransactionId,
+        statusReference: StatusReference,
+        error: Throwable,
+    ) {
         val event = PresentationEvent.AttestationStatusCheckFailed(transactionId, clock.now(), statusReference, error.message)
         publishPresentationEvent(event)
     }

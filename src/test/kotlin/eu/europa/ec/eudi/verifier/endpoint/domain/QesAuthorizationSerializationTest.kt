@@ -28,35 +28,37 @@ import kotlin.test.assertTrue
  * Test class focusing on JSON serialization for QesAuthorization.
  */
 class QesAuthorizationSerializationTest {
-
-    private val json = Json {
-        prettyPrint = true
-        ignoreUnknownKeys = true
-    }
+    private val json =
+        Json {
+            prettyPrint = true
+            ignoreUnknownKeys = true
+        }
 
     @Test
     fun `test QesAuthorization serialization and deserialization`() {
         // Create a DocumentDigest instance
-        val documentDigest = DocumentDigest(
-            label = Label("Example Contract"),
-            hash = "7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA",
-            hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
-            documentLocation = null,
-            documentAccessMethod = null,
-            dataToBeSignedRepresentation = null,
-            dataToBeSignedRepresentationHashAlgorithm = null,
-        )
+        val documentDigest =
+            DocumentDigest(
+                label = Label("Example Contract"),
+                hash = "7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA",
+                hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
+                documentLocation = null,
+                documentAccessMethod = null,
+                dataToBeSignedRepresentation = null,
+                dataToBeSignedRepresentationHashAlgorithm = null,
+            )
 
         // Create a QesAuthorization instance
-        val qesAuthorization = QesAuthorization(
-            type = QesAuthorization.TYPE,
-            credentialIds = nonEmptyListOf("607510a9-c957-4095-906d-f99fd006c4ae"),
-            hashAlgorithms = nonEmptyListOf("SHA-256"),
-            signatureQualifier = SignatureQualifier.EuEidasQes,
-            credentialId = null,
-            documentDigests = nonEmptyListOf(documentDigest),
-            processId = null,
-        )
+        val qesAuthorization =
+            QesAuthorization(
+                type = QesAuthorization.TYPE,
+                credentialIds = nonEmptyListOf("607510a9-c957-4095-906d-f99fd006c4ae"),
+                hashAlgorithms = nonEmptyListOf("SHA-256"),
+                signatureQualifier = SignatureQualifier.EuEidasQes,
+                credentialId = null,
+                documentDigests = nonEmptyListOf(documentDigest),
+                processId = null,
+            )
 
         // Serialize to JSON
         val jsonString = json.encodeToString(qesAuthorization)
@@ -92,26 +94,28 @@ class QesAuthorizationSerializationTest {
     @Test
     fun `test QesAuthorization JSON structure`() {
         // Create a DocumentDigest instance
-        val documentDigest = DocumentDigest(
-            label = Label("Example Contract"),
-            hash = "7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA",
-            hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
-            documentLocation = null,
-            documentAccessMethod = null,
-            dataToBeSignedRepresentation = null,
-            dataToBeSignedRepresentationHashAlgorithm = null,
-        )
+        val documentDigest =
+            DocumentDigest(
+                label = Label("Example Contract"),
+                hash = "7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA",
+                hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
+                documentLocation = null,
+                documentAccessMethod = null,
+                dataToBeSignedRepresentation = null,
+                dataToBeSignedRepresentationHashAlgorithm = null,
+            )
 
         // Create a QesAuthorization instance
-        val qesAuthorization = QesAuthorization(
-            type = QesAuthorization.TYPE,
-            credentialIds = nonEmptyListOf("607510a9-c957-4095-906d-f99fd006c4ae"),
-            hashAlgorithms = nonEmptyListOf("SHA-256"),
-            signatureQualifier = SignatureQualifier.EuEidasQes,
-            credentialId = null,
-            documentDigests = nonEmptyListOf(documentDigest),
-            processId = null,
-        )
+        val qesAuthorization =
+            QesAuthorization(
+                type = QesAuthorization.TYPE,
+                credentialIds = nonEmptyListOf("607510a9-c957-4095-906d-f99fd006c4ae"),
+                hashAlgorithms = nonEmptyListOf("SHA-256"),
+                signatureQualifier = SignatureQualifier.EuEidasQes,
+                credentialId = null,
+                documentDigests = nonEmptyListOf(documentDigest),
+                processId = null,
+            )
 
         // Serialize to JSON
         val jsonString = json.encodeToString(qesAuthorization)
@@ -150,7 +154,8 @@ class QesAuthorizationSerializationTest {
 
     @Test
     fun `test QesAuthorization deserialization from sample JSON`() {
-        val sample = """
+        val sample =
+            """
             {
                 "type": "qes_authorization",
                 "credential_ids":["607510a9-c957-4095-906d-f99fd006c4ae"],
@@ -163,7 +168,7 @@ class QesAuthorizationSerializationTest {
                     }
                 ]
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val qesAuthorization = json.decodeFromString<QesAuthorization>(sample)
 

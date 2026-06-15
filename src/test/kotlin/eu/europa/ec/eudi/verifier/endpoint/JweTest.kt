@@ -42,9 +42,14 @@ import java.util.*
 @ExtendWith(SpringExtension::class)
 @SpringBootTest
 internal class JweTest {
-
     private val log: Logger = LoggerFactory.getLogger(JweTest::class.java)
-    private fun ecdhEncrypt(alg: JWEAlgorithm, enc: EncryptionMethod, ecPublicKey: ECPublicKey, jwtClaims: JWTClaimsSet): String {
+
+    private fun ecdhEncrypt(
+        alg: JWEAlgorithm,
+        enc: EncryptionMethod,
+        ecPublicKey: ECPublicKey,
+        jwtClaims: JWTClaimsSet,
+    ): String {
         // define JWE alg and enc
         // {
         //   "alg": "ECDH-ES",
@@ -76,7 +81,10 @@ internal class JweTest {
         return jwtString
     }
 
-    private fun ecdhDecrypt(ecPrivateKey: ECPrivateKey, jwtString: String): JWTClaimsSet {
+    private fun ecdhDecrypt(
+        ecPrivateKey: ECPrivateKey,
+        jwtString: String,
+    ): JWTClaimsSet {
         val jwt = EncryptedJWT.parse(jwtString)
         val rsaDecrypter = ECDHDecrypter(ecPrivateKey)
 
@@ -90,10 +98,11 @@ internal class JweTest {
         // (Verifier during initialisation of Transaction) generate key pair
         val alg = JWEAlgorithm.ECDH_ES
         val enc = EncryptionMethod.A256GCM
-        val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
-            .keyUse(KeyUse.ENCRYPTION)
-            .algorithm(JWEAlgorithm.ECDH_ES)
-            .keyID("123")
+        val ecKeyGenerator =
+            ECKeyGenerator(Curve.P_256)
+                .keyUse(KeyUse.ENCRYPTION)
+                .algorithm(JWEAlgorithm.ECDH_ES)
+                .keyID("123")
         val ecKey = ecKeyGenerator.generate()
         log.info("ecKey private: ${ecKey.toJSONString()}")
         log.info("ecKey public : ${ecKey.toPublicJWK().toJSONString()}")
@@ -108,16 +117,17 @@ internal class JweTest {
 
         // (wallet) generate JWT with claims
         val now = Date()
-        val jwtClaims: JWTClaimsSet = JWTClaimsSet.Builder()
-            .issuer("Verifier")
-            .subject("john doe")
-            .audience(listOf("https://eudi.com", "https://eudi.org"))
-            .expirationTime(Date(now.time + 1000 * 60 * 10)) // expires in 10 minutes
-            .notBeforeTime(now)
-            .issueTime(now)
-            .jwtID(UUID.randomUUID().toString())
-            .claim("email", "john-doe@eudi.com")
-            .build()
+        val jwtClaims: JWTClaimsSet =
+            JWTClaimsSet.Builder()
+                .issuer("Verifier")
+                .subject("john doe")
+                .audience(listOf("https://eudi.com", "https://eudi.org"))
+                .expirationTime(Date(now.time + 1000 * 60 * 10)) // expires in 10 minutes
+                .notBeforeTime(now)
+                .issueTime(now)
+                .jwtID(UUID.randomUUID().toString())
+                .claim("email", "john-doe@eudi.com")
+                .build()
         log.info("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
 
         // (wallet) encrypts with public key (of the verifier backend)

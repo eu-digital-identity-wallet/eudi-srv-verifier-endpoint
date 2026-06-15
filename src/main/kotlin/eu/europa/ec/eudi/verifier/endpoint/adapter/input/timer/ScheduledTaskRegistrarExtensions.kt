@@ -22,6 +22,9 @@ import kotlin.time.toJavaDuration
 /**
  * Provides Kotlin syntactic sugar over [ScheduledTaskRegistrar.addFixedRateTask].
  */
-internal fun ScheduledTaskRegistrar.addFixedRateTask(interval: Duration, task: Runnable) {
+internal fun ScheduledTaskRegistrar.addFixedRateTask(
+    interval: Duration,
+    task: Runnable,
+) {
     addFixedRateTask(task, interval.toJavaDuration())
 }

@@ -24,11 +24,13 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import java.net.URI
 
 fun interface CreateQueryWalletResponseRedirectUri {
-
     fun GetWalletResponseMethod.Redirect.redirectUri(responseCode: ResponseCode): URI =
         redirectUri(redirectUriTemplate, responseCode).getOrThrow()
 
-    fun redirectUri(template: String, responseCode: ResponseCode): Either<Throwable, URI>
+    fun redirectUri(
+        template: String,
+        responseCode: ResponseCode,
+    ): Either<Throwable, URI>
 
     fun String.validTemplate(): Boolean = redirectUri(this, ResponseCode("test")).isRight()
 
@@ -49,6 +51,9 @@ fun interface CreateQueryWalletResponseRedirectUri {
                 }
             }
 
-        fun simple(first: String, vararg remaining: String): CreateQueryWalletResponseRedirectUri = simple(nonEmptySetOf(first, *remaining))
+        fun simple(
+            first: String,
+            vararg remaining: String,
+        ): CreateQueryWalletResponseRedirectUri = simple(nonEmptySetOf(first, *remaining))
     }
 }

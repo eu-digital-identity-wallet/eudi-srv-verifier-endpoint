@@ -26,24 +26,26 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.GenerateQrCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels
 import java.io.ByteArrayOutputStream
 
-val GenerateQrCodeFromData = GenerateQrCode { data, size ->
-    Either.catch {
-        val writer = QRCodeWriter()
-        val matrix = writer.encode(
-            data,
-            BarcodeFormat.QR_CODE,
-            size.width.toInt(),
-            size.height.toInt(),
-            mapOf(
-                EncodeHintType.CHARACTER_SET to Charsets.UTF_8.name(),
-                EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
-            ),
-        )
-        ByteArrayOutputStream().use {
-            MatrixToImageWriter.writeToStream(matrix, "PNG", it, MatrixToImageConfig())
-            it.toByteArray()
+val GenerateQrCodeFromData =
+    GenerateQrCode { data, size ->
+        Either.catch {
+            val writer = QRCodeWriter()
+            val matrix =
+                writer.encode(
+                    data,
+                    BarcodeFormat.QR_CODE,
+                    size.width.toInt(),
+                    size.height.toInt(),
+                    mapOf(
+                        EncodeHintType.CHARACTER_SET to Charsets.UTF_8.name(),
+                        EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
+                    ),
+                )
+            ByteArrayOutputStream().use {
+                MatrixToImageWriter.writeToStream(matrix, "PNG", it, MatrixToImageConfig())
+                it.toByteArray()
+            }
         }
     }
-}
 
 private fun Pixels.toInt(): Int = size.toInt()

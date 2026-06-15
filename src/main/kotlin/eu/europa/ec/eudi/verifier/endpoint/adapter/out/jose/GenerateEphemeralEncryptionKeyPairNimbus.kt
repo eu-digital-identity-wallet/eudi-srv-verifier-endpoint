@@ -32,17 +32,18 @@ import java.util.*
 class GenerateEphemeralEncryptionKeyPairNimbus(
     private val responseEncryptionOption: ResponseEncryptionOption,
 ) : GenerateEphemeralEncryptionKeyPair {
-
     override fun invoke(): Either<Throwable, JWK> {
         val alg = responseEncryptionOption.algorithm
         return createEphemeralEncryptionKey(alg)
     }
 
-    private fun createEphemeralEncryptionKey(alg: JWEAlgorithm): Either<Throwable, ECKey> = Either.catch {
-        val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
-            .keyUse(KeyUse.ENCRYPTION)
-            .algorithm(alg)
-            .keyID(UUID.randomUUID().toString())
-        ecKeyGenerator.generate()
-    }
+    private fun createEphemeralEncryptionKey(alg: JWEAlgorithm): Either<Throwable, ECKey> =
+        Either.catch {
+            val ecKeyGenerator =
+                ECKeyGenerator(Curve.P_256)
+                    .keyUse(KeyUse.ENCRYPTION)
+                    .algorithm(alg)
+                    .keyID(UUID.randomUUID().toString())
+            ecKeyGenerator.generate()
+        }
 }

@@ -16,6 +16,5 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.out.persistence
 
 fun interface PublishPresentationEvent {
-
     suspend operator fun invoke(event: PresentationEvent)
 }

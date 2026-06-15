@@ -20,8 +20,8 @@ import com.nimbusds.jose.jwk.JWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
-fun interface VerifyEncryptedResponse {
 
+fun interface VerifyEncryptedResponse {
     operator fun invoke(
         ephemeralResponseEncryptionKey: JWK,
         encryptedResponse: Jwt,

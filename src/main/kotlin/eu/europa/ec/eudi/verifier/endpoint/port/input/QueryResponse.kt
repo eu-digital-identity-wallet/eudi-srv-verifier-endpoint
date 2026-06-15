@@ -17,6 +17,8 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 sealed interface QueryResponse<out T : Any> {
     data object NotFound : QueryResponse<Nothing>
+
     data object InvalidState : QueryResponse<Nothing>
+
     data class Found<T : Any>(val value: T) : QueryResponse<T>
 }

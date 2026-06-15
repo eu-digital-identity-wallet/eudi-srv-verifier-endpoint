@@ -58,15 +58,16 @@ internal data class SdJwtVcValidationErrorDetailsTO(
     val cause: Throwable?,
 )
 
-internal fun SdJwtVcValidationResult.Invalid.toJson(): JsonArray = buildJsonArray {
-    errors.forEach { error ->
-        addJsonObject {
-            put("error", error.reason.name)
-            put("description", error.description)
-            error.cause?.message?.let { cause -> put("cause", cause) }
+internal fun SdJwtVcValidationResult.Invalid.toJson(): JsonArray =
+    buildJsonArray {
+        errors.forEach { error ->
+            addJsonObject {
+                put("error", error.reason.name)
+                put("description", error.description)
+                error.cause?.message?.let { cause -> put("cause", cause) }
+            }
         }
     }
-}
 
 internal sealed interface SdJwtVcValidationResult {
     /**
@@ -87,30 +88,28 @@ internal class ValidateSdJwtVc(
     private val sdJwtVcValidatorFactory: (NonEmptyList<X509Certificate>?) -> SdJwtVcValidator,
     private val parsePemEncodedX509Certificates: ParsePemEncodedX509Certificates,
 ) {
-
     suspend operator fun invoke(
         unverified: JsonObject,
         nonce: Nonce,
         issuerChain: String?,
-    ): SdJwtVcValidationResult =
-        validate(unverified.left(), nonce, issuerChain)
+    ): SdJwtVcValidationResult = validate(unverified.left(), nonce, issuerChain)
 
     suspend operator fun invoke(
         unverified: String,
         nonce: Nonce,
         issuerChain: String?,
-    ): SdJwtVcValidationResult =
-        validate(unverified.right(), nonce, issuerChain)
+    ): SdJwtVcValidationResult = validate(unverified.right(), nonce, issuerChain)
 
     private suspend fun validate(
         unverified: Either<JsonObject, String>,
         nonce: Nonce,
         issuerChain: String?,
     ): SdJwtVcValidationResult {
-        val sdJwtVcValidator = sdJwtVcValidator(issuerChain)
-            .getOrElse {
-                return SdJwtVcValidationResult.Invalid(nonEmptyListOf(it.toInvalidIssuersChainSdJwtVcValidationError()))
-            }
+        val sdJwtVcValidator =
+            sdJwtVcValidator(issuerChain)
+                .getOrElse {
+                    return SdJwtVcValidationResult.Invalid(nonEmptyListOf(it.toInvalidIssuersChainSdJwtVcValidationError()))
+                }
 
         return unverified.fold(
             ifLeft = { sdJwtVcValidator.validate(it, nonce, null) },
@@ -121,11 +120,12 @@ internal class ValidateSdJwtVc(
         )
     }
 
-    private fun sdJwtVcValidator(issuerChain: String?): Either<Throwable, SdJwtVcValidator> = Either.catch {
-        sdJwtVcValidatorFactory(
-            issuerChain?.let { parsePemEncodedX509Certificates(it).getOrThrow() },
-        )
-    }
+    private fun sdJwtVcValidator(issuerChain: String?): Either<Throwable, SdJwtVcValidator> =
+        Either.catch {
+            sdJwtVcValidatorFactory(
+                issuerChain?.let { parsePemEncodedX509Certificates(it).getOrThrow() },
+            )
+        }
 }
 
 private fun Throwable.toInvalidIssuersChainSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =
@@ -138,10 +138,11 @@ private fun Throwable.toInvalidIssuersChainSdJwtVcValidationError(): SdJwtVcVali
 private fun SdJwtVcValidationError.toSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =
     SdJwtVcValidationErrorDetailsTO(
         reason = reason.toSdJwtVcValidationErrorCodeTO(),
-        description = when (cause) {
-            is SdJwtVerificationException -> cause.description
-            else -> "an unexpected error occurred${cause.message?.let { ": $it" } ?: ""}"
-        },
+        description =
+            when (cause) {
+                is SdJwtVerificationException -> cause.description
+                else -> "an unexpected error occurred${cause.message?.let { ": $it" } ?: ""}"
+            },
         cause = cause.cause,
     )
 

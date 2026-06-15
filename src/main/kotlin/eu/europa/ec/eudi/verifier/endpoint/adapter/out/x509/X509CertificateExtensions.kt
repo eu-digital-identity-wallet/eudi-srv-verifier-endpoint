@@ -25,5 +25,7 @@ fun X509Certificate.isSelfSigned(): Boolean =
         }.getOrElse { false }
 
 fun List<X509Certificate>.dropRootCAIfPresent(): List<X509Certificate> =
-    if (size > 1 && last().isSelfSigned()) dropLast(1)
-    else this
+    if (size > 1 && last().isSelfSigned())
+        dropLast(1)
+    else
+        this

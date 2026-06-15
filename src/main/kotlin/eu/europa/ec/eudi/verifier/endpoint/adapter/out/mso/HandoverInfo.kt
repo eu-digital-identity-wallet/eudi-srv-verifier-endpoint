@@ -20,7 +20,6 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import java.net.URL
 
 sealed interface HandoverInfo {
-
     data class OpenID4VPHandoverInfo(
         val clientId: VerifierId,
         val nonce: Nonce,
@@ -50,14 +49,16 @@ sealed interface HandoverInfo {
         operator fun invoke(
             presentation: Presentation.RequestObjectRetrieved,
             config: VerifierConfig,
-        ): HandoverInfo = OpenID4VPHandoverInfo(
-            clientId = config.verifierId,
-            nonce = presentation.nonce,
-            ephemeralEncryptionKey = when (val responseMode = presentation.responseMode) {
-                ResponseMode.DirectPost -> null
-                is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
-            },
-            responseUri = config.responseUriBuilder(presentation.requestId),
-        )
+        ): HandoverInfo =
+            OpenID4VPHandoverInfo(
+                clientId = config.verifierId,
+                nonce = presentation.nonce,
+                ephemeralEncryptionKey =
+                    when (val responseMode = presentation.responseMode) {
+                        ResponseMode.DirectPost -> null
+                        is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
+                    },
+                responseUri = config.responseUriBuilder(presentation.requestId),
+            )
     }
 }

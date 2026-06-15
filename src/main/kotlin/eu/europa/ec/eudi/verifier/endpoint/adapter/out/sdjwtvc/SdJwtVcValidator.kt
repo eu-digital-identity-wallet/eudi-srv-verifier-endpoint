@@ -134,74 +134,79 @@ internal class SdJwtVcValidator(
     private val skew: Duration,
     typeMetadataPolicy: TypeMetadataPolicy,
 ) {
-    private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> = run {
-        val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
-            val x5c = checkNotNull(chain.toNonEmptyListOrNull())
-            when (isChainTrustedForAttestation.sdJwtVcIssuance(x5c, vct)) {
-                is CertificationChainValidation.Trusted -> true
-                is CertificationChainValidation.NotTrusted -> false
-                null -> throw IllegalStateException("Could not find Attestation Classification for vct '$vct'")
-            }
-        }
-        NimbusSdJwtOps.SdJwtVcVerifier(
-            issuerVerificationMethod = IssuerVerificationMethod.usingX5c(x509CertificateTrust),
-            typeMetadataPolicy = typeMetadataPolicy,
-            checkStatus = null,
-        )
-    }
-
-    private val sdJwtVcVerifierNoSignatureVerification: SdJwtVcVerifier<SignedJWT> = run {
-        val noSignatureVerifier = run {
-            val typeVerifier = DefaultJOSEObjectTypeVerifier<SecurityContext>(
-                JOSEObjectType(SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT),
+    private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> =
+        run {
+            val x509CertificateTrust =
+                X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
+                    val x5c = checkNotNull(chain.toNonEmptyListOrNull())
+                    when (isChainTrustedForAttestation.sdJwtVcIssuance(x5c, vct)) {
+                        is CertificationChainValidation.Trusted -> true
+                        is CertificationChainValidation.NotTrusted -> false
+                        null -> throw IllegalStateException("Could not find Attestation Classification for vct '$vct'")
+                    }
+                }
+            NimbusSdJwtOps.SdJwtVcVerifier(
+                issuerVerificationMethod = IssuerVerificationMethod.usingX5c(x509CertificateTrust),
+                typeMetadataPolicy = typeMetadataPolicy,
+                checkStatus = null,
             )
-            val claimSetVerifier = DefaultJWTClaimsVerifier<SecurityContext>(
-                JWTClaimsSet.Builder().build(),
-                setOf(RFC7519.ISSUER, SdJwtVcSpec.VCT),
-            )
-
-            JwtSignatureVerifier {
-                Either.catch {
-                    val signedJwt = SignedJWT.parse(it)
-                    typeVerifier.verify(signedJwt.header.type, null)
-                    claimSetVerifier.verify(signedJwt.jwtClaimsSet, null)
-                    signedJwt
-                }.getOrNull()
-            }
         }
 
-        NimbusSdJwtOps.SdJwtVcVerifier(
-            issuerVerificationMethod = IssuerVerificationMethod.usingCustom(noSignatureVerifier),
-            typeMetadataPolicy = typeMetadataPolicy,
-            checkStatus = null,
-        )
-    }
+    private val sdJwtVcVerifierNoSignatureVerification: SdJwtVcVerifier<SignedJWT> =
+        run {
+            val noSignatureVerifier =
+                run {
+                    val typeVerifier =
+                        DefaultJOSEObjectTypeVerifier<SecurityContext>(
+                            JOSEObjectType(SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT),
+                        )
+                    val claimSetVerifier =
+                        DefaultJWTClaimsVerifier<SecurityContext>(
+                            JWTClaimsSet.Builder().build(),
+                            setOf(RFC7519.ISSUER, SdJwtVcSpec.VCT),
+                        )
+
+                    JwtSignatureVerifier {
+                        Either.catch {
+                            val signedJwt = SignedJWT.parse(it)
+                            typeVerifier.verify(signedJwt.header.type, null)
+                            claimSetVerifier.verify(signedJwt.jwtClaimsSet, null)
+                            signedJwt
+                        }.getOrNull()
+                    }
+                }
+
+            NimbusSdJwtOps.SdJwtVcVerifier(
+                issuerVerificationMethod = IssuerVerificationMethod.usingCustom(noSignatureVerifier),
+                typeMetadataPolicy = typeMetadataPolicy,
+                checkStatus = null,
+            )
+        }
 
     suspend fun validate(
         unverified: String,
         nonce: Nonce,
         transactionId: TransactionId? = null,
-    ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> =
-        validate(unverified.right(), nonce, transactionId)
+    ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> = validate(unverified.right(), nonce, transactionId)
 
     suspend fun validate(
         unverified: JsonObject,
         nonce: Nonce,
         transactionId: TransactionId? = null,
-    ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> =
-        validate(unverified.left(), nonce, transactionId)
+    ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> = validate(unverified.left(), nonce, transactionId)
 
     private suspend fun validate(
         unverified: Either<JsonObject, String>,
         nonce: Nonce,
         transactionId: TransactionId?,
     ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> {
-        val challenge = ChallengePredicate(
-            issuedAt = clock.now(),
-            audience = audience.clientId,
-            nonce = nonce.value,
-            skew = skew,
-        )
+        val challenge =
+            ChallengePredicate(
+                issuedAt = clock.now(),
+                audience = audience.clientId,
+                nonce = nonce.value,
+                skew = skew,
+            )
 
         return Either.catch {
             sdJwtVcVerifier.verify(unverified, challenge, transactionId).getOrThrow()
@@ -210,16 +215,18 @@ internal class SdJwtVcValidator(
             ifLeft = { sdJwtVcError ->
                 log.error("SD-JWT-VC validation failed: ${sdJwtVcError.description}", sdJwtVcError)
                 val errors =
-                    if (!sdJwtVcError.isSignatureVerificationFailure()) nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError))
-                    else Either.catch {
-                        sdJwtVcVerifierNoSignatureVerification.verify(unverified, challenge, transactionId).getOrThrow()
-                    }.fold(
-                        ifRight = { nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError)) },
-                        ifLeft = { sdJwtError ->
-                            log.error("SD-JWT validation failed: ${sdJwtError.description}", sdJwtError)
-                            nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError), SdJwtVcValidationError(sdJwtError))
-                        },
-                    )
+                    if (!sdJwtVcError.isSignatureVerificationFailure())
+                        nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError))
+                    else
+                        Either.catch {
+                            sdJwtVcVerifierNoSignatureVerification.verify(unverified, challenge, transactionId).getOrThrow()
+                        }.fold(
+                            ifRight = { nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError)) },
+                            ifLeft = { sdJwtError ->
+                                log.error("SD-JWT validation failed: ${sdJwtError.description}", sdJwtError)
+                                nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError), SdJwtVcValidationError(sdJwtError))
+                            },
+                        )
                 errors.left()
             },
         )
@@ -231,25 +238,27 @@ internal class SdJwtVcValidator(
         transactionId: TransactionId?,
     ): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> =
         effect<Throwable, SdJwtAndKbJwt<SignedJWT>> {
-            val verified = unverified.fold(
-                ifLeft = { verify(it, challenge) },
-                ifRight = { verify(it, challenge) },
-            ).getOrThrow()
+            val verified =
+                unverified.fold(
+                    ifLeft = { verify(it, challenge) },
+                    ifRight = { verify(it, challenge) },
+                ).getOrThrow()
 
             statusListTokenValidator
                 ?.validate(verified, transactionId)
                 ?.getOrElse { statusValidationError ->
-                    val reason = when (statusValidationError) {
-                        is StatusValidationError.StatusNotValid ->
-                            SdJwtVcVerificationError.StatusVerificationError.NonValidStatus(
-                                Status.NonValid(statusValidationError.status.toUByte(), "Status is not Valid"),
-                            )
-                        is StatusValidationError.StatusCheckException ->
-                            SdJwtVcVerificationError.StatusVerificationError.StatusCheckFailure(
-                                "Status List Token could not be checked",
-                                statusValidationError,
-                            )
-                    }
+                    val reason =
+                        when (statusValidationError) {
+                            is StatusValidationError.StatusNotValid ->
+                                SdJwtVcVerificationError.StatusVerificationError.NonValidStatus(
+                                    Status.NonValid(statusValidationError.status.toUByte(), "Status is not Valid"),
+                                )
+                            is StatusValidationError.StatusCheckException ->
+                                SdJwtVcVerificationError.StatusVerificationError.StatusCheckFailure(
+                                    "Status List Token could not be checked",
+                                    statusValidationError,
+                                )
+                        }
                     raise(VerificationError.SdJwtVcError(reason).asException())
                 }
 
@@ -260,22 +269,24 @@ internal class SdJwtVcValidator(
 }
 
 private val Throwable.description: String
-    get() = when (this) {
-        is SdJwtVerificationException -> description
-        else -> message ?: "n/a"
-    }
+    get() =
+        when (this) {
+            is SdJwtVerificationException -> description
+            else -> message ?: "n/a"
+        }
 
 private fun Throwable.isSignatureVerificationFailure(): Boolean =
     when (this) {
-        is SdJwtVerificationException -> when (val reason = reason) {
-            is VerificationError.InvalidJwt ->
-                reason.cause is BadJOSEException && (reason.cause?.message?.startsWith("Signed JWT rejected") ?: false)
+        is SdJwtVerificationException ->
+            when (val reason = reason) {
+                is VerificationError.InvalidJwt ->
+                    reason.cause is BadJOSEException && (reason.cause?.message?.startsWith("Signed JWT rejected") ?: false)
 
-            is VerificationError.SdJwtVcError ->
-                reason.error is IssuerKeyVerificationError
+                is VerificationError.SdJwtVcError ->
+                    reason.error is IssuerKeyVerificationError
 
-            else -> false
-        }
+                else -> false
+            }
 
         else -> false
     }

@@ -23,9 +23,10 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Cert
 /**
  * [ParsePemEncodedX509Certificates] implementation using Nimbus.
  */
-internal val ParsePemEncodedX509CertificatesWithNimbus = ParsePemEncodedX509Certificates { certificates ->
-    Either.catch {
-        val certs = X509CertChainUtils.parse(certificates).toNonEmptyListOrNull()
-        requireNotNull(certs) { "Failed to parse certificates from PEM" }
+internal val ParsePemEncodedX509CertificatesWithNimbus =
+    ParsePemEncodedX509Certificates { certificates ->
+        Either.catch {
+            val certs = X509CertChainUtils.parse(certificates).toNonEmptyListOrNull()
+            requireNotNull(certs) { "Failed to parse certificates from PEM" }
+        }
     }
-}

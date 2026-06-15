@@ -51,10 +51,11 @@ internal fun requestObjectFromDomain(
         aud = aud,
         nonce = presentation.nonce.value,
         state = presentation.requestId.value,
-        responseMode = when (presentation.responseMode) {
-            ResponseMode.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
-            is ResponseMode.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
-        },
+        responseMode =
+            when (presentation.responseMode) {
+                ResponseMode.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
+                is ResponseMode.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
+            },
         responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
         issuedAt = clock.now(),
         transactionData = transactionData,

@@ -19,6 +19,5 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 import kotlin.time.Instant
 
 fun interface LoadIncompletePresentationsOlderThan {
-
     suspend operator fun invoke(at: Instant): List<Presentation>
 }

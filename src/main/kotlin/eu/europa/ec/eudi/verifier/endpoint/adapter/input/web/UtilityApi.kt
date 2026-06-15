@@ -34,39 +34,41 @@ internal class UtilityApi(
     private val processSdJwtVc: ProcessSdJwtVc,
     private val attestationClassifications: AttestationClassifications,
 ) {
-    val route: RouterFunction<ServerResponse> = coRouter {
-        POST(
-            VALIDATE_MSO_MDOC_DEVICE_RESPONSE_PATH,
-            contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
-            ::handleValidateMsoMdocDeviceResponse,
-        )
+    val route: RouterFunction<ServerResponse> =
+        coRouter {
+            POST(
+                VALIDATE_MSO_MDOC_DEVICE_RESPONSE_PATH,
+                contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
+                ::handleValidateMsoMdocDeviceResponse,
+            )
 
-        POST(
-            VALIDATE_SD_JWT_VC_PATH,
-            contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
-            ::handleValidateSdJwtVc,
-        )
+            POST(
+                VALIDATE_SD_JWT_VC_PATH,
+                contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
+                ::handleValidateSdJwtVc,
+            )
 
-        POST(
-            PROCESS_SD_JWT_VC_PATH,
-            contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
-            ::handleProcessSdJwtVc,
-        )
+            POST(
+                PROCESS_SD_JWT_VC_PATH,
+                contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
+                ::handleProcessSdJwtVc,
+            )
 
-        GET(
-            ATTESTATION_CLASSIFICATIONS_PATH,
-            accept(APPLICATION_JSON),
-            ::handleAttestationClassifications,
-        )
-    }
+            GET(
+                ATTESTATION_CLASSIFICATIONS_PATH,
+                accept(APPLICATION_JSON),
+                ::handleAttestationClassifications,
+            )
+        }
 
     private suspend fun handleValidateMsoMdocDeviceResponse(request: ServerRequest): ServerResponse {
         val form = request.awaitFormData()
-        val deviceResponse = form["device_response"]
-            ?.firstOrNull { it.isNotBlank() }
-            .let {
-                requireNotNull(it) { "device_response must be provided" }
-            }
+        val deviceResponse =
+            form["device_response"]
+                ?.firstOrNull { it.isNotBlank() }
+                .let {
+                    requireNotNull(it) { "device_response must be provided" }
+                }
         val issuerChain = form["issuer_chain"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
 
         return when (val result = validateMsoMdocDeviceResponse(deviceResponse = deviceResponse, issuerChain = issuerChain)) {
@@ -82,24 +84,27 @@ internal class UtilityApi(
 
     private suspend fun handleValidateSdJwtVc(request: ServerRequest): ServerResponse {
         val form = request.awaitFormData()
-        val unverifiedSdJwtVc = form["sd_jwt_vc"]
-            ?.firstOrNull { it.isNotBlank() }
-            .let {
-                requireNotNull(it) { "sd_jwt_vc must be provided" }
-            }
-        val nonce = form["nonce"]
-            ?.firstOrNull { it.isNotBlank() }
-            .let {
-                requireNotNull(it) { "nonce must be provided" }
-                Nonce(it)
-            }
+        val unverifiedSdJwtVc =
+            form["sd_jwt_vc"]
+                ?.firstOrNull { it.isNotBlank() }
+                .let {
+                    requireNotNull(it) { "sd_jwt_vc must be provided" }
+                }
+        val nonce =
+            form["nonce"]
+                ?.firstOrNull { it.isNotBlank() }
+                .let {
+                    requireNotNull(it) { "nonce must be provided" }
+                    Nonce(it)
+                }
         val issuerChain = form["issuer_chain"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
 
         return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce, issuerChain)) {
             is SdJwtVcValidationResult.Valid -> {
-                val reCreated = with(NimbusSdJwtOps) {
-                    result.payload.sdJwt.recreateClaimsAndDisclosuresPerClaim().first
-                }
+                val reCreated =
+                    with(NimbusSdJwtOps) {
+                        result.payload.sdJwt.recreateClaimsAndDisclosuresPerClaim().first
+                    }
                 ok().json().bodyValueAndAwait(reCreated)
             }
             is SdJwtVcValidationResult.Invalid -> badRequest().json().bodyValueAndAwait(result.toJson())
@@ -108,11 +113,12 @@ internal class UtilityApi(
 
     private suspend fun handleProcessSdJwtVc(request: ServerRequest): ServerResponse {
         val form = request.awaitFormData()
-        val unprocessedSdJwtVc = form["sd_jwt_vc"]
-            ?.firstOrNull { it.isNotBlank() }
-            .let {
-                requireNotNull(it) { "sd_jwt_vc must be provided" }
-            }
+        val unprocessedSdJwtVc =
+            form["sd_jwt_vc"]
+                ?.firstOrNull { it.isNotBlank() }
+                .let {
+                    requireNotNull(it) { "sd_jwt_vc must be provided" }
+                }
 
         return processSdJwtVc(unprocessedSdJwtVc)
             .fold(

@@ -87,7 +87,6 @@ value class VerifiablePresentations(val value: Map<QueryId, List<VerifiablePrese
 }
 
 sealed interface WalletResponse {
-
     data class VpToken(
         val verifiablePresentations: VerifiablePresentations,
     ) : WalletResponse
@@ -100,6 +99,7 @@ value class ResponseCode(val value: String)
 
 sealed interface GetWalletResponseMethod {
     data object Poll : GetWalletResponseMethod
+
     data class Redirect(val redirectUriTemplate: String) : GetWalletResponseMethod
 }
 
@@ -166,7 +166,10 @@ sealed interface Presentation {
         }
 
         companion object {
-            fun requestObjectRetrieved(requested: Requested, at: Instant): Either<Throwable, RequestObjectRetrieved> =
+            fun requestObjectRetrieved(
+                requested: Requested,
+                at: Instant,
+            ): Either<Throwable, RequestObjectRetrieved> =
                 Either.catch {
                     RequestObjectRetrieved(
                         requested.id,
@@ -204,20 +207,21 @@ sealed interface Presentation {
                 at: Instant,
                 walletResponse: WalletResponse,
                 responseCode: ResponseCode?,
-            ): Either<Throwable, Submitted> = Either.catch {
-                with(requestObjectRetrieved) {
-                    Submitted(
-                        id,
-                        initiatedAt,
-                        requestId,
-                        requestObjectRetrievedAt,
-                        at,
-                        walletResponse,
-                        nonce,
-                        responseCode,
-                    )
+            ): Either<Throwable, Submitted> =
+                Either.catch {
+                    with(requestObjectRetrieved) {
+                        Submitted(
+                            id,
+                            initiatedAt,
+                            requestId,
+                            requestObjectRetrievedAt,
+                            at,
+                            walletResponse,
+                            nonce,
+                            responseCode,
+                        )
+                    }
                 }
-            }
         }
     }
 
@@ -229,32 +233,44 @@ sealed interface Presentation {
         val timedOutAt: Instant,
     ) : Presentation {
         companion object {
-            fun timeOut(presentation: Requested, at: Instant): Either<Throwable, TimedOut> = Either.catch {
-                require(presentation.initiatedAt < at)
-                TimedOut(presentation.id, presentation.initiatedAt, null, null, at)
-            }
+            fun timeOut(
+                presentation: Requested,
+                at: Instant,
+            ): Either<Throwable, TimedOut> =
+                Either.catch {
+                    require(presentation.initiatedAt < at)
+                    TimedOut(presentation.id, presentation.initiatedAt, null, null, at)
+                }
 
-            fun timeOut(presentation: RequestObjectRetrieved, at: Instant): Either<Throwable, TimedOut> = Either.catch {
-                require(presentation.initiatedAt < at)
-                TimedOut(
-                    presentation.id,
-                    presentation.initiatedAt,
-                    presentation.requestObjectRetrievedAt,
-                    null,
-                    at,
-                )
-            }
+            fun timeOut(
+                presentation: RequestObjectRetrieved,
+                at: Instant,
+            ): Either<Throwable, TimedOut> =
+                Either.catch {
+                    require(presentation.initiatedAt < at)
+                    TimedOut(
+                        presentation.id,
+                        presentation.initiatedAt,
+                        presentation.requestObjectRetrievedAt,
+                        null,
+                        at,
+                    )
+                }
 
-            fun timeOut(presentation: Submitted, at: Instant): Either<Throwable, TimedOut> = Either.catch {
-                require(presentation.initiatedAt < at)
-                TimedOut(
-                    presentation.id,
-                    presentation.initiatedAt,
-                    presentation.requestObjectRetrievedAt,
-                    presentation.submittedAt,
-                    at,
-                )
-            }
+            fun timeOut(
+                presentation: Submitted,
+                at: Instant,
+            ): Either<Throwable, TimedOut> =
+                Either.catch {
+                    require(presentation.initiatedAt < at)
+                    TimedOut(
+                        presentation.id,
+                        presentation.initiatedAt,
+                        presentation.requestObjectRetrievedAt,
+                        presentation.submittedAt,
+                        at,
+                    )
+                }
         }
     }
 }
@@ -282,8 +298,7 @@ fun Presentation.RequestObjectRetrieved.submit(
     clock: Clock,
     walletResponse: WalletResponse,
     responseCode: ResponseCode?,
-): Either<Throwable, Presentation.Submitted> =
-    Presentation.Submitted.submitted(this, clock.now(), walletResponse, responseCode)
+): Either<Throwable, Presentation.Submitted> = Presentation.Submitted.submitted(this, clock.now(), walletResponse, responseCode)
 
 fun Presentation.Submitted.timedOut(clock: Clock): Either<Throwable, Presentation.TimedOut> =
     Presentation.TimedOut.timeOut(this, clock.now())

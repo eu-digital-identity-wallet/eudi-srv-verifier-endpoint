@@ -54,10 +54,11 @@ fun DeviceResponse.Companion.decodeFromCborBase64Url(value: String): DeviceRespo
  */
 fun MDoc.decodeMso() {
     if (_mso == null) {
-        _mso = issuerSigned.issuerAuth?.payload?.let { data ->
-            val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(data)
-            cbor.decodeFromByteArray<MSO>(encoded.value)
-        }
+        _mso =
+            issuerSigned.issuerAuth?.payload?.let { data ->
+                val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(data)
+                cbor.decodeFromByteArray<MSO>(encoded.value)
+            }
     }
 }
 

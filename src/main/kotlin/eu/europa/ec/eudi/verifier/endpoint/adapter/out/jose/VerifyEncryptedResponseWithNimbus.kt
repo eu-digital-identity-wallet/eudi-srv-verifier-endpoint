@@ -42,52 +42,55 @@ import org.slf4j.LoggerFactory
 class VerifyEncryptedResponseWithNimbus(
     private val responseEncryptionOption: ResponseEncryptionOption,
 ) : VerifyEncryptedResponse {
-
     private val logger: Logger = LoggerFactory.getLogger(VerifyEncryptedResponseWithNimbus::class.java)
 
     override fun invoke(
         ephemeralResponseEncryptionKey: JWK,
         encryptedResponse: Jwt,
         apv: Nonce,
-    ): Either<Throwable, AuthorisationResponseTO> = Either.catch {
-        val encryptedJwt = EncryptedJWT.parse(encryptedResponse)
-        val processor =
-            with(encryptedJwt.header) {
-                require(algorithm == responseEncryptionOption.algorithm) {
-                    "Encrypted response uses an unsupported JWE Algorithm: ${algorithm.name}, " +
-                        "expected: ${responseEncryptionOption.algorithm.name}"
-                }
-                require(encryptionMethod in responseEncryptionOption.encryptionMethods) {
-                    "Encrypted response uses an unsupported JWE Encryption Method: ${encryptionMethod.name}, " +
-                        "expected one of: ${responseEncryptionOption.encryptionMethods.joinToString { it.name }}"
-                }
+    ): Either<Throwable, AuthorisationResponseTO> =
+        Either.catch {
+            val encryptedJwt = EncryptedJWT.parse(encryptedResponse)
+            val processor =
+                with(encryptedJwt.header) {
+                    require(algorithm == responseEncryptionOption.algorithm) {
+                        "Encrypted response uses an unsupported JWE Algorithm: ${algorithm.name}, " +
+                            "expected: ${responseEncryptionOption.algorithm.name}"
+                    }
+                    require(encryptionMethod in responseEncryptionOption.encryptionMethods) {
+                        "Encrypted response uses an unsupported JWE Encryption Method: ${encryptionMethod.name}, " +
+                            "expected one of: ${responseEncryptionOption.encryptionMethods.joinToString { it.name }}"
+                    }
 
-                encryptedProcessor(algorithm, encryptionMethod, ephemeralResponseEncryptionKey)
-            }
-        val claimSet = processor.process(encryptedJwt, null)
-        claimSet.mapToDomain()
-    }
+                    encryptedProcessor(algorithm, encryptionMethod, ephemeralResponseEncryptionKey)
+                }
+            val claimSet = processor.process(encryptedJwt, null)
+            claimSet.mapToDomain()
+        }
 
     private fun encryptedProcessor(
         algorithm: JWEAlgorithm,
         method: EncryptionMethod,
         ephemeralResponseEncryptionKey: JWK,
-    ): JWTProcessor<SecurityContext> = DefaultJWTProcessor<SecurityContext>().apply {
-        jweKeySelector = JWEDecryptionKeySelector(
-            algorithm,
-            method,
-            ImmutableJWKSet(JWKSet(ephemeralResponseEncryptionKey)),
-        )
-    }
+    ): JWTProcessor<SecurityContext> =
+        DefaultJWTProcessor<SecurityContext>().apply {
+            jweKeySelector =
+                JWEDecryptionKeySelector(
+                    algorithm,
+                    method,
+                    ImmutableJWKSet(JWKSet(ephemeralResponseEncryptionKey)),
+                )
+        }
 
     @Suppress("UNCHECKED_CAST")
     private fun JWTClaimsSet.mapToDomain(): AuthorisationResponseTO =
         AuthorisationResponseTO(
             state = getClaim(RFC6749.STATE)?.toString(),
-            vpToken = getJSONObjectClaim(OpenId4VPSpec.VP_TOKEN)
-                ?.let { vpToken ->
-                    Json.decodeFromString<JsonObject>(JSONObjectUtils.toJSONString(vpToken))
-                },
+            vpToken =
+                getJSONObjectClaim(OpenId4VPSpec.VP_TOKEN)
+                    ?.let { vpToken ->
+                        Json.decodeFromString<JsonObject>(JSONObjectUtils.toJSONString(vpToken))
+                    },
             error = getClaim(RFC6749.ERROR)?.toString(),
             errorDescription = getClaim(RFC6749.ERROR_DESCRIPTION)?.toString(),
         )

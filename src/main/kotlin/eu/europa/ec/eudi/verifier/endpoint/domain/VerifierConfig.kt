@@ -49,6 +49,7 @@ typealias PresentationRelatedUrlBuilder<ID> = (ID) -> URL
  */
 sealed interface EmbedOption<in ID> {
     data object ByValue : EmbedOption<Any>
+
     data class ByReference<ID>(val buildUrl: PresentationRelatedUrlBuilder<ID>) : EmbedOption<ID>
 
     companion object {
@@ -74,7 +75,6 @@ enum class ResponseModeOption {
 }
 
 sealed interface ResponseMode {
-
     data object DirectPost : ResponseMode
 
     data class DirectPostJwt(
@@ -87,10 +87,11 @@ sealed interface ResponseMode {
 }
 
 val ResponseMode.option: ResponseModeOption
-    get() = when (this) {
-        ResponseMode.DirectPost -> ResponseModeOption.DirectPost
-        is ResponseMode.DirectPostJwt -> ResponseModeOption.DirectPostJwt
-    }
+    get() =
+        when (this) {
+            ResponseMode.DirectPost -> ResponseModeOption.DirectPost
+            is ResponseMode.DirectPostJwt -> ResponseModeOption.DirectPostJwt
+        }
 
 data class ResponseEncryptionOption(
     val algorithm: JWEAlgorithm,
@@ -127,7 +128,6 @@ data class VpFormatsSupported(
     data class SdJwtVc(
         @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTS_SD_JWT_VC_SD_JWT_ALGORITHMS)
         val sdJwtAlgorithms: NonEmptyList<JWSAlgorithm>?,
-
         @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTS_SD_JWT_VC_KB_JWT_ALGORITHMS)
         val kbJwtAlgorithms: NonEmptyList<JWSAlgorithm>?,
     ) {
@@ -153,23 +153,25 @@ data class VpFormatsSupported(
     data class MsoMdoc(
         @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED_MSO_MDOC_ISSUER_AUTH_ALGORITHMS)
         val issuerAuthAlgorithms: NonEmptyList<CoseAlgorithm>?,
-
         @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED_MSO_MDOC_DEVICE_AUTH_ALGORITHMS)
         val deviceAuthAlgorithms: NonEmptyList<CoseAlgorithm>?,
     ) {
         companion object {
-            val Default: MsoMdoc = MsoMdoc(
-                issuerAuthAlgorithms = nonEmptyListOf(
-                    CoseAlgorithm(-7), // AlgorithmID.ECDSA_256
-                    CoseAlgorithm(-35), // AlgorithmID.ECDSA_384
-                    CoseAlgorithm(-36), // AlgorithmID.ECDSA_512
-                ),
-                deviceAuthAlgorithms = nonEmptyListOf(
-                    CoseAlgorithm(-7), // AlgorithmID.ECDSA_256
-                    CoseAlgorithm(-35), // AlgorithmID.ECDSA_384
-                    CoseAlgorithm(-36), // AlgorithmID.ECDSA_512
-                ),
-            )
+            val Default: MsoMdoc =
+                MsoMdoc(
+                    issuerAuthAlgorithms =
+                        nonEmptyListOf(
+                            CoseAlgorithm(-7), // AlgorithmID.ECDSA_256
+                            CoseAlgorithm(-35), // AlgorithmID.ECDSA_384
+                            CoseAlgorithm(-36), // AlgorithmID.ECDSA_512
+                        ),
+                    deviceAuthAlgorithms =
+                        nonEmptyListOf(
+                            CoseAlgorithm(-7), // AlgorithmID.ECDSA_256
+                            CoseAlgorithm(-35), // AlgorithmID.ECDSA_384
+                            CoseAlgorithm(-36), // AlgorithmID.ECDSA_512
+                        ),
+                )
         }
     }
 }
@@ -303,14 +305,15 @@ data class VerifierConfig(
 /**
  * Checks if [value] is a Subject Alternative Name of [type] in this [X509Certificate].
  */
-private fun X509Certificate.containsSan(value: String, type: SanType) =
-    value in this.san(type)
+private fun X509Certificate.containsSan(
+    value: String,
+    type: SanType,
+) = value in this.san(type)
 
 /**
  * Checks if [value] is a 'DNS' Subject Alternative Name in this [X509Certificate].
  */
-private fun X509Certificate.containsSanDns(value: String) =
-    containsSan(value, SanType.DNS)
+private fun X509Certificate.containsSanDns(value: String) = containsSan(value, SanType.DNS)
 
 private fun X509Certificate.encodedHashMatches(expected: String): Boolean {
     val hash = hash(encoded, HashAlgorithm.SHA_256)
@@ -321,8 +324,7 @@ private fun X509Certificate.encodedHashMatches(expected: String): Boolean {
 /**
  * Checks if [value] is a 'URI' Subject Alternative Name in this [X509Certificate].
  */
-private fun X509Certificate.containsSanUri(value: String) =
-    containsSan(value, SanType.URI)
+private fun X509Certificate.containsSanUri(value: String) = containsSan(value, SanType.URI)
 
 /**
  * Gets the Subject Alternative Names of the provided [type] from this [X509Certificate].

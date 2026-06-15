@@ -33,27 +33,27 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.expectBody
 
 object VerifierApiClient {
-
     private val log: Logger = LoggerFactory.getLogger(VerifierApiClient::class.java)
 
-    fun loadInitTransactionTO(testResource: String): InitTransactionTO =
-        Json.decodeFromString(TestUtils.loadResource(testResource))
+    fun loadInitTransactionTO(testResource: String): InitTransactionTO = Json.decodeFromString(TestUtils.loadResource(testResource))
 
     fun initTransaction(
         client: WebTestClient,
         initTransactionTO: InitTransactionTO,
         output: Output = Output.Json,
     ): InitTransactionResponse {
-        val accept = when (output) {
-            Output.Json -> MediaType.APPLICATION_JSON
-            Output.QrCode -> MediaType.IMAGE_PNG
-        }
+        val accept =
+            when (output) {
+                Output.Json -> MediaType.APPLICATION_JSON
+                Output.QrCode -> MediaType.IMAGE_PNG
+            }
 
-        val responseSpec = client.post().uri(VerifierApi.INIT_TRANSACTION_PATH_V2)
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(accept)
-            .bodyValue(initTransactionTO)
-            .exchange()
+        val responseSpec =
+            client.post().uri(VerifierApi.INIT_TRANSACTION_PATH_V2)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(accept)
+                .bodyValue(initTransactionTO)
+                .exchange()
 
         return when (output) {
             Output.Json ->
@@ -62,9 +62,10 @@ object VerifierApiClient {
                     .returnResult()
                     .responseBody!!
             Output.QrCode -> {
-                val response = responseSpec.expectStatus().isOk()
-                    .expectBody<ByteArray>()
-                    .returnResult()
+                val response =
+                    responseSpec.expectStatus().isOk()
+                        .expectBody<ByteArray>()
+                        .returnResult()
 
                 val qrCode = checkNotNull(response.responseBody)
                 val transactionId = checkNotNull(response.responseHeaders.getFirst(TRANSACTION_ID_HEADER))
@@ -86,15 +87,20 @@ object VerifierApiClient {
      * - (request) mdocVerification application Internet frontend to Internet Web Service, flow "18 HTTPs POST to response_uri [section B.3.2.2]
      * - (response) Internet Web Service to mdocVerification application Internet frontend, flow "20 return status and conditionally return data"
      */
-    fun getWalletResponse(client: WebTestClient, presentationId: TransactionId, responseCode: ResponseCode? = null): WalletResponseTO? {
+    fun getWalletResponse(
+        client: WebTestClient,
+        presentationId: TransactionId,
+        responseCode: ResponseCode? = null,
+    ): WalletResponseTO? {
         val walletResponseUri =
             VerifierApi.WALLET_RESPONSE_PATH.replace("{transactionId}", presentationId.value) +
                 (responseCode?.let { "?response_code=${it.value}" } ?: "")
 
         // when
-        val responseSpec = client.get().uri(walletResponseUri)
-            .accept(MediaType.APPLICATION_JSON)
-            .exchange()
+        val responseSpec =
+            client.get().uri(walletResponseUri)
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
         val returnResult = responseSpec.expectBody<WalletResponseTO>().returnResult()
         returnResult.status.also { log.info("response status: $it") }
         returnResult.responseHeaders.also { log.info("response headers: $it") }
@@ -117,9 +123,10 @@ object VerifierApiClient {
                 (responseCode?.let { "?response_code=${it.value}" } ?: "")
 
         // when
-        val responseSpec = client.get().uri(walletResponseUri)
-            .accept(MediaType.APPLICATION_JSON)
-            .exchange()
+        val responseSpec =
+            client.get().uri(walletResponseUri)
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
         return responseSpec.expectBody<WalletResponseTO>().returnResult()
     }
 }

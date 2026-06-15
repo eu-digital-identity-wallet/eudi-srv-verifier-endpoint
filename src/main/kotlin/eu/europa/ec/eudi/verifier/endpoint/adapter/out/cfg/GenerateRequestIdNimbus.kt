@@ -23,5 +23,6 @@ class GenerateRequestIdNimbus(private val byteLength: Int) : GenerateRequestId {
     init {
         require(byteLength >= 32) { "Value should be greater or equal to 32" }
     }
+
     override suspend fun invoke(): RequestId = RequestId(State(byteLength).value)
 }

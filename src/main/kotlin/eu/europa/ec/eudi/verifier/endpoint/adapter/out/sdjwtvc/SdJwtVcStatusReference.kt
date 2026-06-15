@@ -27,9 +27,11 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import kotlinx.serialization.json.JsonObject
 
 fun SdJwt<SignedJWT>.statusReference(): StatusReference? = jwt.statusReference()
+
 fun SdJwtAndKbJwt<SignedJWT>.statusReference(): StatusReference? = sdJwt.statusReference()
 
 fun SdJwt<SignedJWT>.status(): JsonObject? = jwt.jwtClaimsSet.getJSONObjectClaim(TokenStatusListSpec.STATUS)?.toJsonObject()
+
 fun SdJwtAndKbJwt<SignedJWT>.status(): JsonObject? = sdJwt.status()
 
 private fun SignedJWT.statusReference(): StatusReference? {

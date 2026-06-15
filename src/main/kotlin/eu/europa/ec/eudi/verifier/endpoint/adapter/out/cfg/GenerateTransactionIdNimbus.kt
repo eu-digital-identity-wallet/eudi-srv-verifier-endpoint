@@ -20,7 +20,6 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
 
 class GenerateTransactionIdNimbus(private val byteLength: Int) : GenerateTransactionId {
-
     init {
         require(byteLength >= 32) { "Value should be greater or equal to 32" }
     }

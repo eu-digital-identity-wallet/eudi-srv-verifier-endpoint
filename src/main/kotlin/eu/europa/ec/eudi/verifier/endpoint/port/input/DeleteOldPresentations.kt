@@ -21,7 +21,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.DeletePresentati
 import kotlin.time.Duration
 
 fun interface DeleteOldPresentations {
-
     /**
      * Deletes old Presentations from the system.
      */
@@ -33,6 +32,5 @@ internal class DeleteOldPresentationsLive(
     private val maxAge: Duration,
     private val deletePresentationsInitiatedBefore: DeletePresentationsInitiatedBefore,
 ) : DeleteOldPresentations {
-
     override suspend fun invoke(): List<TransactionId> = deletePresentationsInitiatedBefore(clock.now() - maxAge)
 }

@@ -33,6 +33,7 @@ object TestUtils {
     private val log: Logger = LoggerFactory.getLogger(TestUtils.javaClass)
 
     private val jsonFormat: Json = Json { prettyPrint = true }
+
     fun loadResource(f: String): String =
         TestUtils::class.java.classLoader.getResourceAsStream(f)
             .let { String(it!!.readBytes()) }
@@ -40,7 +41,10 @@ object TestUtils {
     /**
      * Pretty print json element
      */
-    fun prettyPrintJson(msg: String? = null, e: JsonElement) {
+    fun prettyPrintJson(
+        msg: String? = null,
+        e: JsonElement,
+    ) {
         log.info("${msg.orEmpty()}${jsonFormat.encodeToString(e)}")
     }
 
@@ -68,14 +72,16 @@ object TestUtils {
     }
 
     private fun JWTClaimsSet.claims(): JsonObject = jsonFormat.parseToJsonElement(toString()).jsonObject
+
     private fun JWSHeader.claims(): JsonObject = jsonFormat.parseToJsonElement(toString()).jsonObject
 }
 
-fun JsonObject.ecKey(): ECKey? = fromClientMetaData { clientMetaData ->
-    clientMetaData["jwks"]?.let { jwkSetJson ->
-        JWKSet.parse(jwkSetJson.toString()).keys.firstOrNull { jwk -> jwk.keyType == KeyType.EC }
-    }?.toECKey()
-}
+fun JsonObject.ecKey(): ECKey? =
+    fromClientMetaData { clientMetaData ->
+        clientMetaData["jwks"]?.let { jwkSetJson ->
+            JWKSet.parse(jwkSetJson.toString()).keys.firstOrNull { jwk -> jwk.keyType == KeyType.EC }
+        }?.toECKey()
+    }
 
 fun JsonObject.supportedEncryptionMethods(): List<EncryptionMethod>? =
     fromClientMetaData { clientMetadata ->

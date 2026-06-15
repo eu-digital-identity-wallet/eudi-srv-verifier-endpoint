@@ -53,26 +53,29 @@ object TestContext {
     private val generatedTransactionId = GenerateTransactionId.fixed(testTransactionId)
     val testRequestId = RequestId("SampleRequestId")
     private val generateRequestId = GenerateRequestId.fixed(testRequestId)
-    private val ecJwk: ECKey = run {
-        loadKeyStore(location = "classpath:keystore.jks", type = "jks", password = "keystore")
-            .loadJWK(alias = "access_certificate", password = "access_certificate")
-            .toECKey()
-    }
+    private val ecJwk: ECKey =
+        run {
+            loadKeyStore(location = "classpath:keystore.jks", type = "jks", password = "keystore")
+                .loadJWK(alias = "access_certificate", password = "access_certificate")
+                .toECKey()
+        }
     private val responseEncryptionOption =
         ResponseEncryptionOption(JWEAlgorithm.ECDH_ES, nonEmptyListOf(EncryptionMethod.A128GCM, EncryptionMethod.A256GCM))
-    val clientMetaData = ClientMetaData(
-        responseEncryptionOption = responseEncryptionOption,
-        vpFormatsSupported = VpFormatsSupported(
-            VpFormatsSupported.SdJwtVc(
-                sdJwtAlgorithms = nonEmptyListOf(JWSAlgorithm.ES256),
-                kbJwtAlgorithms = nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256),
-            ),
-            VpFormatsSupported.MsoMdoc(
-                issuerAuthAlgorithms = null,
-                deviceAuthAlgorithms = null,
-            ),
-        ),
-    )
+    val clientMetaData =
+        ClientMetaData(
+            responseEncryptionOption = responseEncryptionOption,
+            vpFormatsSupported =
+                VpFormatsSupported(
+                    VpFormatsSupported.SdJwtVc(
+                        sdJwtAlgorithms = nonEmptyListOf(JWSAlgorithm.ES256),
+                        kbJwtAlgorithms = nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256),
+                    ),
+                    VpFormatsSupported.MsoMdoc(
+                        issuerAuthAlgorithms = null,
+                        deviceAuthAlgorithms = null,
+                    ),
+                ),
+        )
     private val accessCertificate: AccessCertificate = AccessCertificate(ecJwk, JWSAlgorithm.ES512)
     val verifierId = VerifierId.X509SanDns("verifier", accessCertificate)
     val createJar: CreateJarNimbus = CreateJarNimbus()
@@ -115,7 +118,6 @@ object TestContext {
 @ContextConfiguration
 @AutoConfigureWebTestClient
 internal annotation class VerifierApplicationTest(
-
     /**
      * [Configuration] classes that contain extra bean definitions.
      * Useful for bean overriding using [Primary] annotation.

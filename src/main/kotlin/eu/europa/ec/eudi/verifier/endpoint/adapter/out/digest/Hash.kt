@@ -18,19 +18,26 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest
 import eu.europa.ec.eudi.verifier.endpoint.domain.HashAlgorithm
 import java.security.MessageDigest
 
-internal fun hash(data: ByteArray, algorithm: HashAlgorithm): ByteArray {
-    val messageDigest = when (algorithm) {
-        HashAlgorithm.SHA_256 -> MessageDigest.getInstance("SHA-256")
-        HashAlgorithm.SHA_384 -> MessageDigest.getInstance("SHA-384")
-        HashAlgorithm.SHA_512 -> MessageDigest.getInstance("SHA-512")
-        HashAlgorithm.SHA3_224 -> MessageDigest.getInstance("SHA3-224")
-        HashAlgorithm.SHA3_256 -> MessageDigest.getInstance("SHA3-256")
-        HashAlgorithm.SHA3_384 -> MessageDigest.getInstance("SHA3-384")
-        HashAlgorithm.SHA3_512 -> MessageDigest.getInstance("SHA3-512")
-    }
+internal fun hash(
+    data: ByteArray,
+    algorithm: HashAlgorithm,
+): ByteArray {
+    val messageDigest =
+        when (algorithm) {
+            HashAlgorithm.SHA_256 -> MessageDigest.getInstance("SHA-256")
+            HashAlgorithm.SHA_384 -> MessageDigest.getInstance("SHA-384")
+            HashAlgorithm.SHA_512 -> MessageDigest.getInstance("SHA-512")
+            HashAlgorithm.SHA3_224 -> MessageDigest.getInstance("SHA3-224")
+            HashAlgorithm.SHA3_256 -> MessageDigest.getInstance("SHA3-256")
+            HashAlgorithm.SHA3_384 -> MessageDigest.getInstance("SHA3-384")
+            HashAlgorithm.SHA3_512 -> MessageDigest.getInstance("SHA3-512")
+        }
 
     messageDigest.update(data)
     return messageDigest.digest()
 }
 
-internal fun hash(data: String, algorithm: HashAlgorithm): ByteArray = hash(data.toByteArray(), algorithm)
+internal fun hash(
+    data: String,
+    algorithm: HashAlgorithm,
+): ByteArray = hash(data.toByteArray(), algorithm)

@@ -24,7 +24,6 @@ fun interface GenerateRequestId {
     suspend operator fun invoke(): RequestId
 
     companion object {
-
         /**
          * Fixed generator, useful input tests
          */

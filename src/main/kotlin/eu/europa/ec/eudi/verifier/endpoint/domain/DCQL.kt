@@ -51,7 +51,6 @@ data class DCQL(
      * on which of the requested Verifiable Credentials to return
      */
     @SerialName(OpenId4VPSpec.DCQL_CREDENTIAL_SETS) val credentialSets: CredentialSets? = null,
-
 ) : java.io.Serializable {
     init {
         credentialSets?.ensureKnownIds(credentials)
@@ -65,7 +64,6 @@ data class DCQL(
 @Serializable
 @JvmInline
 value class Credentials(val value: List<CredentialQuery>) : java.io.Serializable {
-
     init {
         require(value.isNotEmpty()) { "${OpenId4VPSpec.DCQL_CREDENTIALS} cannot be empty" }
         value.ensureUniqueIds()
@@ -76,7 +74,6 @@ value class Credentials(val value: List<CredentialQuery>) : java.io.Serializable
     override fun toString(): String = value.toString()
 
     companion object {
-
         @JvmStatic
         @JvmName("of")
         operator fun invoke(vararg value: CredentialQuery): Credentials = Credentials(value.toList())
@@ -96,7 +93,6 @@ value class Credentials(val value: List<CredentialQuery>) : java.io.Serializable
 @Serializable
 @JvmInline
 value class CredentialSets(val value: List<CredentialSetQuery>) : java.io.Serializable {
-
     init {
         require(value.isNotEmpty()) {
             "${OpenId4VPSpec.DCQL_CREDENTIAL_SETS} cannot be empty, if provided"
@@ -109,30 +105,33 @@ value class CredentialSets(val value: List<CredentialSetQuery>) : java.io.Serial
      * @param credentials the queries against which the [credential set queries][value] will be checked
      * @throws IllegalArgumentException if the above check fails
      */
-    fun ensureKnownIds(credentials: Credentials): CredentialSets = apply {
-        val violations = value.mapIndexedNotNull { index, credentialSet ->
-            val invaliOptions = credentialSet.options.mapIndexedNotNull { optionIndex, option ->
-                option.unknownIds(credentials).takeIf { it.isNotEmpty() }?.let { unknownIds ->
-                    optionIndex to unknownIds
-                }
-            }
-            invaliOptions.takeIf { it.isNotEmpty() }?.let {
-                index to invaliOptions
-            }
-        }.toMap()
-        require(violations.isEmpty()) {
-            buildString {
-                appendLine("The following credential set queries have invalid options:")
-                violations.forEach { (index, invaliOptions) ->
-                    appendLine("[$index]:")
-                    invaliOptions.forEach { (optionIndex, unknownIds) ->
-                        appendLine("[$optionIndex]:")
-                        appendLine("  Unknown credential query ids: $unknownIds")
+    fun ensureKnownIds(credentials: Credentials): CredentialSets =
+        apply {
+            val violations =
+                value.mapIndexedNotNull { index, credentialSet ->
+                    val invaliOptions =
+                        credentialSet.options.mapIndexedNotNull { optionIndex, option ->
+                            option.unknownIds(credentials).takeIf { it.isNotEmpty() }?.let { unknownIds ->
+                                optionIndex to unknownIds
+                            }
+                        }
+                    invaliOptions.takeIf { it.isNotEmpty() }?.let {
+                        index to invaliOptions
+                    }
+                }.toMap()
+            require(violations.isEmpty()) {
+                buildString {
+                    appendLine("The following credential set queries have invalid options:")
+                    violations.forEach { (index, invaliOptions) ->
+                        appendLine("[$index]:")
+                        invaliOptions.forEach { (optionIndex, unknownIds) ->
+                            appendLine("[$optionIndex]:")
+                            appendLine("  Unknown credential query ids: $unknownIds")
+                        }
                     }
                 }
             }
         }
-    }
 
     override fun toString(): String = value.toString()
 
@@ -233,9 +232,7 @@ data class CredentialQuery(
      * specifies which combinations of claims for the Credential are requested
      */
     @SerialName(OpenId4VPSpec.DCQL_CLAIM_SETS) val claimSets: List<ClaimSet>? = null,
-
 ) : java.io.Serializable {
-
     init {
         if (claims != null) {
             claims.ensureValid(format)
@@ -263,6 +260,7 @@ data class CredentialQuery(
     companion object {
         private const val DEFAULT_MULTIPLE_VALUE: Boolean = false
         private const val DEFAULT_REQUIRE_CRYPTOGRAPHIC_HOLDER_BINDING_VALUE: Boolean = true
+
         fun sdJwtVc(
             id: QueryId,
             sdJwtVcMeta: DCQLMetaSdJwtVcExtensions,
@@ -337,7 +335,6 @@ data class CredentialQuery(
 @Serializable
 @JvmInline
 value class ClaimSet(val value: List<ClaimId>) : java.io.Serializable {
-
     init {
         value.ensureValid()
     }
@@ -371,11 +368,11 @@ value class ClaimSet(val value: List<ClaimId>) : java.io.Serializable {
 
 val CredentialQuery.metaMsoMdoc: DCQLMetaMsoMdocExtensions? get() = meta.metaAs()
 val CredentialQuery.metaSdJwtVc: DCQLMetaSdJwtVcExtensions? get() = meta.metaAs()
+
 internal inline fun <reified T> JsonObject?.metaAs(): T? = this?.let { jsonSupport.decodeFromJsonElement(it) }
 
 @Serializable
 data class CredentialSetQuery(
-
     @SerialName(OpenId4VPSpec.DCQL_OPTIONS) @Required val options: List<CredentialQueryIds>,
     /**
      * A boolean which indicates whether this set of Credentials is required
@@ -385,7 +382,6 @@ data class CredentialSetQuery(
      */
     @SerialName(OpenId4VPSpec.DCQL_REQUIRED) val required: Boolean? = null,
 ) : java.io.Serializable {
-
     init {
         require(options.isNotEmpty()) { "${OpenId4VPSpec.DCQL_OPTIONS} cannot be empty" }
         val emptyOptions =
@@ -400,7 +396,6 @@ data class CredentialSetQuery(
         get() = required ?: DEFAULT_REQUIRED_VALUE
 
     companion object {
-
         private const val DEFAULT_REQUIRED_VALUE: Boolean = true
     }
 }
@@ -411,7 +406,6 @@ data class CredentialSetQuery(
 @Serializable
 @JvmInline
 value class CredentialQueryIds(val value: List<QueryId>) : java.io.Serializable {
-
     init {
         value.ensureValid()
     }
@@ -421,7 +415,6 @@ value class CredentialQueryIds(val value: List<QueryId>) : java.io.Serializable 
     override fun toString(): String = value.toString()
 
     companion object {
-
         fun List<QueryId>.ensureValid() {
             ensureNotEmpty()
             ensureUniqueIds()
@@ -457,7 +450,6 @@ data class ClaimsQuery(
     @SerialName(OpenId4VPSpec.DCQL_VALUES) val values: JsonArray? = null,
     @SerialName(OpenId4VPSpec.DCQL_MSO_MDOC_INTENT_TO_RETAIN) override val intentToRetain: Boolean? = null,
 ) : MsoMdocClaimsQueryExtension, java.io.Serializable {
-
     init {
         values?.ensureContainsOnlyPrimitives()
     }
@@ -500,11 +492,14 @@ data class ClaimsQuery(
         }
 
         fun JsonArray.ensureContainsOnlyPrimitives() {
-            val nonPrimitiveElements = mapIndexedNotNull { index, jsonElement ->
-                if (jsonElement !is JsonPrimitive || jsonElement == JsonNull) {
-                    index
-                } else null
-            }
+            val nonPrimitiveElements =
+                mapIndexedNotNull { index, jsonElement ->
+                    if (jsonElement !is JsonPrimitive || jsonElement == JsonNull) {
+                        index
+                    } else {
+                        null
+                    }
+                }
             require(nonPrimitiveElements.isEmpty()) {
                 "${OpenId4VPSpec.DCQL_VALUES} should contain only primitive, non-null, elements. Violations at $nonPrimitiveElements"
             }
@@ -524,7 +519,6 @@ data class DCQLMetaSdJwtVcExtensions(
      * The Wallet may return credentials that inherit from any of the specified types
      */
     @SerialName(OpenId4VPSpec.DCQL_SD_JWT_VC_VCT_VALUES) @Required val vctValues: List<String>,
-
 ) : java.io.Serializable {
     init {
         require(vctValues.isNotEmpty()) { "${OpenId4VPSpec.DCQL_SD_JWT_VC_VCT_VALUES} cannot be empty" }
@@ -552,7 +546,6 @@ value class MsoMdocDocType(val value: String) : java.io.Serializable {
  */
 @Serializable
 data class DCQLMetaMsoMdocExtensions(
-
     /**
      * Specifies an allowed value for the doctype of the requested Verifiable Credential.
      * It MUST be a valid doctype identifier as defined
@@ -564,7 +557,6 @@ data class DCQLMetaMsoMdocExtensions(
  * The following are ISO mdoc specific parameters to be used in a [Claims Query][ClaimsQuery]
  */
 interface MsoMdocClaimsQueryExtension : java.io.Serializable {
-
     /**
      * OPTIONAL. A boolean that is equivalent to IntentToRetain variable defined in Section 8.3.2.1.2.1 of [ISO.18013-5].
      */
@@ -574,6 +566,7 @@ interface MsoMdocClaimsQueryExtension : java.io.Serializable {
 
 internal object DCQLId {
     const val REGEX: String = "^[a-zA-Z0-9_-]+$"
+
     fun ensureValid(value: String): String {
         require(value.isNotEmpty()) { "Value cannot be be empty" }
         require(REGEX.toRegex().matches(value)) {

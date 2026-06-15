@@ -29,7 +29,6 @@ import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyInserters
 
 object WalletApiClient {
-
     private val log: Logger = LoggerFactory.getLogger(WalletApiClient::class.java)
 
     /**
@@ -39,7 +38,10 @@ object WalletApiClient {
      * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
      * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
      */
-    fun getRequestObjectJsonResponse(client: WebTestClient, requestUri: String): JsonObject {
+    fun getRequestObjectJsonResponse(
+        client: WebTestClient,
+        requestUri: String,
+    ): JsonObject {
         val (header, payload) = getRequestObjectPair(client, requestUri)
         // debug
         TestUtils.prettyPrintJson("prettyHeader:\n", header)
@@ -55,7 +57,10 @@ object WalletApiClient {
      * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
      * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
      */
-    fun getRequestObject(client: WebTestClient, requestUri: String) {
+    fun getRequestObject(
+        client: WebTestClient,
+        requestUri: String,
+    ) {
         val (header, payload) = getRequestObjectPair(client, requestUri)
 
         // debug
@@ -66,18 +71,22 @@ object WalletApiClient {
     /**
      * private helper function to get the request object response as a pair of strings (header, payload)
      */
-    private fun getRequestObjectPair(client: WebTestClient, requestUri: String): Pair<JsonObject, JsonObject> {
+    private fun getRequestObjectPair(
+        client: WebTestClient,
+        requestUri: String,
+    ): Pair<JsonObject, JsonObject> {
         // update the request_uri to point to the local server
         val relativeRequestUri = requestUri.removePrefix("http://localhost:0")
         log.info("relative request_uri: $relativeRequestUri")
 
         // get the DCQL query
-        val getResponse = client.get()
-            .uri(relativeRequestUri)
-            .accept(MediaType.parseMediaType(RFC9101.REQUEST_OBJECT_MEDIA_TYPE))
-            .exchange()
-            .expectStatus().isOk()
-            .expectBody<String>().returnResult()
+        val getResponse =
+            client.get()
+                .uri(relativeRequestUri)
+                .accept(MediaType.parseMediaType(RFC9101.REQUEST_OBJECT_MEDIA_TYPE))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody<String>().returnResult()
 
         assertNotNull(getResponse.responseBody, "getResponseString is null")
         log.info("response: $getResponse.responseBody")

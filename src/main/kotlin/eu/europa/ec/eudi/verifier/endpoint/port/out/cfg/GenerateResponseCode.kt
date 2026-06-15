@@ -25,11 +25,11 @@ fun interface GenerateResponseCode {
     suspend operator fun invoke(): ResponseCode
 
     companion object {
-
-        val Random: GenerateResponseCode = GenerateResponseCode {
-            val value = UUID.randomUUID().toString()
-            ResponseCode(value)
-        }
+        val Random: GenerateResponseCode =
+            GenerateResponseCode {
+                val value = UUID.randomUUID().toString()
+                ResponseCode(value)
+            }
 
         /**
          * Fixed generator, useful input tests

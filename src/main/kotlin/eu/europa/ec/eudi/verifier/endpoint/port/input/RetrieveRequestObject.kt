@@ -45,6 +45,7 @@ import kotlin.reflect.KClass
  */
 sealed interface RetrieveRequestObjectMethod {
     data object Get : RetrieveRequestObjectMethod
+
     data class Post(val walletMetadata: String?, val walletNonce: String?) : RetrieveRequestObjectMethod
 }
 
@@ -53,10 +54,15 @@ sealed interface RetrieveRequestObjectMethod {
  */
 sealed interface RetrieveRequestObjectError {
     data object PresentationNotFound : RetrieveRequestObjectError
+
     data class InvalidState(val expected: KClass<out Presentation>, val actual: KClass<out Presentation>) : RetrieveRequestObjectError
+
     data class InvalidRequestUriMethod(val expected: RequestUriMethod) : RetrieveRequestObjectError
+
     data class UnparsableWalletMetadata(val message: String, val cause: Throwable? = null) : RetrieveRequestObjectError
+
     data class UnsupportedWalletMetadata(val message: String, val cause: Throwable? = null) : RetrieveRequestObjectError
+
     data class InvalidWalletMetadata(val message: String, val cause: Throwable? = null) : RetrieveRequestObjectError
 }
 
@@ -82,7 +88,6 @@ class RetrieveRequestObjectLive(
     private val clock: Clock,
     private val publishPresentationEvent: PublishPresentationEvent,
 ) : RetrieveRequestObject {
-
     private val walletMetadataValidator = WalletMetadataValidator(verifierConfig)
 
     override suspend operator fun invoke(
@@ -108,36 +113,42 @@ class RetrieveRequestObjectLive(
             suspend fun updatePresentationAndCreateJar(
                 encryptionRequirement: EncryptionRequirement,
             ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
-                val jar = createJar(
-                    verifierConfig,
-                    clock,
-                    presentation,
-                    method.walletNonceOrNull,
-                    encryptionRequirement,
-                ).getOrThrow()
+                val jar =
+                    createJar(
+                        verifierConfig,
+                        clock,
+                        presentation,
+                        method.walletNonceOrNull,
+                        encryptionRequirement,
+                    ).getOrThrow()
                 val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
                 storePresentation(updatedPresentation)
                 return updatedPresentation to jar
             }
 
-            suspend fun log(p: Presentation.RequestObjectRetrieved, jwt: Jwt) {
+            suspend fun log(
+                p: Presentation.RequestObjectRetrieved,
+                jwt: Jwt,
+            ) {
                 val event = PresentationEvent.RequestObjectRetrieved(p.id, p.requestObjectRetrievedAt, jwt)
                 publishPresentationEvent(event)
             }
 
             when (method) {
-                is RetrieveRequestObjectMethod.Get -> ensure(
-                    presentation.requestUriMethod == RequestUriMethod.PostOrGet ||
-                        presentation.requestUriMethod == RequestUriMethod.Get,
-                ) {
-                    RetrieveRequestObjectError.InvalidRequestUriMethod(presentation.requestUriMethod)
-                }
-                is RetrieveRequestObjectMethod.Post -> ensure(
-                    presentation.requestUriMethod == RequestUriMethod.PostOrGet ||
-                        presentation.requestUriMethod == RequestUriMethod.Post,
-                ) {
-                    RetrieveRequestObjectError.InvalidRequestUriMethod(presentation.requestUriMethod)
-                }
+                is RetrieveRequestObjectMethod.Get ->
+                    ensure(
+                        presentation.requestUriMethod == RequestUriMethod.PostOrGet ||
+                            presentation.requestUriMethod == RequestUriMethod.Get,
+                    ) {
+                        RetrieveRequestObjectError.InvalidRequestUriMethod(presentation.requestUriMethod)
+                    }
+                is RetrieveRequestObjectMethod.Post ->
+                    ensure(
+                        presentation.requestUriMethod == RequestUriMethod.PostOrGet ||
+                            presentation.requestUriMethod == RequestUriMethod.Post,
+                    ) {
+                        RetrieveRequestObjectError.InvalidRequestUriMethod(presentation.requestUriMethod)
+                    }
             }
 
             val walletMetadata = method.walletMetadataOrNull?.let { parseWalletMetadata(it).bind() }
@@ -147,19 +158,20 @@ class RetrieveRequestObjectLive(
             log(updatePresentation, jar)
             jar
         }.onLeft { error ->
-            val cause = when (error) {
-                RetrieveRequestObjectError.PresentationNotFound -> null
-                is RetrieveRequestObjectError.InvalidState ->
-                    "Presentation should be in state ${error.expected.simpleName} but is in ${error.actual.simpleName}"
-                is RetrieveRequestObjectError.InvalidRequestUriMethod ->
-                    "Invalid request_uri_method used, expected ${error.expected}"
-                is RetrieveRequestObjectError.UnparsableWalletMetadata ->
-                    "Wallet metadata could not be parsed, reason: ${error.cause?.message ?: "n/a"}"
-                is RetrieveRequestObjectError.UnsupportedWalletMetadata ->
-                    "Wallet metadata contains unsupported values, reason: ${error.message}, ${error.cause?.message ?: "n/a"}"
-                is RetrieveRequestObjectError.InvalidWalletMetadata ->
-                    "Wallet metadata is not valid, reason: ${error.message}, ${error.cause?.message ?: "n/a"}"
-            }
+            val cause =
+                when (error) {
+                    RetrieveRequestObjectError.PresentationNotFound -> null
+                    is RetrieveRequestObjectError.InvalidState ->
+                        "Presentation should be in state ${error.expected.simpleName} but is in ${error.actual.simpleName}"
+                    is RetrieveRequestObjectError.InvalidRequestUriMethod ->
+                        "Invalid request_uri_method used, expected ${error.expected}"
+                    is RetrieveRequestObjectError.UnparsableWalletMetadata ->
+                        "Wallet metadata could not be parsed, reason: ${error.cause?.message ?: "n/a"}"
+                    is RetrieveRequestObjectError.UnsupportedWalletMetadata ->
+                        "Wallet metadata contains unsupported values, reason: ${error.message}, ${error.cause?.message ?: "n/a"}"
+                    is RetrieveRequestObjectError.InvalidWalletMetadata ->
+                        "Wallet metadata is not valid, reason: ${error.message}, ${error.cause?.message ?: "n/a"}"
+                }
 
             cause?.let {
                 val event = PresentationEvent.FailedToRetrieveRequestObject(presentation.id, clock.now(), it)
@@ -169,26 +181,25 @@ class RetrieveRequestObjectLive(
 
     private suspend fun WalletMetadataTO.validate(
         presentation: Presentation.Requested,
-    ): Either<RetrieveRequestObjectError, EncryptionRequirement> =
-        walletMetadataValidator.validate(this, presentation)
+    ): Either<RetrieveRequestObjectError, EncryptionRequirement> = walletMetadataValidator.validate(this, presentation)
 }
 
 /**
  * Validator for Wallet Metadata.
  */
 private class WalletMetadataValidator(private val verifierConfig: VerifierConfig) {
-
     suspend fun validate(
         metadata: WalletMetadataTO,
         presentation: Presentation.Requested,
-    ): Either<RetrieveRequestObjectError, EncryptionRequirement> = either {
-        ensureWalletSupportsRequiredVpFormats(metadata, presentation)
-        ensureWalletSupportsVerifierClientIdPrefix(metadata)
-        ensureVerifierSupportsWalletJarSigningAlgorithms(metadata)
-        ensureWalletSupportsRequiredResponseType(metadata)
-        ensureWalletSupportsRequiredResponseMode(metadata, presentation)
-        encryptionRequirement(metadata)
-    }
+    ): Either<RetrieveRequestObjectError, EncryptionRequirement> =
+        either {
+            ensureWalletSupportsRequiredVpFormats(metadata, presentation)
+            ensureWalletSupportsVerifierClientIdPrefix(metadata)
+            ensureVerifierSupportsWalletJarSigningAlgorithms(metadata)
+            ensureWalletSupportsRequiredResponseType(metadata)
+            ensureWalletSupportsRequiredResponseMode(metadata, presentation)
+            encryptionRequirement(metadata)
+        }
 
     private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsRequiredVpFormats(
         metadata: WalletMetadataTO,
@@ -198,22 +209,23 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         val queryRequiredFormats = presentation.query.credentials.value.map { it.format }.toSet()
 
         val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormatsSupported
-        val walletSupportsAllRequiredVpFormats = queryRequiredFormats.map { requiredFormat ->
-            when (requiredFormat) {
-                Format.SdJwtVc -> {
-                    val verifierSupported = checkNotNull(verifierSupportedVpFormats.sdJwtVc)
-                    val walletSupported = walletSupportedVpFormats.sdJwtVc
-                    null != walletSupported && commonGround(walletSupported = walletSupported, verifierSupported = verifierSupported)
-                }
+        val walletSupportsAllRequiredVpFormats =
+            queryRequiredFormats.map { requiredFormat ->
+                when (requiredFormat) {
+                    Format.SdJwtVc -> {
+                        val verifierSupported = checkNotNull(verifierSupportedVpFormats.sdJwtVc)
+                        val walletSupported = walletSupportedVpFormats.sdJwtVc
+                        null != walletSupported && commonGround(walletSupported = walletSupported, verifierSupported = verifierSupported)
+                    }
 
-                Format.MsoMdoc -> {
-                    checkNotNull(verifierSupportedVpFormats.msoMdoc)
-                    null != walletSupportedVpFormats.msoMdoc
-                }
+                    Format.MsoMdoc -> {
+                        checkNotNull(verifierSupportedVpFormats.msoMdoc)
+                        null != walletSupportedVpFormats.msoMdoc
+                    }
 
-                else -> false
-            }
-        }.foldRight(true, Boolean::and)
+                    else -> false
+                }
+            }.foldRight(true, Boolean::and)
 
         ensure(walletSupportsAllRequiredVpFormats) {
             RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support all required VpFormats")
@@ -239,9 +251,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         }
     }
 
-    private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsRequiredResponseType(
-        metadata: WalletMetadataTO,
-    ) {
+    private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsRequiredResponseType(metadata: WalletMetadataTO) {
         val responseType = OpenId4VPSpec.VP_TOKEN
         ensure(responseType in metadata.responseTypesSupported) {
             RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Type '$responseType'")
@@ -265,10 +275,12 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         return if (null == jwks) {
             EncryptionRequirement.NotRequired
         } else {
-            val walletSupportedEncryptionAlgorithms = metadata.requestObjectEncryptionAlgorithmsSupported.orEmpty()
-                .map { JWEAlgorithm.parse(it) }
-            val walletSupportedEncryptionMethods = metadata.requestObjectEncryptionMethodsSupported.orEmpty()
-                .map { EncryptionMethod.parse(it) }
+            val walletSupportedEncryptionAlgorithms =
+                metadata.requestObjectEncryptionAlgorithmsSupported.orEmpty()
+                    .map { JWEAlgorithm.parse(it) }
+            val walletSupportedEncryptionMethods =
+                metadata.requestObjectEncryptionMethodsSupported.orEmpty()
+                    .map { EncryptionMethod.parse(it) }
 
             EncryptionRequirement.Required.create(
                 jwks.keys,
@@ -287,32 +299,23 @@ private data class WalletMetadataTO(
     @Required
     @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED)
     val vpFormatsSupported: VpFormatsSupported,
-
     @SerialName(OpenId4VPSpec.CLIENT_ID_PREFIXES_SUPPORTED)
     val clientIdPrefixesSupported: List<String>? = OpenId4VPSpec.DEFAULT_CLIENT_ID_PREFIXES_SUPPORTED,
-
     @SerialName(RFC8414.JWKS)
     val jwks: JsonObject? = null,
-
     @SerialName(JarmSpec.AUTHORIZATION_ENCRYPTION_ALGORITHMS_SUPPORTED)
     val encryptionAlgorithmsSupported: List<String>? = null,
-
     @SerialName(JarmSpec.AUTHORIZATION_ENCRYPTION_METHODS_SUPPORTED)
     val encryptionMethodsSupported: List<String>? = null,
-
     @SerialName(RFC9101.REQUEST_OBJECT_SIGNING_ALGORITHMS_SUPPORTED)
     val requestObjectSigningAlgorithmsSupported: List<String>? = null,
-
     @SerialName(RFC9101.REQUEST_OBJECT_ENCRYPTION_ALG_VALUES_SUPPORTED)
     val requestObjectEncryptionAlgorithmsSupported: List<String>? = null,
-
     @SerialName(RFC9101.REQUEST_OBJECT_ENCRYPTION_ENC_VALUES_SUPPORTED)
     val requestObjectEncryptionMethodsSupported: List<String>? = null,
-
     @Required
     @SerialName(RFC8414.RESPONSE_TYPES_SUPPORTED)
     val responseTypesSupported: List<String>,
-
     @SerialName(RFC8414.RESPONSE_MODES_SUPPORTED)
     val responseModesSupported: List<String>? = RFC8414.DEFAULT_RESPONSE_MODES_SUPPORTED,
 )
@@ -323,23 +326,26 @@ private fun parseWalletMetadata(serialized: String): Either<RetrieveRequestObjec
     }.mapLeft { RetrieveRequestObjectError.UnparsableWalletMetadata("Wallet Metadata cannot be parsed", it) }
 
 private val RetrieveRequestObjectMethod.walletMetadataOrNull: String?
-    get() = when (this) {
-        RetrieveRequestObjectMethod.Get -> null
-        is RetrieveRequestObjectMethod.Post -> walletMetadata
-    }
+    get() =
+        when (this) {
+            RetrieveRequestObjectMethod.Get -> null
+            is RetrieveRequestObjectMethod.Post -> walletMetadata
+        }
 
 private val RetrieveRequestObjectMethod.walletNonceOrNull: String?
-    get() = when (this) {
-        RetrieveRequestObjectMethod.Get -> null
-        is RetrieveRequestObjectMethod.Post -> walletNonce
-    }
+    get() =
+        when (this) {
+            RetrieveRequestObjectMethod.Get -> null
+            is RetrieveRequestObjectMethod.Post -> walletNonce
+        }
 
 private val VerifierId.clientIdPrefix: String
-    get() = when (this) {
-        is VerifierId.PreRegistered -> OpenId4VPSpec.CLIENT_ID_PREFIX_PRE_REGISTERED
-        is VerifierId.X509SanDns -> OpenId4VPSpec.CLIENT_ID_PREFIX_X509_SAN_DNS
-        is VerifierId.X509Hash -> OpenId4VPSpec.CLIENT_ID_PREFIX_X509_HASH
-    }
+    get() =
+        when (this) {
+            is VerifierId.PreRegistered -> OpenId4VPSpec.CLIENT_ID_PREFIX_PRE_REGISTERED
+            is VerifierId.X509SanDns -> OpenId4VPSpec.CLIENT_ID_PREFIX_X509_SAN_DNS
+            is VerifierId.X509Hash -> OpenId4VPSpec.CLIENT_ID_PREFIX_X509_HASH
+        }
 
 private fun ResponseModeOption.name(): String =
     when (this) {
@@ -351,8 +357,10 @@ private fun <T> commonGround(
     walletSupported: Collection<T>?,
     verifierSupported: Collection<T>?,
 ): Boolean =
-    if (null != walletSupported && null != verifierSupported) walletSupported.intersect(verifierSupported.toSet()).isNotEmpty()
-    else true
+    if (null != walletSupported && null != verifierSupported)
+        walletSupported.intersect(verifierSupported.toSet()).isNotEmpty()
+    else
+        true
 
 private fun commonGround(
     walletSupported: VpFormatsSupported.SdJwtVc,
@@ -380,20 +388,25 @@ private fun EncryptionRequirement.Required.Companion.create(
         ensure(algorithms.isNotEmpty()) { RetrieveRequestObjectError.InvalidWalletMetadata("Missing encryption algorithms") }
         ensure(methods.isNotEmpty()) { RetrieveRequestObjectError.InvalidWalletMetadata("Missing encryption methods") }
 
-        val encryptionRequirement = jwks.filter { it.isSupportedEncryptionJwk() }
-            .firstNotNullOfOrNull { encryptionKey ->
-                val encryptionKeySupportedEncryptionAlgorithms = encryptionKey.supportedEncryptionAlgorithms.intersect(algorithms.toSet())
-                    .sortedBy { encryptionAlgorithm -> encryptionAlgorithmPreferenceMap[encryptionAlgorithm] }
-                val encryptionKeySupportedEncryptionMethods = encryptionKey.supportedEncryptionMethods.intersect(methods.toSet())
-                    .sortedBy { encryptionMethod -> encryptionMethodPreferenceMap[encryptionMethod] }
-                if (encryptionKeySupportedEncryptionAlgorithms.isNotEmpty() && encryptionKeySupportedEncryptionMethods.isNotEmpty()) {
-                    EncryptionRequirement.Required(
-                        encryptionKey.toPublicJWK(),
-                        encryptionKeySupportedEncryptionAlgorithms.first(),
-                        encryptionKeySupportedEncryptionMethods.first(),
-                    )
-                } else null
-            }
+        val encryptionRequirement =
+            jwks.filter { it.isSupportedEncryptionJwk() }
+                .firstNotNullOfOrNull { encryptionKey ->
+                    val encryptionKeySupportedEncryptionAlgorithms =
+                        encryptionKey.supportedEncryptionAlgorithms.intersect(algorithms.toSet())
+                            .sortedBy { encryptionAlgorithm -> encryptionAlgorithmPreferenceMap[encryptionAlgorithm] }
+                    val encryptionKeySupportedEncryptionMethods =
+                        encryptionKey.supportedEncryptionMethods.intersect(methods.toSet())
+                            .sortedBy { encryptionMethod -> encryptionMethodPreferenceMap[encryptionMethod] }
+                    if (encryptionKeySupportedEncryptionAlgorithms.isNotEmpty() && encryptionKeySupportedEncryptionMethods.isNotEmpty()) {
+                        EncryptionRequirement.Required(
+                            encryptionKey.toPublicJWK(),
+                            encryptionKeySupportedEncryptionAlgorithms.first(),
+                            encryptionKeySupportedEncryptionMethods.first(),
+                        )
+                    } else {
+                        null
+                    }
+                }
 
         encryptionRequirement
             ?: raise(RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet Metadata contains unsupported encryption parameters"))

@@ -44,7 +44,6 @@ import java.util.*
 import kotlin.test.*
 
 class CreateJarNimbusTest {
-
     private val createJar = TestContext.createJar
     private val verifier = TestContext.signedRequestObjectVerifier
     private val clientMetaData = TestContext.clientMetaData
@@ -53,30 +52,33 @@ class CreateJarNimbusTest {
     @Test
     fun `given a request object, it should be signed and decoded`() {
         val query = Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery
-        val requestObject = RequestObject(
-            verifierId = verifierId,
-            responseType = listOf("vp_token"),
-            dcqlQuery = query,
-            scope = listOf("openid"),
-            nonce = UUID.randomUUID().toString(),
-            responseMode = "direct_post.jwt",
-            responseUri = URL("https://foo"),
-            state = TestContext.testRequestId.value,
-            aud = emptyList(),
-            issuedAt = TestContext.testClock.now(),
-        )
+        val requestObject =
+            RequestObject(
+                verifierId = verifierId,
+                responseType = listOf("vp_token"),
+                dcqlQuery = query,
+                scope = listOf("openid"),
+                nonce = UUID.randomUUID().toString(),
+                responseMode = "direct_post.jwt",
+                responseUri = URL("https://foo"),
+                state = TestContext.testRequestId.value,
+                aud = emptyList(),
+                issuedAt = TestContext.testClock.now(),
+            )
 
         // responseMode is direct_post.jwt, so we need to generate an ephemeral key
-        val ecKey = ECKeyGenerator(Curve.P_256)
-            .keyUse(KeyUse.ENCRYPTION)
-            .algorithm(JWEAlgorithm.ECDH_ES)
-            .keyID(UUID.randomUUID().toString())
-            .generate()
+        val ecKey =
+            ECKeyGenerator(Curve.P_256)
+                .keyUse(KeyUse.ENCRYPTION)
+                .algorithm(JWEAlgorithm.ECDH_ES)
+                .keyID(UUID.randomUUID().toString())
+                .generate()
 
-        val jwt = createJar.sign(clientMetaData, ResponseMode.DirectPostJwt(ecKey), requestObject, null)
-            .getOrThrow()
-            .serialize()
-            .also { println(it) }
+        val jwt =
+            createJar.sign(clientMetaData, ResponseMode.DirectPostJwt(ecKey), requestObject, null)
+                .getOrThrow()
+                .serialize()
+                .also { println(it) }
         val signedJwt = decode(jwt).getOrThrow().also { println(it) }
         assertX5cHeaderClaimDoesNotContainPEM(signedJwt.header)
         val claimSet = signedJwt.jwtClaimsSet
@@ -96,7 +98,10 @@ class CreateJarNimbusTest {
         }
     }
 
-    private fun assertEqualsRequestObjectJWTClaimSet(r: RequestObject, c: JWTClaimsSet) {
+    private fun assertEqualsRequestObjectJWTClaimSet(
+        r: RequestObject,
+        c: JWTClaimsSet,
+    ) {
         assertEquals(r.verifierId.clientId, c.getStringClaim("client_id"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
         assertEquals(

@@ -43,7 +43,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 object Data {
-
     /**
      * Contains three documents,
      * The first and the second are valid
@@ -84,181 +83,215 @@ object Data {
             .inputStream
             .use { inputStream ->
                 val keyStore = loadKeystore(inputStream)
-                val certs = run {
-                    val aliases = keyStore.aliases().toList()
-                    aliases.filter { keyStore.isCertificateEntry(it) }.mapNotNull { keyStore.getCertificate(it) as? X509Certificate }
-                }.toNonEmptyListOrNull()
+                val certs =
+                    run {
+                        val aliases = keyStore.aliases().toList()
+                        aliases.filter { keyStore.isCertificateEntry(it) }.mapNotNull { keyStore.getCertificate(it) as? X509Certificate }
+                    }.toNonEmptyListOrNull()
                 requireNotNull(certs) { "Unable to load X509 Certificates from 'classpath:trusted-issuers.jks'" }
             }
     }
 
-    private fun loadKeystore(inputStream: InputStream): KeyStore =
-        KeyStore.getInstance("JKS").apply { load(inputStream, null) }
+    private fun loadKeystore(inputStream: InputStream): KeyStore = KeyStore.getInstance("JKS").apply { load(inputStream, null) }
 }
 
 class DeviceResponseValidatorTest {
-
-    private val clock = run {
-        val testDate = LocalDateTime(2024, 11, 1, 0, 0)
-        Clock.fixed(
-            testDate.toInstant(kotlinx.datetime.TimeZone.of("Europe/Athens")),
-            kotlinx.datetime.TimeZone.of("Europe/Athens"),
-        )
-    }
-
-    @Test
-    fun `a vp_token where the 3d document has an invalid validity info should fail`() = runTest {
-        val invalidDocument = run {
-            val validator = deviceResponseValidator(Data.caCerts, clock)
-            val validated = validator.ensureValid(Data.ThreeDocumentVP)
-            val invalidDocuments =
-                assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
-                    .invalidDocuments
-            assertEquals(1, invalidDocuments.size)
-            invalidDocuments.head
+    private val clock =
+        run {
+            val testDate = LocalDateTime(2024, 11, 1, 0, 0)
+            Clock.fixed(
+                testDate.toInstant(kotlinx.datetime.TimeZone.of("Europe/Athens")),
+                kotlinx.datetime.TimeZone.of("Europe/Athens"),
+            )
         }
 
-        assertEquals(2, invalidDocument.index)
-        val documentError = run {
-            assertEquals(1, invalidDocument.errors.size)
-            invalidDocument.errors.head
+    @Test
+    fun `a vp_token where the 3d document has an invalid validity info should fail`() =
+        runTest {
+            val invalidDocument =
+                run {
+                    val validator = deviceResponseValidator(Data.caCerts, clock)
+                    val validated = validator.ensureValid(Data.ThreeDocumentVP)
+                    val invalidDocuments =
+                        assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
+                            .invalidDocuments
+                    assertEquals(1, invalidDocuments.size)
+                    invalidDocuments.head
+                }
+
+            assertEquals(2, invalidDocument.index)
+            val documentError =
+                run {
+                    assertEquals(1, invalidDocument.errors.size)
+                    invalidDocument.errors.head
+                }
+            assertIs<DocumentError.ExpiredValidityInfo>(documentError)
         }
-        assertIs<DocumentError.ExpiredValidityInfo>(documentError)
-    }
+
+    @Suppress("ktlint:standard:max-line-length")
+    @Test
+    fun `a vp_token where the 3d document has an invalid validity info should not fail when skip`() =
+        runTest {
+            val validDocuments =
+                run {
+                    val docV =
+                        DocumentValidator(
+                            clock = clock,
+                            validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
+                            isChainTrustedForAttestation =
+                                IsChainTrustedForAttestation(
+                                    IsChainTrustedForContextF.usingTrustAnchors(Data.caCerts) {
+                                        isRevocationEnabled = false
+                                        date = clock.now().toJavaDate()
+                                    },
+                                    AttestationClassifications(
+                                        pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
+                                        eaAs =
+                                            mapOf(
+                                                "mDL" to
+                                                    AttestationIdentifierPredicate.mdocMatching(
+                                                        "^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex(),
+                                                    ),
+                                            ),
+                                    ),
+                                ),
+                            statusListTokenValidator = null,
+                        )
+                    val vpValidator = DeviceResponseValidator(docV)
+                    val validated = vpValidator.ensureValid(Data.ThreeDocumentVP)
+                    assertNotNull(validated.getOrNull())
+                }
+
+            assertEquals(3, validDocuments.size)
+        }
 
     @Test
-    fun `a vp_token where the 3d document has an invalid validity info should not fail when skip`() = runTest {
-        val validDocuments = run {
-            val docV = DocumentValidator(
-                clock = clock,
-                validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
-                isChainTrustedForAttestation = IsChainTrustedForAttestation(
+    fun `a vp_token having a single document with invalid chain should fail`() =
+        runTest {
+            val invalidDocument =
+                run {
+                    val validated = deviceResponseValidator(Data.caCerts, clock).ensureValid(Data.MdlVP)
+                    val invalidDocuments =
+                        assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
+                            .invalidDocuments
+                    assertEquals(1, invalidDocuments.size)
+                    invalidDocuments.head
+                }
+            assertEquals(0, invalidDocument.index)
+            val documentError =
+                run {
+                    assertEquals(1, invalidDocument.errors.size)
+                    invalidDocument.errors.head
+                }
+            assertIs<DocumentError.X5CNotTrusted>(documentError)
+        }
+
+    @Test
+    fun `a vp_token having a single document skipping chain validation should be valid`() =
+        runTest {
+            val validDocuments =
+                run {
+                    val docV =
+                        DocumentValidator(
+                            isChainTrustedForAttestation =
+                                IsChainTrustedForAttestation(
+                                    IsChainTrustedForContextF.Ignored,
+                                    AttestationClassifications(
+                                        pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
+                                        eaAs =
+                                            mapOf(
+                                                "mDL" to
+                                                    AttestationIdentifierPredicate.mdocMatching(
+                                                        "^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex(),
+                                                    ),
+                                            ),
+                                    ),
+                                ),
+                            clock = clock,
+                            statusListTokenValidator = null,
+                        )
+                    val vpValidator = DeviceResponseValidator(docV)
+                    val validated = vpValidator.ensureValid(Data.MdlVP)
+                    assertNotNull(validated.getOrNull())
+                }
+
+            assertEquals(1, validDocuments.size)
+        }
+
+    @Test
+    fun `device signed items in an authorized namespace are accepted`() =
+        runTest {
+            val validDocuments =
+                run {
+                    val vpValidator = ignoreTrustDocumentValidator(clock)
+                    val handoverInfo = deviceSignedHandoverInfo()
+
+                    val validated = vpValidator.ensureValid(Data.VPWithDeviceSignedItems, handoverInfo = handoverInfo)
+                    assertNotNull(validated.getOrElse { error -> error("Validation failed: $error") })
+                }
+
+            assertEquals(1, validDocuments.size)
+        }
+
+    @Test
+    fun `device signed items in an unauthorized namespace should fail`() =
+        runTest {
+            val invalidDocument =
+                run {
+                    val vpValidator = ignoreTrustDocumentValidator(clock)
+                    val handoverInfo = deviceSignedHandoverInfo()
+
+                    val validated = vpValidator.ensureValid(Data.VPWithUnauthorizedDeviceSignedItems, handoverInfo = handoverInfo)
+                    val invalidDocuments =
+                        assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull()).invalidDocuments
+                    assertEquals(1, invalidDocuments.size)
+                    invalidDocuments.head
+                }
+
+            assertEquals(0, invalidDocument.index)
+            val documentError =
+                run {
+                    assertEquals(1, invalidDocument.errors.size)
+                    invalidDocument.errors.head
+                }
+            assertIs<DocumentError.DeviceKeyNotAuthorizedToSignItems>(documentError)
+        }
+}
+
+private fun deviceResponseValidator(
+    caCerts: NonEmptyList<X509Certificate>,
+    clock: Clock,
+): DeviceResponseValidator {
+    val documentValidator =
+        DocumentValidator(
+            clock,
+            ValidityInfoShouldBe.NotExpired,
+            IssuerSignedItemsShouldBe.Verified,
+            isChainTrustedForAttestation =
+                IsChainTrustedForAttestation(
                     IsChainTrustedForContextF.usingTrustAnchors(Data.caCerts) {
                         isRevocationEnabled = false
                         date = clock.now().toJavaDate()
                     },
                     AttestationClassifications(
                         pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
-                        eaAs = mapOf(
-                            "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
-                        ),
-                    ),
-                ),
-                statusListTokenValidator = null,
-            )
-            val vpValidator = DeviceResponseValidator(docV)
-            val validated = vpValidator.ensureValid(Data.ThreeDocumentVP)
-            assertNotNull(validated.getOrNull())
-        }
-
-        assertEquals(3, validDocuments.size)
-    }
-
-    @Test
-    fun `a vp_token having a single document with invalid chain should fail`() = runTest {
-        val invalidDocument = run {
-            val validated = deviceResponseValidator(Data.caCerts, clock).ensureValid(Data.MdlVP)
-            val invalidDocuments =
-                assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
-                    .invalidDocuments
-            assertEquals(1, invalidDocuments.size)
-            invalidDocuments.head
-        }
-        assertEquals(0, invalidDocument.index)
-        val documentError = run {
-            assertEquals(1, invalidDocument.errors.size)
-            invalidDocument.errors.head
-        }
-        assertIs<DocumentError.X5CNotTrusted>(documentError)
-    }
-
-    @Test
-    fun `a vp_token having a single document skipping chain validation should be valid`() = runTest {
-        val validDocuments = run {
-            val docV =
-                DocumentValidator(
-                    isChainTrustedForAttestation = IsChainTrustedForAttestation(
-                        IsChainTrustedForContextF.Ignored,
-                        AttestationClassifications(
-                            pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
-                            eaAs = mapOf(
+                        eaAs =
+                            mapOf(
                                 "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
                             ),
-                        ),
                     ),
-                    clock = clock,
-                    statusListTokenValidator = null,
-                )
-            val vpValidator = DeviceResponseValidator(docV)
-            val validated = vpValidator.ensureValid(Data.MdlVP)
-            assertNotNull(validated.getOrNull())
-        }
-
-        assertEquals(1, validDocuments.size)
-    }
-
-    @Test
-    fun `device signed items in an authorized namespace are accepted`() = runTest {
-        val validDocuments = run {
-            val vpValidator = ignoreTrustDocumentValidator(clock)
-            val handoverInfo = deviceSignedHandoverInfo()
-
-            val validated = vpValidator.ensureValid(Data.VPWithDeviceSignedItems, handoverInfo = handoverInfo)
-            assertNotNull(validated.getOrElse { error -> error("Validation failed: $error") })
-        }
-
-        assertEquals(1, validDocuments.size)
-    }
-
-    @Test
-    fun `device signed items in an unauthorized namespace should fail`() = runTest {
-        val invalidDocument = run {
-            val vpValidator = ignoreTrustDocumentValidator(clock)
-            val handoverInfo = deviceSignedHandoverInfo()
-
-            val validated = vpValidator.ensureValid(Data.VPWithUnauthorizedDeviceSignedItems, handoverInfo = handoverInfo)
-            val invalidDocuments =
-                assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull()).invalidDocuments
-            assertEquals(1, invalidDocuments.size)
-            invalidDocuments.head
-        }
-
-        assertEquals(0, invalidDocument.index)
-        val documentError = run {
-            assertEquals(1, invalidDocument.errors.size)
-            invalidDocument.errors.head
-        }
-        assertIs<DocumentError.DeviceKeyNotAuthorizedToSignItems>(documentError)
-    }
-}
-
-private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, clock: Clock): DeviceResponseValidator {
-    val documentValidator = DocumentValidator(
-        clock,
-        ValidityInfoShouldBe.NotExpired,
-        IssuerSignedItemsShouldBe.Verified,
-        isChainTrustedForAttestation = IsChainTrustedForAttestation(
-            IsChainTrustedForContextF.usingTrustAnchors(Data.caCerts) {
-                isRevocationEnabled = false
-                date = clock.now().toJavaDate()
-            },
-            AttestationClassifications(
-                pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
-                eaAs = mapOf(
-                    "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
                 ),
-            ),
-        ),
-        statusListTokenValidator = null,
-    )
+            statusListTokenValidator = null,
+        )
     return DeviceResponseValidator(documentValidator)
 }
 
 private fun deviceSignedHandoverInfo(): HandoverInfo {
-    val verifierId = VerifierId.PreRegistered(
-        originalClientId = "client_id",
-        accessCertificate = TestContext.verifierId.accessCertificate,
-    )
+    val verifierId =
+        VerifierId.PreRegistered(
+            originalClientId = "client_id",
+            accessCertificate = TestContext.verifierId.accessCertificate,
+        )
 
     return HandoverInfo.OpenID4VPHandoverInfo(
         clientId = verifierId,
@@ -269,19 +302,22 @@ private fun deviceSignedHandoverInfo(): HandoverInfo {
 }
 
 private fun ignoreTrustDocumentValidator(clock: Clock): DeviceResponseValidator {
-    val documentValidator = DocumentValidator(
-        clock = clock,
-        validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
-        isChainTrustedForAttestation = IsChainTrustedForAttestation(
-            IsChainTrustedForContextF.Ignored,
-            AttestationClassifications(
-                pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
-                eaAs = mapOf(
-                    "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
+    val documentValidator =
+        DocumentValidator(
+            clock = clock,
+            validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
+            isChainTrustedForAttestation =
+                IsChainTrustedForAttestation(
+                    IsChainTrustedForContextF.Ignored,
+                    AttestationClassifications(
+                        pids = AttestationIdentifierPredicate.mdocMatching("^eu\\.europa\\.ec\\.eudi\\.pid\\.1$".toRegex()),
+                        eaAs =
+                            mapOf(
+                                "mDL" to AttestationIdentifierPredicate.mdocMatching("^org\\.iso\\.18013\\.5\\.1\\.mDL$".toRegex()),
+                            ),
+                    ),
                 ),
-            ),
-        ),
-        statusListTokenValidator = null,
-    )
+            statusListTokenValidator = null,
+        )
     return DeviceResponseValidator(documentValidator)
 }

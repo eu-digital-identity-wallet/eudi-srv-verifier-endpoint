@@ -53,6 +53,7 @@ data class AuthorisationResponseTO(
 
 sealed interface AuthorisationResponse {
     data class DirectPost(val response: AuthorisationResponseTO) : AuthorisationResponse
+
     data class DirectPostJwt(val encryptedResponse: Jwt) : AuthorisationResponse
 }
 
@@ -70,14 +71,20 @@ sealed interface WalletResponseValidationError {
     data object PresentationNotInExpectedState : WalletResponseValidationError
 
     data object IncorrectState : WalletResponseValidationError
+
     data class InvalidVpToken(val message: String, val cause: Throwable? = null) : WalletResponseValidationError
+
     data object MissingVpToken : WalletResponseValidationError
+
     data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
+
     data class InvalidEncryptedResponse(val error: BadJOSEException) : WalletResponseValidationError
 
     sealed interface HAIPValidationError : WalletResponseValidationError {
         data object DeviceResponseContainsMoreThanOneMDoc : HAIPValidationError
+
         data class UnsupportedMsoRevocationMechanism(val used: Set<String>, val allowed: Set<String>) : HAIPValidationError
+
         data object SdJwtVcMustUseTokenStatusList : HAIPValidationError
     }
 }
@@ -86,17 +93,18 @@ private suspend fun AuthorisationResponseTO.toDomain(
     presentation: RequestObjectRetrieved,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormatsSupported: VpFormatsSupported,
-): Either<WalletResponseValidationError, WalletResponse> = either {
-    suspend fun requiredVerifiablePresentations(): VerifiablePresentations =
-        verifiablePresentations(
-            presentation,
-            validateVerifiablePresentation,
-            vpFormatsSupported,
-        ).bind()
+): Either<WalletResponseValidationError, WalletResponse> =
+    either {
+        suspend fun requiredVerifiablePresentations(): VerifiablePresentations =
+            verifiablePresentations(
+                presentation,
+                validateVerifiablePresentation,
+                vpFormatsSupported,
+            ).bind()
 
-    val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
-    maybeError ?: WalletResponse.VpToken(requiredVerifiablePresentations())
-}
+        val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
+        maybeError ?: WalletResponse.VpToken(requiredVerifiablePresentations())
+    }
 
 private suspend fun AuthorisationResponseTO.verifiablePresentations(
     presentation: RequestObjectRetrieved,
@@ -107,23 +115,26 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
 
         suspend fun JsonObject.toVerifiablePresentations(): Map<QueryId, List<VerifiablePresentation>> {
-            val vpToken = Either.catch {
-                Json.decodeFromJsonElement<Map<QueryId, List<JsonElement>>>(this)
-            }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
+            val vpToken =
+                Either.catch {
+                    Json.decodeFromJsonElement<Map<QueryId, List<JsonElement>>>(this)
+                }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
 
             val credentialQueries = presentation.query.credentials.value.associateBy { it.id }
             return vpToken.mapValues { (queryId, value) ->
-                val format = credentialQueries[queryId]?.format
-                    ?: raise(
-                        WalletResponseValidationError.InvalidVpToken(
-                            "vp_token references non-existing Credential Query",
-                            null,
-                        ),
-                    )
+                val format =
+                    credentialQueries[queryId]?.format
+                        ?: raise(
+                            WalletResponseValidationError.InvalidVpToken(
+                                "vp_token references non-existing Credential Query",
+                                null,
+                            ),
+                        )
                 val unvalidatedVerifiablePresentations = value.map { it.toVerifiablePresentation(format).bind() }
-                val applicableTransactionData = presentation.transactionData?.filter {
-                    queryId.value in it.credentialIds
-                }?.toNonEmptyListOrNull()
+                val applicableTransactionData =
+                    presentation.transactionData?.filter {
+                        queryId.value in it.credentialIds
+                    }?.toNonEmptyListOrNull()
                 ensure(vpFormatsSupported.supports(format)) {
                     WalletResponseValidationError.InvalidVpToken(
                         "vp_token contains a Verifiable Presentation in an unsupported format",
@@ -168,12 +179,13 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
                 }
 
                 is JsonObject -> VerifiablePresentation.Json(element, format)
-                else -> raise(
-                    WalletResponseValidationError.InvalidVpToken(
-                        "vp_token must contain either json strings, or json objects",
-                        null,
-                    ),
-                )
+                else ->
+                    raise(
+                        WalletResponseValidationError.InvalidVpToken(
+                            "vp_token must contain either json strings, or json objects",
+                            null,
+                        ),
+                    )
             }
 
         val element = this@toVerifiablePresentation
@@ -195,7 +207,6 @@ data class WalletResponseAcceptedTO(
  * The caller (wallet) may POST the [AuthorisationResponseTO] to the verifier back-end
  */
 fun interface PostWalletResponse {
-
     suspend operator fun invoke(
         requestId: RequestId,
         walletResponse: AuthorisationResponse,
@@ -215,28 +226,28 @@ class PostWalletResponseLive(
     private val publishPresentationEvent: PublishPresentationEvent,
     private val validateVerifiablePresentation: ValidateVerifiablePresentation,
 ) : PostWalletResponse {
-
     override suspend operator fun invoke(
         requestId: RequestId,
         walletResponse: AuthorisationResponse,
-    ): Either<WalletResponseValidationError, WalletResponseAcceptedTO?> = either {
-        log.debug(requestId, walletResponse)
+    ): Either<WalletResponseValidationError, WalletResponseAcceptedTO?> =
+        either {
+            log.debug(requestId, walletResponse)
 
-        val presentation = loadPresentation(requestId).bind()
-        ensure(presentation is RequestObjectRetrieved) {
-            WalletResponseValidationError.PresentationNotInExpectedState
+            val presentation = loadPresentation(requestId).bind()
+            ensure(presentation is RequestObjectRetrieved) {
+                WalletResponseValidationError.PresentationNotInExpectedState
+            }
+            log.debug(presentation, walletResponse)
+
+            val responseObject = responseObject(walletResponse, presentation).bind()
+            log.info(presentation.id, responseObject)
+
+            submit(presentation, responseObject)
+                .onLeft { cause -> logFailure(presentation, responseObject, cause) }
+                .onRight { (submitted, accepted) -> logWalletResponsePosted(submitted, accepted) }
+                .map { (_, accepted) -> accepted }
+                .bind()
         }
-        log.debug(presentation, walletResponse)
-
-        val responseObject = responseObject(walletResponse, presentation).bind()
-        log.info(presentation.id, responseObject)
-
-        submit(presentation, responseObject)
-            .onLeft { cause -> logFailure(presentation, responseObject, cause) }
-            .onRight { (submitted, accepted) -> logWalletResponsePosted(submitted, accepted) }
-            .map { (_, accepted) -> accepted }
-            .bind()
-    }
 
     private suspend fun submit(
         presentation: RequestObjectRetrieved,
@@ -244,20 +255,22 @@ class PostWalletResponseLive(
     ): Either<WalletResponseValidationError, Pair<Submitted, WalletResponseAcceptedTO?>> =
         either {
             // Submit the response
-            val submitted = doSubmit(presentation, responseObject)
-                .bind()
-                .also { storePresentation(it) }
+            val submitted =
+                doSubmit(presentation, responseObject)
+                    .bind()
+                    .also { storePresentation(it) }
 
-            val accepted = when (val getWalletResponseMethod = presentation.getWalletResponseMethod) {
-                is GetWalletResponseMethod.Redirect ->
-                    with(createQueryWalletResponseRedirectUri) {
-                        requireNotNull(submitted.responseCode) { "ResponseCode expected in Submitted state but not found" }
-                        val redirectUri = getWalletResponseMethod.redirectUri(submitted.responseCode)
-                        WalletResponseAcceptedTO(redirectUri.toString())
-                    }
+            val accepted =
+                when (val getWalletResponseMethod = presentation.getWalletResponseMethod) {
+                    is GetWalletResponseMethod.Redirect ->
+                        with(createQueryWalletResponseRedirectUri) {
+                            requireNotNull(submitted.responseCode) { "ResponseCode expected in Submitted state but not found" }
+                            val redirectUri = getWalletResponseMethod.redirectUri(submitted.responseCode)
+                            WalletResponseAcceptedTO(redirectUri.toString())
+                        }
 
-                GetWalletResponseMethod.Poll -> null
-            }
+                    GetWalletResponseMethod.Poll -> null
+                }
             submitted to accepted
         }
 
@@ -270,70 +283,77 @@ class PostWalletResponseLive(
     private fun responseObject(
         walletResponse: AuthorisationResponse,
         presentation: RequestObjectRetrieved,
-    ): Either<WalletResponseValidationError, AuthorisationResponseTO> = either {
-        when (val responseMode = presentation.responseMode) {
-            ResponseMode.DirectPost -> {
-                ensure(walletResponse is AuthorisationResponse.DirectPost) {
-                    WalletResponseValidationError.UnexpectedResponseMode(
-                        presentation.requestId,
-                        expected = ResponseModeOption.DirectPost,
-                        actual = ResponseModeOption.DirectPostJwt,
-                    )
-                }
-                walletResponse.response
-            }
-
-            is ResponseMode.DirectPostJwt -> {
-                when (walletResponse) {
-                    is AuthorisationResponse.DirectPost -> {
-                        ensure(walletResponse.isErrorResponse()) {
-                            WalletResponseValidationError.UnexpectedResponseMode(
-                                presentation.requestId,
-                                expected = ResponseModeOption.DirectPostJwt,
-                                actual = ResponseModeOption.DirectPost,
-                            )
-                        }
-                        walletResponse.response
+    ): Either<WalletResponseValidationError, AuthorisationResponseTO> =
+        either {
+            when (val responseMode = presentation.responseMode) {
+                ResponseMode.DirectPost -> {
+                    ensure(walletResponse is AuthorisationResponse.DirectPost) {
+                        WalletResponseValidationError.UnexpectedResponseMode(
+                            presentation.requestId,
+                            expected = ResponseModeOption.DirectPost,
+                            actual = ResponseModeOption.DirectPostJwt,
+                        )
                     }
+                    walletResponse.response
+                }
 
-                    is AuthorisationResponse.DirectPostJwt ->
-                        verifyEncryptedResponse(
-                            ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
-                            encryptedResponse = walletResponse.encryptedResponse,
-                            apv = presentation.nonce,
-                        ).getOrElse {
-                            when (it) {
-                                is BadJOSEException -> raise(WalletResponseValidationError.InvalidEncryptedResponse(it))
-                                else -> throw it
+                is ResponseMode.DirectPostJwt -> {
+                    when (walletResponse) {
+                        is AuthorisationResponse.DirectPost -> {
+                            ensure(walletResponse.isErrorResponse()) {
+                                WalletResponseValidationError.UnexpectedResponseMode(
+                                    presentation.requestId,
+                                    expected = ResponseModeOption.DirectPostJwt,
+                                    actual = ResponseModeOption.DirectPost,
+                                )
                             }
+                            walletResponse.response
                         }
+
+                        is AuthorisationResponse.DirectPostJwt ->
+                            verifyEncryptedResponse(
+                                ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
+                                encryptedResponse = walletResponse.encryptedResponse,
+                                apv = presentation.nonce,
+                            ).getOrElse {
+                                when (it) {
+                                    is BadJOSEException -> raise(WalletResponseValidationError.InvalidEncryptedResponse(it))
+                                    else -> throw it
+                                }
+                            }
+                    }
                 }
             }
         }
-    }
 
     private suspend fun doSubmit(
         presentation: RequestObjectRetrieved,
         responseObject: AuthorisationResponseTO,
-    ): Either<WalletResponseValidationError, Submitted> = either {
-        // Verify response `state` is RequestId
-        ensure(presentation.requestId.value == responseObject.state) { WalletResponseValidationError.IncorrectState }
+    ): Either<WalletResponseValidationError, Submitted> =
+        either {
+            // Verify response `state` is RequestId
+            ensure(presentation.requestId.value == responseObject.state) { WalletResponseValidationError.IncorrectState }
 
-        // add the wallet response to the presentation
-        val walletResponse = responseObject.toDomain(
-            presentation,
-            validateVerifiablePresentation,
-            verifierConfig.clientMetaData.vpFormatsSupported,
-        ).bind()
+            // add the wallet response to the presentation
+            val walletResponse =
+                responseObject.toDomain(
+                    presentation,
+                    validateVerifiablePresentation,
+                    verifierConfig.clientMetaData.vpFormatsSupported,
+                ).bind()
 
-        val responseCode = when (presentation.getWalletResponseMethod) {
-            GetWalletResponseMethod.Poll -> null
-            is GetWalletResponseMethod.Redirect -> generateResponseCode()
+            val responseCode =
+                when (presentation.getWalletResponseMethod) {
+                    GetWalletResponseMethod.Poll -> null
+                    is GetWalletResponseMethod.Redirect -> generateResponseCode()
+                }
+            presentation.submit(clock, walletResponse, responseCode).getOrThrow()
         }
-        presentation.submit(clock, walletResponse, responseCode).getOrThrow()
-    }
 
-    private suspend fun logWalletResponsePosted(p: Submitted, accepted: WalletResponseAcceptedTO?) {
+    private suspend fun logWalletResponsePosted(
+        p: Submitted,
+        accepted: WalletResponseAcceptedTO?,
+    ) {
         val event =
             PresentationEvent.WalletResponsePosted(p.id, p.submittedAt, p.walletResponse.toTO(), accepted)
         publishPresentationEvent(event)
@@ -344,12 +364,13 @@ class PostWalletResponseLive(
         responseObject: AuthorisationResponseTO,
         cause: WalletResponseValidationError,
     ) {
-        val event = PresentationEvent.WalletFailedToPostResponse(
-            presentation.id,
-            clock.now(),
-            cause,
-            responseObject.vpToken,
-        )
+        val event =
+            PresentationEvent.WalletFailedToPostResponse(
+                presentation.id,
+                clock.now(),
+                cause,
+                responseObject.vpToken,
+            )
         publishPresentationEvent(event)
     }
 }
@@ -363,24 +384,30 @@ private fun DCQL.satisfiedBy(response: Map<QueryId, List<VerifiablePresentation>
         ?: response.keys.containsAll(credentials.ids)
 
 private val AuthorisationResponse.encryptedResponseOrNull: Jwt?
-    get() = when (this) {
-        is AuthorisationResponse.DirectPost -> null
-        is AuthorisationResponse.DirectPostJwt -> encryptedResponse
-    }
+    get() =
+        when (this) {
+            is AuthorisationResponse.DirectPost -> null
+            is AuthorisationResponse.DirectPostJwt -> encryptedResponse
+        }
 
 private val AuthorisationResponse.vpTokenOrNull: JsonObject?
-    get() = when (this) {
-        is AuthorisationResponse.DirectPost -> response.vpToken
-        is AuthorisationResponse.DirectPostJwt -> null
-    }
+    get() =
+        when (this) {
+            is AuthorisationResponse.DirectPost -> response.vpToken
+            is AuthorisationResponse.DirectPostJwt -> null
+        }
 
 private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
-    get() = when (responseMode) {
-        ResponseMode.DirectPost -> null
-        is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey
-    }
+    get() =
+        when (responseMode) {
+            ResponseMode.DirectPost -> null
+            is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey
+        }
 
-private fun Logger.debug(requestId: RequestId, walletResponse: AuthorisationResponse) {
+private fun Logger.debug(
+    requestId: RequestId,
+    walletResponse: AuthorisationResponse,
+) {
     debug(
         "RequestId({}):: Wallet posted response. \nEncrypted response: '{}', \nVP Token: '{}'",
         requestId.value,
@@ -389,7 +416,10 @@ private fun Logger.debug(requestId: RequestId, walletResponse: AuthorisationResp
     )
 }
 
-private fun Logger.debug(presentation: RequestObjectRetrieved, walletResponse: AuthorisationResponse) {
+private fun Logger.debug(
+    presentation: RequestObjectRetrieved,
+    walletResponse: AuthorisationResponse,
+) {
     debug(
         "TransactionId({}):: Wallet posted response. \nEncrypted response: '{}', \nDecryption Key: '{}', \nVP Token: '{}'",
         presentation.id.value,
@@ -399,7 +429,10 @@ private fun Logger.debug(presentation: RequestObjectRetrieved, walletResponse: A
     )
 }
 
-private fun Logger.info(transactionId: TransactionId, authorizationResponse: AuthorisationResponseTO) {
+private fun Logger.info(
+    transactionId: TransactionId,
+    authorizationResponse: AuthorisationResponseTO,
+) {
     info(
         "TransactionId({}):: Wallet posted response. \nVP Token: '{}'",
         transactionId.value,

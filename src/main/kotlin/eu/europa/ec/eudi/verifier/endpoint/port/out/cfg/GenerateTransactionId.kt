@@ -24,7 +24,6 @@ fun interface GenerateTransactionId {
     suspend operator fun invoke(): TransactionId
 
     companion object {
-
         /**
          * Fixed generator, useful input tests
          */

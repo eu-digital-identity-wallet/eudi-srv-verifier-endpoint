@@ -32,12 +32,16 @@ class LookupTypeMetadataFromUrl(
     private val vcts: Map<Vct, Url>,
     private val sriValidator: SRIValidator?,
 ) : LookupTypeMetadata {
-    override suspend fun invoke(vct: Vct, expectedIntegrity: DocumentIntegrity?): Result<SdJwtVcTypeMetadata?> =
+    override suspend fun invoke(
+        vct: Vct,
+        expectedIntegrity: DocumentIntegrity?,
+    ): Result<SdJwtVcTypeMetadata?> =
         Either.catch {
             vcts[vct]?.let { url ->
-                val response = httpClient.get(url) {
-                    expectSuccess = false
-                }
+                val response =
+                    httpClient.get(url) {
+                        expectSuccess = false
+                    }
 
                 when (response.status) {
                     HttpStatusCode.OK -> {

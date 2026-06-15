@@ -24,6 +24,5 @@ import org.springframework.stereotype.Component
 @ConfigurationPropertiesBinding
 @Component
 class StringToAttestationsClassificationsConverter : Converter<String, AttestationClassifications> {
-    override fun convert(source: String): AttestationClassifications =
-        jsonSupport.decodeFromString(source)
+    override fun convert(source: String): AttestationClassifications = jsonSupport.decodeFromString(source)
 }

@@ -40,91 +40,89 @@ fun interface GetPresentationEvents {
 }
 
 class GetPresentationEventsLive(
-
     private val loadPresentationById: LoadPresentationById,
     private val loadPresentationEvents: LoadPresentationEvents,
 ) : GetPresentationEvents {
-    override suspend fun invoke(
-        transactionId: TransactionId,
-    ): QueryResponse<PresentationEventsTO> = coroutineScope {
-        if (presentationExists(transactionId)) {
-            val events = loadPresentationEvents(transactionId)
-            checkNotNull(events) { "Didn't find any events for transaction $transactionId" }
-            val lastTimestamp = events.map { it.timestamp }.max()
-            val transferObject = PresentationEventsTO(transactionId, lastTimestamp, events)
-            QueryResponse.Found(transferObject)
-        } else {
-            QueryResponse.NotFound
+    override suspend fun invoke(transactionId: TransactionId): QueryResponse<PresentationEventsTO> =
+        coroutineScope {
+            if (presentationExists(transactionId)) {
+                val events = loadPresentationEvents(transactionId)
+                checkNotNull(events) { "Didn't find any events for transaction $transactionId" }
+                val lastTimestamp = events.map { it.timestamp }.max()
+                val transferObject = PresentationEventsTO(transactionId, lastTimestamp, events)
+                QueryResponse.Found(transferObject)
+            } else {
+                QueryResponse.NotFound
+            }
         }
-    }
 
-    private suspend fun presentationExists(transactionId: TransactionId): Boolean =
-        loadPresentationById(transactionId) != null
+    private suspend fun presentationExists(transactionId: TransactionId): Boolean = loadPresentationById(transactionId) != null
 }
 
 private operator fun PresentationEventsTO.Companion.invoke(
     transactionId: TransactionId,
     lastUpdated: Instant,
     events: NonEmptyList<PresentationEvent>,
-) =
-    PresentationEventsTO(
-        transactionId = transactionId.value,
-        lastUpdated = lastUpdated.toEpochMilliseconds(),
-        events = events.map { event ->
+) = PresentationEventsTO(
+    transactionId = transactionId.value,
+    lastUpdated = lastUpdated.toEpochMilliseconds(),
+    events =
+        events.map { event ->
             require(event.transactionId == transactionId)
             toTransferObject(event)
         }.toList(),
-    )
+)
 
-private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
-    put("timestamp", event.timestamp.toEpochMilliseconds())
-    putEventNameAndActor(event)
-    when (event) {
-        is PresentationEvent.TransactionInitialized -> {
-            put("response", event.response.json())
-            put("profile", event.profile.json())
-        }
+private fun toTransferObject(event: PresentationEvent) =
+    buildJsonObject {
+        put("timestamp", event.timestamp.toEpochMilliseconds())
+        putEventNameAndActor(event)
+        when (event) {
+            is PresentationEvent.TransactionInitialized -> {
+                put("response", event.response.json())
+                put("profile", event.profile.json())
+            }
 
-        is PresentationEvent.RequestObjectRetrieved -> {
-            put("jwt", event.jwt)
-        }
+            is PresentationEvent.RequestObjectRetrieved -> {
+                put("jwt", event.jwt)
+            }
 
-        is PresentationEvent.FailedToRetrieveRequestObject -> {
-            put("cause", event.cause)
-        }
+            is PresentationEvent.FailedToRetrieveRequestObject -> {
+                put("cause", event.cause)
+            }
 
-        is PresentationEvent.WalletResponsePosted -> {
-            put("wallet_response", event.walletResponse.json())
-        }
-        is PresentationEvent.WalletFailedToPostResponse -> {
-            put("cause", event.cause.asText())
-            if (null != event.vpToken) {
-                put("vp_token", event.vpToken)
+            is PresentationEvent.WalletResponsePosted -> {
+                put("wallet_response", event.walletResponse.json())
+            }
+            is PresentationEvent.WalletFailedToPostResponse -> {
+                put("cause", event.cause.asText())
+                if (null != event.vpToken) {
+                    put("vp_token", event.vpToken)
+                }
+            }
+
+            is PresentationEvent.VerifierGotWalletResponse -> {
+                put("wallet_response", event.walletResponse.json())
+            }
+
+            is PresentationEvent.VerifierFailedToGetWalletResponse -> {
+                put("cause", event.cause)
+            }
+
+            is PresentationEvent.PresentationExpired -> {
+                // No extra information to add
+            }
+
+            is PresentationEvent.AttestationStatusCheckSuccessful -> {
+                put("status_reference", event.statusReference.json())
+            }
+
+            is PresentationEvent.AttestationStatusCheckFailed -> {
+                put("status_reference", event.statusReference.json())
+                put("cause", event.cause)
             }
         }
-
-        is PresentationEvent.VerifierGotWalletResponse -> {
-            put("wallet_response", event.walletResponse.json())
-        }
-
-        is PresentationEvent.VerifierFailedToGetWalletResponse -> {
-            put("cause", event.cause)
-        }
-
-        is PresentationEvent.PresentationExpired -> {
-            // No extra information to add
-        }
-
-        is PresentationEvent.AttestationStatusCheckSuccessful -> {
-            put("status_reference", event.statusReference.json())
-        }
-
-        is PresentationEvent.AttestationStatusCheckFailed -> {
-            put("status_reference", event.statusReference.json())
-            put("cause", event.cause)
-        }
     }
-}
 
 @Serializable
 private enum class Actor {
@@ -134,18 +132,19 @@ private enum class Actor {
 }
 
 private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
-    val (eventName, actor) = when (e) {
-        is PresentationEvent.TransactionInitialized -> "Transaction initialized" to Actor.Verifier
-        is PresentationEvent.RequestObjectRetrieved -> "Request object retrieved" to Actor.Wallet
-        is PresentationEvent.FailedToRetrieveRequestObject -> "FailedToRetrieve request" to Actor.Wallet
-        is PresentationEvent.WalletResponsePosted -> "Wallet response posted" to Actor.Wallet
-        is PresentationEvent.WalletFailedToPostResponse -> "Wallet failed to post response" to Actor.Wallet
-        is PresentationEvent.VerifierGotWalletResponse -> "Verifier got wallet response" to Actor.Verifier
-        is PresentationEvent.VerifierFailedToGetWalletResponse -> "Verifier failed to get wallet" to Actor.Verifier
-        is PresentationEvent.PresentationExpired -> "Presentation expired" to Actor.VerifierEndPoint
-        is PresentationEvent.AttestationStatusCheckSuccessful -> "Attestation status check succeeded" to Actor.VerifierEndPoint
-        is PresentationEvent.AttestationStatusCheckFailed -> "Attestation status check failed" to Actor.VerifierEndPoint
-    }
+    val (eventName, actor) =
+        when (e) {
+            is PresentationEvent.TransactionInitialized -> "Transaction initialized" to Actor.Verifier
+            is PresentationEvent.RequestObjectRetrieved -> "Request object retrieved" to Actor.Wallet
+            is PresentationEvent.FailedToRetrieveRequestObject -> "FailedToRetrieve request" to Actor.Wallet
+            is PresentationEvent.WalletResponsePosted -> "Wallet response posted" to Actor.Wallet
+            is PresentationEvent.WalletFailedToPostResponse -> "Wallet failed to post response" to Actor.Wallet
+            is PresentationEvent.VerifierGotWalletResponse -> "Verifier got wallet response" to Actor.Verifier
+            is PresentationEvent.VerifierFailedToGetWalletResponse -> "Verifier failed to get wallet" to Actor.Verifier
+            is PresentationEvent.PresentationExpired -> "Presentation expired" to Actor.VerifierEndPoint
+            is PresentationEvent.AttestationStatusCheckSuccessful -> "Attestation status check succeeded" to Actor.VerifierEndPoint
+            is PresentationEvent.AttestationStatusCheckFailed -> "Attestation status check failed" to Actor.VerifierEndPoint
+        }
     put("event", eventName)
     put("actor", actor.json())
 }

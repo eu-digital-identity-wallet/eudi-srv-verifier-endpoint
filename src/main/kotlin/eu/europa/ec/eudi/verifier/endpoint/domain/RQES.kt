@@ -19,7 +19,6 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
  * Remote Qualified Electronic Signature
  */
 object RQES {
-
     const val SIGNATURE_QUALIFIER_EU_EIDAS_QES = "eu_eidas_qes"
     const val SIGNATURE_QUALIFIER_EU_EIDAS_AES = "eu_eidas_aes"
     const val SIGNATURE_QUALIFIER_EU_EIDAS_AES_QC = "eu_eidas_aesqc"

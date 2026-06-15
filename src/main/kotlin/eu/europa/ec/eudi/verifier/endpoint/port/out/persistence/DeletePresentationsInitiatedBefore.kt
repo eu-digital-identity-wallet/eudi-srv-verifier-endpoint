@@ -20,7 +20,6 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import kotlin.time.Instant
 
 fun interface DeletePresentationsInitiatedBefore {
-
     /**
      * Deletes the [Presentations][Presentation] that were created before [a specific time][at].
      *

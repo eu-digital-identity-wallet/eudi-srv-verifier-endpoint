@@ -29,23 +29,24 @@ import kotlin.test.assertTrue
  * Test class focusing on JSON serialization for QCertCreationAcceptance.
  */
 class QCertCreationAcceptanceSerializationTest {
-
-    private val json = Json {
-        prettyPrint = true
-        ignoreUnknownKeys = true
-    }
+    private val json =
+        Json {
+            prettyPrint = true
+            ignoreUnknownKeys = true
+        }
 
     @Test
     fun `test QCertCreationAcceptance serialization and deserialization`() {
         // Create a QCertCreationAcceptance instance
-        val qCertCreationAcceptance = QCertCreationAcceptance(
-            type = QCertCreationAcceptance.TYPE,
-            credentialIds = nonEmptyListOf("credential1", "credential2"),
-            hashAlgorithms = nonEmptyListOf("SHA-256", "SHA-512"),
-            termsAndConditions = URL("https://example.com/terms"),
-            documentHash = "dGVzdEhhc2g", // "testHash" in Base64 without padding
-            hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
-        )
+        val qCertCreationAcceptance =
+            QCertCreationAcceptance(
+                type = QCertCreationAcceptance.TYPE,
+                credentialIds = nonEmptyListOf("credential1", "credential2"),
+                hashAlgorithms = nonEmptyListOf("SHA-256", "SHA-512"),
+                termsAndConditions = URL("https://example.com/terms"),
+                documentHash = "dGVzdEhhc2g", // "testHash" in Base64 without padding
+                hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
+            )
 
         // Serialize to JSON
         val jsonString = json.encodeToString(qCertCreationAcceptance)
@@ -76,14 +77,15 @@ class QCertCreationAcceptanceSerializationTest {
     @Test
     fun `test QCertCreationAcceptance JSON structure`() {
         // Create a QCertCreationAcceptance instance
-        val qCertCreationAcceptance = QCertCreationAcceptance(
-            type = QCertCreationAcceptance.TYPE,
-            credentialIds = nonEmptyListOf("credential1", "credential2"),
-            hashAlgorithms = nonEmptyListOf("SHA-256", "SHA-512"),
-            termsAndConditions = URL("https://example.com/terms"),
-            documentHash = "dGVzdEhhc2g", // "testHash" in Base64 without padding
-            hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
-        )
+        val qCertCreationAcceptance =
+            QCertCreationAcceptance(
+                type = QCertCreationAcceptance.TYPE,
+                credentialIds = nonEmptyListOf("credential1", "credential2"),
+                hashAlgorithms = nonEmptyListOf("SHA-256", "SHA-512"),
+                termsAndConditions = URL("https://example.com/terms"),
+                documentHash = "dGVzdEhhc2g", // "testHash" in Base64 without padding
+                hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
+            )
 
         // Serialize to JSON
         val jsonString = json.encodeToString(qCertCreationAcceptance)
@@ -125,16 +127,17 @@ class QCertCreationAcceptanceSerializationTest {
     @Test
     fun `test QCertCreationAcceptance deserialization from JSON string`() {
         // JSON string representing a QCertCreationAcceptance object
-        val jsonString = """
-        {
-            "type": "qcert_creation_acceptance",
-            "credential_ids": ["credential3", "credential4"],
-            "transaction_data_hashes_alg": ["SHA-384", "SHA-512"],
-            "QC_terms_conditions_uri": "https://example.org/terms-and-conditions",
-            "QC_hash": "ZXhhbXBsZUhhc2g",
-            "QC_hashAlgorithmOID": "2.16.840.1.101.3.4.2.2"
-        }
-        """.trimIndent()
+        val jsonString =
+            """
+            {
+                "type": "qcert_creation_acceptance",
+                "credential_ids": ["credential3", "credential4"],
+                "transaction_data_hashes_alg": ["SHA-384", "SHA-512"],
+                "QC_terms_conditions_uri": "https://example.org/terms-and-conditions",
+                "QC_hash": "ZXhhbXBsZUhhc2g",
+                "QC_hashAlgorithmOID": "2.16.840.1.101.3.4.2.2"
+            }
+            """.trimIndent()
 
         // Deserialize the JSON string to a QCertCreationAcceptance object
         val deserializedQCertCreationAcceptance = json.decodeFromString<QCertCreationAcceptance>(jsonString)

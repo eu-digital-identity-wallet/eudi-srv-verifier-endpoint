@@ -35,18 +35,18 @@ data class PresentationStoredEntry(
 class PresentationInMemoryRepo(
     private val presentations: ConcurrentHashMap<TransactionId, PresentationStoredEntry> = ConcurrentHashMap(),
 ) {
-
     val loadPresentationById: LoadPresentationById by lazy {
         LoadPresentationById { presentationId -> presentations[presentationId]?.presentation }
     }
 
     val loadPresentationByRequestId: LoadPresentationByRequestId by lazy {
-        fun requestId(p: Presentation) = when (p) {
-            is Presentation.Requested -> p.requestId
-            is Presentation.RequestObjectRetrieved -> p.requestId
-            is Presentation.Submitted -> p.requestId
-            is Presentation.TimedOut -> null
-        }
+        fun requestId(p: Presentation) =
+            when (p) {
+                is Presentation.Requested -> p.requestId
+                is Presentation.RequestObjectRetrieved -> p.requestId
+                is Presentation.Submitted -> p.requestId
+                is Presentation.TimedOut -> null
+            }
         LoadPresentationByRequestId { requestId ->
             presentations.values.map { it.presentation }.firstOrNull {
                 requestId(it) == requestId
@@ -71,8 +71,9 @@ class PresentationInMemoryRepo(
     val loadPresentationEvents: LoadPresentationEvents by lazy {
         LoadPresentationEvents { transactionId ->
             val p = presentations[transactionId]
-            if (p == null) null
-            else {
+            if (p == null) {
+                null
+            } else {
                 checkNotNull(p.events)
             }
         }
@@ -82,13 +83,15 @@ class PresentationInMemoryRepo(
         PublishPresentationEvent { event ->
             log(event)
             val transactionId = event.transactionId
-            val presentationAndEvent = checkNotNull(presentations[transactionId]) {
-                "Cannot publish event without a presentation"
-            }
-            val presentationEvents = when (val existingEvents = presentationAndEvent.events) {
-                null -> nonEmptyListOf(event)
-                else -> existingEvents + event
-            }
+            val presentationAndEvent =
+                checkNotNull(presentations[transactionId]) {
+                    "Cannot publish event without a presentation"
+                }
+            val presentationEvents =
+                when (val existingEvents = presentationAndEvent.events) {
+                    null -> nonEmptyListOf(event)
+                    else -> existingEvents + event
+                }
             presentations[transactionId] = presentationAndEvent.copy(events = presentationEvents)
         }
     }
@@ -104,9 +107,12 @@ class PresentationInMemoryRepo(
 }
 
 private val logger = LoggerFactory.getLogger("EVENTS")
+
 private fun log(e: PresentationEvent) {
     fun txt(s: String) = "$s - tx: ${e.transactionId.value}"
+
     fun warn(s: String) = logger.warn(txt(s))
+
     fun info(s: String) = logger.info(txt(s))
     when (e) {
         is PresentationEvent.VerifierFailedToGetWalletResponse -> warn("Verifier failed to retrieve wallet response. Cause ${e.cause}")

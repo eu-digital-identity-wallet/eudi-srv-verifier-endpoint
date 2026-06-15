@@ -37,27 +37,29 @@ internal class SwaggerUi(
     private val publicResourcesBasePath: String,
     private val webJarResourcesBasePath: String,
 ) {
-    val route: RouterFunction<ServerResponse> = coRouter {
-        (GET("") or GET("/")) {
-            log.info("Redirecting to {}", SWAGGER_UI)
-            ServerResponse.status(HttpStatus.TEMPORARY_REDIRECT)
-                .renderAndAwait("redirect:$SWAGGER_UI")
-        }
+    val route: RouterFunction<ServerResponse> =
+        coRouter {
+            (GET("") or GET("/")) {
+                log.info("Redirecting to {}", SWAGGER_UI)
+                ServerResponse.status(HttpStatus.TEMPORARY_REDIRECT)
+                    .renderAndAwait("redirect:$SWAGGER_UI")
+            }
 
-        GET(SWAGGER_UI, contentType(MediaType.ALL) and accept(MediaType.TEXT_HTML)) {
-            log.info("Displaying Swagger UI")
-            ServerResponse.ok()
-                .contentType(MediaType.TEXT_HTML)
-                .renderAndAwait(
-                    name = "swagger-ui",
-                    model = mapOf(
-                        "publicResourcesBasePath" to publicResourcesBasePath,
-                        "webJarResourcesBasePath" to webJarResourcesBasePath,
-                        "openid4VpVersion" to OpenId4VPSpec.VERSION,
-                    ),
-                )
+            GET(SWAGGER_UI, contentType(MediaType.ALL) and accept(MediaType.TEXT_HTML)) {
+                log.info("Displaying Swagger UI")
+                ServerResponse.ok()
+                    .contentType(MediaType.TEXT_HTML)
+                    .renderAndAwait(
+                        name = "swagger-ui",
+                        model =
+                            mapOf(
+                                "publicResourcesBasePath" to publicResourcesBasePath,
+                                "webJarResourcesBasePath" to webJarResourcesBasePath,
+                                "openid4VpVersion" to OpenId4VPSpec.VERSION,
+                            ),
+                    )
+            }
         }
-    }
 
     companion object {
         const val SWAGGER_UI = "/swagger-ui"

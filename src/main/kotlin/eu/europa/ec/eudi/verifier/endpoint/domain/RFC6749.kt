@@ -19,7 +19,6 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
  * [OAuth 2.0 Authorization Framework](https://www.rfc-editor.org/rfc/rfc6749.html)
  */
 object RFC6749 {
-
     const val CLIENT_ID: String = "client_id"
     const val STATE: String = "state"
     const val ERROR: String = "error"

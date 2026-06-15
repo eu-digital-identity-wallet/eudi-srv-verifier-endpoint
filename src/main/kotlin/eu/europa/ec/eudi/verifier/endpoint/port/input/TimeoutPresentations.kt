@@ -26,7 +26,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentatio
 import kotlin.time.Duration
 
 fun interface TimeoutPresentations {
-
     suspend operator fun invoke(): List<TransactionId>
 }
 
@@ -43,12 +42,13 @@ class TimeoutPresentationsLive(
     }
 
     private suspend fun timeout(presentation: Presentation): Presentation? {
-        val timeout = when (presentation) {
-            is Presentation.Requested -> presentation.timedOut(clock).getOrNull()
-            is Presentation.RequestObjectRetrieved -> presentation.timedOut(clock).getOrNull()
-            is Presentation.Submitted -> presentation.timedOut(clock).getOrNull()
-            is Presentation.TimedOut -> null
-        }
+        val timeout =
+            when (presentation) {
+                is Presentation.Requested -> presentation.timedOut(clock).getOrNull()
+                is Presentation.RequestObjectRetrieved -> presentation.timedOut(clock).getOrNull()
+                is Presentation.Submitted -> presentation.timedOut(clock).getOrNull()
+                is Presentation.TimedOut -> null
+            }
         return timeout?.also { timedOut ->
             logExpired(timedOut)
             storePresentation(timedOut)

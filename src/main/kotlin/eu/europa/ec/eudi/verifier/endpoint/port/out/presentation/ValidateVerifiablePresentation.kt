@@ -32,7 +32,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationEr
  * For all other formats, no validations are performed.
  */
 fun interface ValidateVerifiablePresentation {
-
     suspend operator fun invoke(
         presentation: Presentation.RequestObjectRetrieved,
         verifiablePresentation: VerifiablePresentation,

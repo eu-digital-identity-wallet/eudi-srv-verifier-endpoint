@@ -27,7 +27,6 @@ import kotlin.time.Duration.Companion.seconds
 
 @EnableScheduling
 class ScheduleTimeoutPresentations(private val timeoutPresentations: TimeoutPresentations) : SchedulingConfigurer {
-
     private val logger: Logger = LoggerFactory.getLogger(ScheduleTimeoutPresentations::class.java)
 
     override fun configureTasks(taskRegistrar: ScheduledTaskRegistrar) {
