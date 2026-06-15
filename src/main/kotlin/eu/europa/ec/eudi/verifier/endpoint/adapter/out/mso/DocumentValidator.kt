@@ -19,6 +19,11 @@ import COSE.AlgorithmID
 import COSE.OneKey
 import arrow.core.*
 import arrow.core.raise.*
+import arrow.core.raise.context.ensure
+import arrow.core.raise.context.ensureNotNull
+import arrow.core.raise.context.raise
+import arrow.core.raise.context.withError
+import arrow.core.raise.context.zipOrAccumulate
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
 import com.upokecenter.cbor.CBORObject
@@ -118,35 +123,35 @@ class DocumentValidator(
     private val statusListTokenValidator: StatusListTokenValidator?,
     private val isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
 ) {
+    context(_: Raise<Nel<DocumentError>>)
     suspend fun ensureValid(
         document: MDoc,
         transactionId: TransactionId? = null,
         handoverInfo: HandoverInfo? = null,
-    ): EitherNel<DocumentError, MDoc> =
-        either {
-            document.decodeMso()
+    ): MDoc {
+        document.decodeMso()
 
-            val issuerChain = ensureTrustedChain(document, isChainTrustedForAttestation)
-            zipOrAccumulate(
-                { ensureNotExpiredValidityInfo(document, clock, validityInfoShouldBe) },
-                { ensureMatchingDocumentType(document) },
-                { ensureDigestsOfIssuerSignedItems(document, issuerSignedItemsShouldBe) },
-                {
-                    ensureValidIssuerSignature(document, issuerChain)
-                        .also { log.info("IssuerSigned validation succeeded") }
-                },
-                { ensureNotRevoked(document, statusListTokenValidator, transactionId) },
-            ) { _, _, _, _, _ -> document }
-            if (null != handoverInfo) {
-                ensureValidDeviceSigned(document, handoverInfo)
-                    .also { log.info("DeviceSigned validation succeeded") }
-            }
-
-            document
+        val issuerChain = ensureTrustedChain(document, isChainTrustedForAttestation)
+        zipOrAccumulate(
+            { ensureNotExpiredValidityInfo(document, clock, validityInfoShouldBe) },
+            { ensureMatchingDocumentType(document) },
+            { ensureDigestsOfIssuerSignedItems(document, issuerSignedItemsShouldBe) },
+            {
+                ensureValidIssuerSignature(document, issuerChain)
+                    .also { log.info("IssuerSigned validation succeeded") }
+            },
+            { ensureNotRevoked(document, statusListTokenValidator, transactionId) },
+        ) { _, _, _, _, _ -> document }
+        if (null != handoverInfo) {
+            ensureValidDeviceSigned(document, handoverInfo)
+                .also { log.info("DeviceSigned validation succeeded") }
         }
+        return document
+    }
 }
 
-private fun Raise<DocumentError>.ensureNotExpiredValidityInfo(
+context(_: Raise<DocumentError>)
+private fun ensureNotExpiredValidityInfo(
     document: MDoc,
     clock: Clock,
     validityInfoShouldBe: ValidityInfoShouldBe,
@@ -170,18 +175,18 @@ private fun Raise<DocumentError>.ensureNotExpiredValidityInfo(
             validityInfo?.notExpired()
         }
 
-        ValidityInfoShouldBe.Ignored -> {
-            Unit
-        }
+        ValidityInfoShouldBe.Ignored -> {}
     }
 }
 
-private fun Raise<DocumentError.DocumentTypeNotMatching>.ensureMatchingDocumentType(document: MDoc) =
+context(_: Raise<DocumentError.DocumentTypeNotMatching>)
+private fun ensureMatchingDocumentType(document: MDoc) =
     ensure(document.verifyDocType()) {
         DocumentError.DocumentTypeNotMatching
     }
 
-private fun Raise<DocumentError>.ensureValidIssuerSignature(
+context(_: Raise<DocumentError>)
+private fun ensureValidIssuerSignature(
     document: MDoc,
     issuerChain: NonEmptyList<X509Certificate>,
 ) {
@@ -194,9 +199,8 @@ private fun Raise<DocumentError>.ensureValidIssuerSignature(
 
 private const val ISSUER_KEY_ID = "ISSUER_KEY_ID"
 
-private fun Raise<DocumentError.IssuerKeyIsNotEC>.cryptoProviderKeyInfo(
-    issuerChain: NonEmptyList<X509Certificate>,
-): COSECryptoProviderKeyInfo {
+context(_: Raise<DocumentError.IssuerKeyIsNotEC>)
+private fun cryptoProviderKeyInfo(issuerChain: NonEmptyList<X509Certificate>): COSECryptoProviderKeyInfo {
     val issuerECKey = ensureIssuerKeyIsEC(issuerChain.head)
     return COSECryptoProviderKeyInfo(
         keyID = ISSUER_KEY_ID,
@@ -208,10 +212,11 @@ private fun Raise<DocumentError.IssuerKeyIsNotEC>.cryptoProviderKeyInfo(
     )
 }
 
-private fun Raise<DocumentError.IssuerKeyIsNotEC>.ensureIssuerKeyIsEC(issuerCert: X509Certificate): ECKey =
+context(_: Raise<DocumentError.IssuerKeyIsNotEC>)
+private fun ensureIssuerKeyIsEC(issuerCert: X509Certificate): ECKey =
     try {
         ECKey.parse(issuerCert)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         raise(DocumentError.IssuerKeyIsNotEC)
     }
 
@@ -224,7 +229,8 @@ private val ECKey.coseAlgorithmID: AlgorithmID
             else -> error("Unsupported ECKey Curve '$curve'")
         }
 
-private fun Raise<DocumentError.InvalidIssuerSignedItems>.ensureDigestsOfIssuerSignedItems(
+context(_: Raise<DocumentError.InvalidIssuerSignedItems>)
+private fun ensureDigestsOfIssuerSignedItems(
     document: MDoc,
     issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe,
 ) {
@@ -247,16 +253,18 @@ private fun Raise<DocumentError.InvalidIssuerSignedItems>.ensureDigestsOfIssuerS
     }
 }
 
-private suspend fun Raise<Nel<DocumentError.X5CNotTrusted>>.ensureTrustedChain(
+context(_: Raise<Nel<DocumentError.X5CNotTrusted>>)
+private suspend fun ensureTrustedChain(
     document: MDoc,
     isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
 ): NonEmptyList<X509Certificate> =
-    either {
+    withError({ e -> e.nel() }) {
         val issuerChain = ensureContainsChain(document)
         ensureTrustedChain(document.docType.value, issuerChain, isChainTrustedForAttestation)
-    }.toEitherNel().bind()
+    }
 
-private fun Raise<DocumentError.X5CNotTrusted>.ensureContainsChain(document: MDoc): Nel<X509Certificate> {
+context(_: Raise<DocumentError.X5CNotTrusted>)
+private fun ensureContainsChain(document: MDoc): Nel<X509Certificate> {
     val issuerAuth =
         ensureNotNull(document.issuerSigned.issuerAuth) {
             DocumentError.X5CNotTrusted("Missing issuerAuth")
@@ -273,7 +281,8 @@ private fun Raise<DocumentError.X5CNotTrusted>.ensureContainsChain(document: MDo
     }
 }
 
-private suspend fun Raise<DocumentError.X5CNotTrusted>.ensureTrustedChain(
+context(_: Raise<DocumentError.X5CNotTrusted>)
+private suspend fun ensureTrustedChain(
     docType: String,
     issuerChain: NonEmptyList<X509Certificate>,
     isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
@@ -284,22 +293,25 @@ private suspend fun Raise<DocumentError.X5CNotTrusted>.ensureTrustedChain(
         null -> throw IllegalStateException("Could not find Attestation Classification for docType '$docType'")
     }
 
-private suspend fun Raise<DocumentError>.ensureNotRevoked(
+context(_: Raise<DocumentError>)
+private suspend fun ensureNotRevoked(
     document: MDoc,
     statusListTokenValidator: StatusListTokenValidator?,
     transactionId: TransactionId?,
 ) {
-    statusListTokenValidator
-        ?.validate(document, transactionId)
-        ?.mapLeft {
-            when (it) {
-                is StatusValidationError.StatusCheckException -> DocumentError.DocumentStatusCheckFailed(it)
-                is StatusValidationError.StatusNotValid -> DocumentError.DocumentHasBeenRevoked
-            }
-        }?.bind()
+    withError(transform = { statusError ->
+        when (statusError) {
+            is StatusValidationError.StatusCheckException -> DocumentError.DocumentStatusCheckFailed(statusError)
+            is StatusValidationError.StatusNotValid -> DocumentError.DocumentHasBeenRevoked
+        }
+    }) {
+        statusListTokenValidator
+            ?.validate(document, transactionId)
+    }
 }
 
-private fun Raise<Nel<DocumentError>>.ensureValidDeviceSigned(
+context(_: Raise<Nel<DocumentError>>)
+private fun ensureValidDeviceSigned(
     document: MDoc,
     handoverInfo: HandoverInfo,
 ): MDoc {
@@ -318,7 +330,8 @@ private fun Raise<Nel<DocumentError>>.ensureValidDeviceSigned(
     ) { _, _ -> document }
 }
 
-private fun Raise<DocumentError.DeviceKeyNotAuthorizedToSignItems>.ensureValidKeyAuthorizations(
+context(_: Raise<DocumentError.DeviceKeyNotAuthorizedToSignItems>)
+private fun ensureValidKeyAuthorizations(
     mso: MSO,
     nameSpaces: DeviceNameSpaces,
 ) {
@@ -351,35 +364,43 @@ private fun Raise<DocumentError.DeviceKeyNotAuthorizedToSignItems>.ensureValidKe
     }
 }
 
-private fun DeviceKeyInfo.cryptoProviderKeyInfo(): Either<DocumentError, COSECryptoProviderKeyInfo> =
-    either {
-        val publicKey =
-            catch({
-                val oneKey = OneKey(CBORObject.DecodeFromBytes(deviceKey.toCBOR()))
-                oneKey.AsPublicKey()
-            }) { raise(DocumentError.DevicePublicKeyCannotBeParsed(it)) }
+context(_: Raise<DocumentError>)
+private fun DeviceKeyInfo.cryptoProviderKeyInfo(): COSECryptoProviderKeyInfo {
+    val publicKey =
+        catch({
+            val oneKey = OneKey(CBORObject.DecodeFromBytes(deviceKey.toCBOR()))
+            oneKey.AsPublicKey()
+        }) { raise(DocumentError.DevicePublicKeyCannotBeParsed(it)) }
 
-        val ecKey =
-            catch({
-                val ecPublicKey = publicKey as ECPublicKey
-                ECKey.Builder(Curve.forECParameterSpec(ecPublicKey.params), ecPublicKey).build()
-            }) { raise(DocumentError.DeviceKeyIsNotEC(it)) }
+    val ecKey =
+        catch({
+            val ecPublicKey = publicKey as ECPublicKey
+            ECKey.Builder(Curve.forECParameterSpec(ecPublicKey.params), ecPublicKey).build()
+        }) { raise(DocumentError.DeviceKeyIsNotEC(it)) }
 
-        COSECryptoProviderKeyInfo(keyID = "DEVICE_KEY_ID", algorithmID = ecKey.coseAlgorithmID, publicKey = publicKey)
-    }
+    return COSECryptoProviderKeyInfo(
+        keyID = "DEVICE_KEY_ID",
+        algorithmID = ecKey.coseAlgorithmID,
+        publicKey = publicKey,
+    )
+}
 
-private fun Raise<DocumentError>.ensureValidDeviceAuthentication(
+context(_: Raise<DocumentError>)
+private fun ensureValidDeviceAuthentication(
     document: MDoc,
     handoverInfo: HandoverInfo,
 ) {
     val mso = checkNotNull(document.MSO)
-    val deviceKeyCryptoProviderKeyInfo = mso.deviceKeyInfo.cryptoProviderKeyInfo().bind()
-
+    val deviceKeyCryptoProviderKeyInfo = mso.deviceKeyInfo.cryptoProviderKeyInfo()
     val deviceSigned = checkNotNull(document.deviceSigned)
     val handover = handoverInfo.toHandover()
     val sessionTranscript = SessionTranscript(deviceEngagementBytes = null, eReaderKeyBytes = null, handover)
     val deviceAuthentication =
-        DeviceAuthentication(sessionTranscript.toDataElement(), mso.docType.value, deviceSigned.nameSpaces)
+        DeviceAuthentication(
+            sessionTranscript.toDataElement(),
+            docType = mso.docType.value,
+            deviceNameSpaces = deviceSigned.nameSpaces,
+        )
 
     ensure(
         document.verifyDeviceSignature(
@@ -539,7 +560,11 @@ private data class Handover(
 
 private fun Handover.toDataElement(): ListElement = listOf(identifier.toDataElement(), handoverInfoHash.toDataElement()).toDataElement()
 
-private fun HandoverInfo.toHandover(sha256: (ByteArray) -> ByteArray = { MessageDigest.getInstance("SHA-256").digest(it) }): Handover {
+private fun HandoverInfo.toHandover(
+    sha256: (ByteArray) -> ByteArray = {
+        MessageDigest.getInstance("SHA-256").digest(it)
+    },
+): Handover {
     val (identifier, handoverInfoBytes) =
         when (this) {
             is HandoverInfo.OpenID4VPHandoverInfo -> {

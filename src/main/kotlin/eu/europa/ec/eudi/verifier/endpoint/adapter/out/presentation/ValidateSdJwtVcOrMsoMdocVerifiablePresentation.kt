@@ -15,13 +15,12 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation
 
-import arrow.core.Either
 import arrow.core.NonEmptyList
-import arrow.core.getOrElse
 import arrow.core.raise.Raise
-import arrow.core.raise.either
-import arrow.core.raise.ensure
-import arrow.core.raise.ensureNotNull
+import arrow.core.raise.context.ensure
+import arrow.core.raise.context.ensureNotNull
+import arrow.core.raise.context.raise
+import arrow.core.raise.context.withError
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
@@ -55,44 +54,42 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
 ) : ValidateVerifiablePresentation {
     private val vpFormatsSupported = config.clientMetaData.vpFormatsSupported
 
+    context(_: Raise<WalletResponseValidationError>)
     override suspend fun invoke(
         presentation: Presentation.RequestObjectRetrieved,
         verifiablePresentation: VerifiablePresentation,
         transactionData: NonEmptyList<TransactionData>?,
-    ): Either<WalletResponseValidationError, VerifiablePresentation> =
-        either {
-            when (verifiablePresentation.format) {
-                Format.SdJwtVc -> {
-                    val vpFormatSupported = checkNotNull(vpFormatsSupported.sdJwtVc)
-                    val validator = sdJwtVcValidatorFactory(presentation.issuerChain)
-                    validator
-                        .validateSdJwtVcVerifiablePresentation(
-                            vpFormatSupported,
-                            verifiablePresentation,
-                            presentation.nonce,
-                            transactionData,
-                            presentation.id,
-                            presentation.profile,
-                        ).bind()
-                }
+    ): VerifiablePresentation =
+        when (verifiablePresentation.format) {
+            Format.SdJwtVc -> {
+                val vpFormatSupported = checkNotNull(vpFormatsSupported.sdJwtVc)
+                val validator = sdJwtVcValidatorFactory(presentation.issuerChain)
+                validator.validateSdJwtVcVerifiablePresentation(
+                    vpFormatSupported,
+                    verifiablePresentation,
+                    presentation.nonce,
+                    transactionData,
+                    presentation.id,
+                    presentation.profile,
+                )
+            }
 
-                Format.MsoMdoc -> {
-                    val vpFormatSupported = checkNotNull(vpFormatsSupported.msoMdoc)
-                    val validator = deviceResponseValidatorFactory(presentation.issuerChain)
-                    validator
-                        .validateMsoMdocVerifiablePresentation(
-                            presentation,
-                            verifiablePresentation,
-                            vpFormatSupported,
-                        ).bind()
-                }
+            Format.MsoMdoc -> {
+                val vpFormatSupported = checkNotNull(vpFormatsSupported.msoMdoc)
+                val validator = deviceResponseValidatorFactory(presentation.issuerChain)
+                validator.validateMsoMdocVerifiablePresentation(
+                    presentation,
+                    verifiablePresentation,
+                    vpFormatSupported,
+                )
+            }
 
-                else -> {
-                    throw IllegalArgumentException("unsupported format '${verifiablePresentation.format}'")
-                }
+            else -> {
+                throw IllegalArgumentException("unsupported format '${verifiablePresentation.format}'")
             }
         }
 
+    context(_: Raise<WalletResponseValidationError>)
     private suspend fun SdJwtVcValidator.validateSdJwtVcVerifiablePresentation(
         vpFormatSupported: VpFormatsSupported.SdJwtVc,
         verifiablePresentation: VerifiablePresentation,
@@ -100,15 +97,15 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         transactionData: NonEmptyList<TransactionData>?,
         transactionId: TransactionId,
         profile: Profile,
-    ): Either<WalletResponseValidationError, VerifiablePresentation> =
-        either {
-            fun invalidVpToken(errors: NonEmptyList<SdJwtVcValidationError>): WalletResponseValidationError {
-                val validationFailures = jsonSupport.encodeToString(errors.toJson())
-                log.warn("Failed to validate SD-JWT VC: $validationFailures")
-                return WalletResponseValidationError.InvalidVpToken(validationFailures)
-            }
+    ): VerifiablePresentation {
+        fun invalidVpToken(errors: NonEmptyList<SdJwtVcValidationError>): WalletResponseValidationError {
+            val validationFailures = jsonSupport.encodeToString(errors.toJson())
+            log.warn("Failed to validate SD-JWT VC: $validationFailures")
+            return WalletResponseValidationError.InvalidVpToken(validationFailures)
+        }
 
-            val (sdJwt, kbJwt) =
+        val (sdJwt, kbJwt) =
+            withError({ errors -> invalidVpToken(errors) }) {
                 when (verifiablePresentation) {
                     is VerifiablePresentation.Str -> {
                         validate(
@@ -125,184 +122,194 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                             transactionId = transactionId,
                         )
                     }
-                }.mapLeft { errors -> invalidVpToken(errors) }.bind()
-
-            val status = sdJwt.status()
-            if (Profile.HAIP == profile && null != status) {
-                ensure(TokenStatusListSpec.STATUS_LIST in status) {
-                    WalletResponseValidationError.HAIPValidationError.SdJwtVcMustUseTokenStatusList
                 }
             }
 
-            // Validate that the signing algorithm of sd-jwt-vc matches the algorithm specified in the presentation query
-            if (null != vpFormatSupported.sdJwtAlgorithms) {
-                ensure(sdJwt.jwt.header.algorithm in vpFormatSupported.sdJwtAlgorithms) {
-                    WalletResponseValidationError.InvalidVpToken("SD-JWT not signed with a supported algorithm")
-                }
+        val status = sdJwt.status()
+        if (Profile.HAIP == profile && null != status) {
+            ensure(TokenStatusListSpec.STATUS_LIST in status) {
+                WalletResponseValidationError.HAIPValidationError.SdJwtVcMustUseTokenStatusList
             }
-
-            // Validate that the signing algorithm of key binding JWT matches the algorithm specified in the presentation query
-            if (null != vpFormatSupported.kbJwtAlgorithms) {
-                ensure(kbJwt.header.algorithm in vpFormatSupported.kbJwtAlgorithms) {
-                    WalletResponseValidationError.InvalidVpToken("Keybinding JWT not signed with a supported algorithm")
-                }
-            }
-
-            if (null != transactionData) {
-                ensureValidTransactionDataHashes(kbJwt, transactionData, config.transactionDataHashAlgorithm) { error ->
-                    WalletResponseValidationError.InvalidVpToken(error)
-                }
-            }
-
-            verifiablePresentation
         }
 
+        // Validate that the signing algorithm of sd-jwt-vc matches the algorithm specified in the presentation query
+        if (null != vpFormatSupported.sdJwtAlgorithms) {
+            ensure(sdJwt.jwt.header.algorithm in vpFormatSupported.sdJwtAlgorithms) {
+                WalletResponseValidationError.InvalidVpToken("SD-JWT not signed with a supported algorithm")
+            }
+        }
+
+        // Validate that the signing algorithm of key binding JWT matches the algorithm specified in the presentation query
+        if (null != vpFormatSupported.kbJwtAlgorithms) {
+            ensure(kbJwt.header.algorithm in vpFormatSupported.kbJwtAlgorithms) {
+                WalletResponseValidationError.InvalidVpToken("Keybinding JWT not signed with a supported algorithm")
+            }
+        }
+
+        if (null != transactionData) {
+            ensureValidTransactionDataHashes(kbJwt, transactionData, config.transactionDataHashAlgorithm) { error ->
+                WalletResponseValidationError.InvalidVpToken(error)
+            }
+        }
+
+        return verifiablePresentation
+    }
+
+    context(_: Raise<WalletResponseValidationError>)
     private suspend fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
         presentation: Presentation.RequestObjectRetrieved,
         verifiablePresentation: VerifiablePresentation,
         vpFormatSupported: VpFormatsSupported.MsoMdoc,
-    ): Either<WalletResponseValidationError, VerifiablePresentation.Str> =
-        either {
-            ensure(verifiablePresentation is VerifiablePresentation.Str) {
-                WalletResponseValidationError.InvalidVpToken("Mso MDoc VC must be a string.")
-            }
+    ): VerifiablePresentation.Str {
+        ensure(verifiablePresentation is VerifiablePresentation.Str) {
+            WalletResponseValidationError.InvalidVpToken("Mso MDoc VC must be a string.")
+        }
 
-            val handoverInfo = HandoverInfo(presentation, config)
-            val documents =
+        val handoverInfo = HandoverInfo(presentation, config)
+        val documents =
+            withError({ error ->
+                log.warn("Failed to validate MsoMdoc VC. Reason: '$error'")
+                error.toWalletResponseValidationError()
+            }) {
                 ensureValid(verifiablePresentation.value, presentation.id, handoverInfo)
-                    .mapLeft { error ->
-                        log.warn("Failed to validate MsoMdoc VC. Reason: '$error'")
-                        error.toWalletResponseValidationError()
-                    }.bind()
-
-            if (Profile.HAIP == presentation.profile) {
-                ensure(1 == documents.size) {
-                    WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc
-                }
             }
 
-            documents.forEach { document ->
-                val issuerSignature =
-                    ensureNotNull(document.issuerSigned.issuerAuth) {
-                        WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
-                    }
-
-                if (null != vpFormatSupported.issuerAuthAlgorithms) {
-                    ensure(issuerSignature.algorithm in vpFormatSupported.issuerAuthAlgorithms.map { it.value }) {
-                        WalletResponseValidationError.InvalidVpToken("IssuerSigned not signed with a supported algorithm")
-                    }
-                }
-
-                val deviceSignature =
-                    ensureNotNull(document.deviceSigned?.deviceAuth?.deviceSignature) {
-                        WalletResponseValidationError.InvalidVpToken("DeviceResponse contains MSO MDoc documents without Device signature")
-                    }
-
-                if (null != vpFormatSupported.deviceAuthAlgorithms) {
-                    ensure(deviceSignature.algorithm in vpFormatSupported.deviceAuthAlgorithms.map { it.value }) {
-                        WalletResponseValidationError.InvalidVpToken("DeviceSigned not signed with a supported algorithm")
-                    }
-                }
-
-                val issuerSignaturePayload = checkNotNull(issuerSignature.decodePayloadAs<MapElement>())
-                val status = issuerSignaturePayload.value[MapKey(TokenStatusListSpec.STATUS)]
-                if (Profile.HAIP == presentation.profile && status is MapElement) {
-                    val msoRevocationMechanisms = setOf("identifier_list", TokenStatusListSpec.STATUS_LIST)
-                    ensure(status.value.keys.all { MapKeyType.string == it.type && it.str in msoRevocationMechanisms }) {
-                        WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism(
-                            used =
-                                status.value.keys
-                                    .map { it.toString() }
-                                    .toSet(),
-                            allowed = msoRevocationMechanisms,
-                        )
-                    }
-                }
-            }
-            verifiablePresentation
-        }
-}
-
-private fun JWTClaimsSet.stringClaim(claim: String): Either<Throwable, String> =
-    Either.catch {
-        getStringClaim(claim)
-    }
-
-private fun JWTClaimsSet.stringListClaim(claim: String): Either<Throwable, List<String>> =
-    Either.catch {
-        getStringListClaim(claim)
-    }
-
-private fun <Error> Raise<Error>.ensureValidTransactionDataHashes(
-    keyBindingJwt: SignedJWT,
-    transactionData: NonEmptyList<TransactionData>,
-    hashAlgorithm: HashAlgorithm,
-    convert: (String) -> Error,
-) {
-    val actualHashAlgorithm =
-        keyBindingJwt.jwtClaimsSet
-            .stringClaim(OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS)
-            .getOrElse {
-                raise(convert(it.message ?: "'${OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS}' claim is not a string"))
-            }
-    ensure(hashAlgorithm.ianaName == actualHashAlgorithm) {
-        convert("'${OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS}' must be '${hashAlgorithm.ianaName}'")
-    }
-
-    val expectedHashes =
-        transactionData.map {
-            val hash = hash(it.base64Url, hashAlgorithm)
-            base64UrlNoPadding.encode(hash)
-        }
-    val actualHashes =
-        keyBindingJwt.jwtClaimsSet
-            .stringListClaim(OpenId4VPSpec.TRANSACTION_DATA_HASHES)
-            .getOrElse {
-                raise(convert(it.message ?: "'${OpenId4VPSpec.TRANSACTION_DATA_HASHES}' claim is not a string list"))
-            }
-    ensure(actualHashes.isNotEmpty() && actualHashes.size <= expectedHashes.size && expectedHashes.containsAll(actualHashes)) {
-        convert("hashes of transaction data do not match the expected values")
-    }
-}
-
-private fun DeviceResponseError.toWalletResponseValidationError(): WalletResponseValidationError.InvalidVpToken {
-    val error =
-        when (this) {
-            DeviceResponseError.CannotBeDecoded -> {
-                "DeviceResponse cannot be decoded"
-            }
-
-            is DeviceResponseError.InvalidDocuments -> {
-                val deviceResponseErrors =
-                    invalidDocuments.joinToString { invalidDocument ->
-                        val documentErrors = invalidDocument.errors.joinToString()
-                        "Document at index '${invalidDocument.index}' with docType '${invalidDocument.documentType}' " +
-                            "contains the following errors: '$documentErrors'"
-                    }
-
-                "DeviceResponse contains invalid documents: $deviceResponseErrors"
-            }
-
-            is DeviceResponseError.NotOkDeviceResponseStatus -> {
-                "Unexpected DeviceResponse status: '$status'"
+        if (Profile.HAIP == presentation.profile) {
+            ensure(1 == documents.size) {
+                WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc
             }
         }
 
-    return WalletResponseValidationError.InvalidVpToken(error)
-}
+        documents.forEach { document ->
+            val issuerSignature =
+                ensureNotNull(document.issuerSigned.issuerAuth) {
+                    WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
+                }
 
-private fun Collection<SdJwtVcValidationError>.toJson(): JsonArray =
-    JsonArray(
-        map { error ->
-            buildJsonObject {
-                put("error", error.reason.name)
-                val (description, cause) =
-                    when (val cause = error.cause) {
-                        is SdJwtVerificationException -> cause.description to null
-                        else -> "an unexpected error occurred${cause.message?.let { ": $it" } ?: ""}" to cause
-                    }
-                put("description", description)
-                cause?.message?.let { put("cause", it) }
+            if (null != vpFormatSupported.issuerAuthAlgorithms) {
+                ensure(issuerSignature.algorithm in vpFormatSupported.issuerAuthAlgorithms.map { it.value }) {
+                    WalletResponseValidationError.InvalidVpToken("IssuerSigned not signed with a supported algorithm")
+                }
             }
-        },
-    )
+
+            val deviceSignature =
+                ensureNotNull(document.deviceSigned?.deviceAuth?.deviceSignature) {
+                    WalletResponseValidationError.InvalidVpToken("DeviceResponse contains MSO MDoc documents without Device signature")
+                }
+
+            if (null != vpFormatSupported.deviceAuthAlgorithms) {
+                ensure(deviceSignature.algorithm in vpFormatSupported.deviceAuthAlgorithms.map { it.value }) {
+                    WalletResponseValidationError.InvalidVpToken("DeviceSigned not signed with a supported algorithm")
+                }
+            }
+
+            val issuerSignaturePayload = checkNotNull(issuerSignature.decodePayloadAs<MapElement>())
+            val status = issuerSignaturePayload.value[MapKey(TokenStatusListSpec.STATUS)]
+            if (Profile.HAIP == presentation.profile && status is MapElement) {
+                val msoRevocationMechanisms = setOf("identifier_list", TokenStatusListSpec.STATUS_LIST)
+                ensure(status.value.keys.all { MapKeyType.string == it.type && it.str in msoRevocationMechanisms }) {
+                    WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism(
+                        used =
+                            status.value.keys
+                                .map { it.toString() }
+                                .toSet(),
+                        allowed = msoRevocationMechanisms,
+                    )
+                }
+            }
+        }
+        return verifiablePresentation
+    }
+
+    private fun JWTClaimsSet.stringClaim(claim: String): Result<String> = runCatching { getStringClaim(claim) }
+
+    private fun JWTClaimsSet.stringListClaim(claim: String): Result<List<String>> = runCatching { getStringListClaim(claim) }
+
+    context(_: Raise<Error>)
+    private fun <Error> ensureValidTransactionDataHashes(
+        keyBindingJwt: SignedJWT,
+        transactionData: NonEmptyList<TransactionData>,
+        hashAlgorithm: HashAlgorithm,
+        convert: (String) -> Error,
+    ) {
+        val actualHashAlgorithm =
+            keyBindingJwt.jwtClaimsSet
+                .stringClaim(OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS)
+                .getOrElse {
+                    raise(
+                        convert(
+                            it.message ?: "'${OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS}' claim is not a string",
+                        ),
+                    )
+                }
+        ensure(hashAlgorithm.ianaName == actualHashAlgorithm) {
+            convert("'${OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS}' must be '${hashAlgorithm.ianaName}'")
+        }
+
+        val expectedHashes =
+            transactionData.map {
+                val hash = hash(it.base64Url, hashAlgorithm)
+                base64UrlNoPadding.encode(hash)
+            }
+        val actualHashes =
+            keyBindingJwt.jwtClaimsSet
+                .stringListClaim(OpenId4VPSpec.TRANSACTION_DATA_HASHES)
+                .getOrElse {
+                    raise(
+                        convert(
+                            it.message ?: "'${OpenId4VPSpec.TRANSACTION_DATA_HASHES}' claim is not a string list",
+                        ),
+                    )
+                }
+        ensure(
+            actualHashes.isNotEmpty() && actualHashes.size <= expectedHashes.size &&
+                expectedHashes.containsAll(
+                    actualHashes,
+                ),
+        ) {
+            convert("hashes of transaction data do not match the expected values")
+        }
+    }
+
+    private fun DeviceResponseError.toWalletResponseValidationError(): WalletResponseValidationError.InvalidVpToken {
+        val error =
+            when (this) {
+                DeviceResponseError.CannotBeDecoded -> {
+                    "DeviceResponse cannot be decoded"
+                }
+
+                is DeviceResponseError.InvalidDocuments -> {
+                    val deviceResponseErrors =
+                        invalidDocuments.joinToString { invalidDocument ->
+                            val documentErrors = invalidDocument.errors.joinToString()
+                            "Document at index '${invalidDocument.index}' with docType '${invalidDocument.documentType}' " +
+                                "contains the following errors: '$documentErrors'"
+                        }
+
+                    "DeviceResponse contains invalid documents: $deviceResponseErrors"
+                }
+
+                is DeviceResponseError.NotOkDeviceResponseStatus -> {
+                    "Unexpected DeviceResponse status: '$status'"
+                }
+            }
+
+        return WalletResponseValidationError.InvalidVpToken(error)
+    }
+
+    private fun Collection<SdJwtVcValidationError>.toJson(): JsonArray =
+        JsonArray(
+            map { error ->
+                buildJsonObject {
+                    put("error", error.reason.name)
+                    val (description, cause) =
+                        when (val cause = error.cause) {
+                            is SdJwtVerificationException -> cause.description to null
+                            else -> "an unexpected error occurred${cause.message?.let { ": $it" } ?: ""}" to cause
+                        }
+                    put("description", description)
+                    cause?.message?.let { put("cause", it) }
+                }
+            },
+        )
+}

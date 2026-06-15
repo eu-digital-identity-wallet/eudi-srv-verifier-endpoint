@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.getOrElse
+import arrow.core.raise.either
 import cbor.Cbor
 import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications
 import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationIdentifierPredicate
@@ -83,7 +84,7 @@ class ExamplesTest {
                     statusListTokenValidator = null,
                 )
             val document = MDoc.fromCBORHex(waltIdExample)
-            documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
+            either { documentValidator.ensureValid(document) }.getOrElse { fail(it.toString()) }
         }
 
     @OptIn(ExperimentalEncodingApi::class, ExperimentalSerializationApi::class)
@@ -114,7 +115,7 @@ class ExamplesTest {
                         ),
                     statusListTokenValidator = null,
                 )
-            documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
+            either { documentValidator.ensureValid(document) }.getOrElse { fail(it.toString()) }
         }
 }
 

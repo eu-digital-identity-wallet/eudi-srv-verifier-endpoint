@@ -15,9 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.presentation
 
-import arrow.core.Either
 import arrow.core.NonEmptyList
-import arrow.core.raise.either
+import arrow.core.raise.Raise
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionData
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifiablePresentation
@@ -32,14 +31,15 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationEr
  * For all other formats, no validations are performed.
  */
 fun interface ValidateVerifiablePresentation {
+    context(_: Raise<WalletResponseValidationError>)
     suspend operator fun invoke(
         presentation: Presentation.RequestObjectRetrieved,
         verifiablePresentation: VerifiablePresentation,
         transactionData: NonEmptyList<TransactionData>?,
-    ): Either<WalletResponseValidationError, VerifiablePresentation>
+    ): VerifiablePresentation
 
     companion object {
         val NoOp: ValidateVerifiablePresentation =
-            ValidateVerifiablePresentation { _, verifiablePresentation, _ -> either { verifiablePresentation } }
+            ValidateVerifiablePresentation { _, verifiablePresentation, _ -> verifiablePresentation }
     }
 }

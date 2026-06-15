@@ -16,6 +16,9 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.*
+import arrow.core.raise.Raise
+import arrow.core.raise.context.raise
+import arrow.core.raise.context.withError
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
@@ -58,9 +61,9 @@ internal data class SdJwtVcValidationErrorDetailsTO(
     val cause: Throwable?,
 )
 
-internal fun SdJwtVcValidationResult.Invalid.toJson(): JsonArray =
+internal fun NonEmptyList<SdJwtVcValidationErrorDetailsTO>.toJson(): JsonArray =
     buildJsonArray {
-        errors.forEach { error ->
+        forEach { error ->
             addJsonObject {
                 put("error", error.reason.name)
                 put("description", error.description)
@@ -69,22 +72,6 @@ internal fun SdJwtVcValidationResult.Invalid.toJson(): JsonArray =
         }
     }
 
-internal sealed interface SdJwtVcValidationResult {
-    /**
-     * Successfully validated an SD-JWT Verifiable Credential.
-     */
-    data class Valid(
-        val payload: SdJwtAndKbJwt<SignedJWT>,
-    ) : SdJwtVcValidationResult
-
-    /**
-     * SD-JWT Verifiable Credential validation failed.
-     */
-    data class Invalid(
-        val errors: NonEmptyList<SdJwtVcValidationErrorDetailsTO>,
-    ) : SdJwtVcValidationResult
-}
-
 /**
  * Validates an SD-JWT Verifiable Credential.
  */
@@ -92,44 +79,44 @@ internal class ValidateSdJwtVc(
     private val sdJwtVcValidatorFactory: (NonEmptyList<X509Certificate>?) -> SdJwtVcValidator,
     private val parsePemEncodedX509Certificates: ParsePemEncodedX509Certificates,
 ) {
+    context(_: Raise<NonEmptyList<SdJwtVcValidationErrorDetailsTO>>)
     suspend operator fun invoke(
         unverified: JsonObject,
         nonce: Nonce,
         issuerChain: String?,
-    ): SdJwtVcValidationResult = validate(unverified.left(), nonce, issuerChain)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.left(), nonce, issuerChain)
 
+    context(_: Raise<NonEmptyList<SdJwtVcValidationErrorDetailsTO>>)
     suspend operator fun invoke(
         unverified: String,
         nonce: Nonce,
         issuerChain: String?,
-    ): SdJwtVcValidationResult = validate(unverified.right(), nonce, issuerChain)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.right(), nonce, issuerChain)
 
+    context(_: Raise<NonEmptyList<SdJwtVcValidationErrorDetailsTO>>)
     private suspend fun validate(
         unverified: Either<JsonObject, String>,
         nonce: Nonce,
         issuerChain: String?,
-    ): SdJwtVcValidationResult {
-        val sdJwtVcValidator =
-            sdJwtVcValidator(issuerChain)
-                .getOrElse {
-                    return SdJwtVcValidationResult.Invalid(nonEmptyListOf(it.toInvalidIssuersChainSdJwtVcValidationError()))
-                }
+    ): SdJwtAndKbJwt<SignedJWT> {
+        val sdJwtVcValidator = sdJwtVcValidator(issuerChain)
 
-        return unverified
-            .fold(
+        return withError({ errors -> errors.map { it.toSdJwtVcValidationError() } }) {
+            unverified.fold(
                 ifLeft = { sdJwtVcValidator.validate(it, nonce, null) },
                 ifRight = { sdJwtVcValidator.validate(it, nonce, null) },
-            ).fold(
-                ifLeft = { errors -> SdJwtVcValidationResult.Invalid(errors.map { it.toSdJwtVcValidationError() }) },
-                ifRight = { SdJwtVcValidationResult.Valid(it) },
             )
+        }
     }
 
-    private fun sdJwtVcValidator(issuerChain: String?): Either<Throwable, SdJwtVcValidator> =
-        Either.catch {
+    context(_: Raise<NonEmptyList<SdJwtVcValidationErrorDetailsTO>>)
+    private fun sdJwtVcValidator(issuerChain: String?): SdJwtVcValidator =
+        try {
             sdJwtVcValidatorFactory(
                 issuerChain?.let { parsePemEncodedX509Certificates(it).getOrThrow() },
             )
+        } catch (e: Exception) {
+            raise(e.toInvalidIssuersChainSdJwtVcValidationError().nel())
         }
 }
 

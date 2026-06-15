@@ -15,12 +15,13 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
-import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.mapOrAccumulate
 import arrow.core.raise.Raise
-import arrow.core.raise.either
-import arrow.core.raise.ensure
+import arrow.core.raise.context.bind
+import arrow.core.raise.context.ensure
+import arrow.core.raise.context.raise
+import arrow.core.raise.context.withError
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import id.walt.mdoc.dataretrieval.DeviceResponse
 import id.walt.mdoc.dataretrieval.DeviceResponseStatus
@@ -66,43 +67,45 @@ class DeviceResponseValidator(
      * Validates the given verifier presentation
      * It could a vp_token or an element of an array vp_token
      */
+    context(_: Raise<DeviceResponseError>)
     suspend fun ensureValid(
         vp: String,
         transactionId: TransactionId? = null,
         handoverInfo: HandoverInfo? = null,
-    ): Either<DeviceResponseError, List<MDoc>> =
-        either {
-            val deviceResponse = ensureCanBeDecoded(vp)
-            val validDocuments = ensureValid(deviceResponse, transactionId, handoverInfo).bind()
-            validDocuments
-        }
+    ): List<MDoc> {
+        val deviceResponse = ensureCanBeDecoded(vp)
+        return ensureValid(deviceResponse, transactionId, handoverInfo)
+    }
 
+    context(_: Raise<DeviceResponseError>)
     suspend fun ensureValid(
         deviceResponse: DeviceResponse,
         transactionId: TransactionId?,
         handoverInfo: HandoverInfo?,
-    ): Either<DeviceResponseError, List<MDoc>> =
-        either {
-            ensureStatusIsOk(deviceResponse)
-            ensureValidDocuments(deviceResponse, documentValidator, transactionId, handoverInfo)
-        }
+    ): List<MDoc> {
+        ensureStatusIsOk(deviceResponse)
+        return ensureValidDocuments(deviceResponse, documentValidator, transactionId, handoverInfo)
+    }
 }
 
-private fun Raise<DeviceResponseError.CannotBeDecoded>.ensureCanBeDecoded(vp: String): DeviceResponse =
+context(_: Raise<DeviceResponseError.CannotBeDecoded>)
+private fun ensureCanBeDecoded(vp: String): DeviceResponse =
     try {
         DeviceResponse.decodeFromCborBase64Url(vp)
-    } catch (t: Throwable) {
+    } catch (_: Throwable) {
         raise(DeviceResponseError.CannotBeDecoded)
     }
 
-private fun Raise<DeviceResponseError.NotOkDeviceResponseStatus>.ensureStatusIsOk(deviceResponse: DeviceResponse) {
+context(_: Raise<DeviceResponseError.NotOkDeviceResponseStatus>)
+private fun ensureStatusIsOk(deviceResponse: DeviceResponse) {
     val status = deviceResponse.status
     ensure(DeviceResponseStatus.OK.status.toInt() == status.value.toInt()) {
         DeviceResponseError.NotOkDeviceResponseStatus(status.value)
     }
 }
 
-private suspend fun Raise<DeviceResponseError.InvalidDocuments>.ensureValidDocuments(
+context(_: Raise<DeviceResponseError.InvalidDocuments>)
+private suspend fun ensureValidDocuments(
     deviceResponse: DeviceResponse,
     documentValidator: DocumentValidator,
     transactionId: TransactionId?,
@@ -111,9 +114,9 @@ private suspend fun Raise<DeviceResponseError.InvalidDocuments>.ensureValidDocum
     deviceResponse.documents
         .withIndex()
         .mapOrAccumulate { (index, document) ->
-            documentValidator
-                .ensureValid(document, transactionId, handoverInfo)
-                .mapLeft { documentErrors -> InvalidDocument(index, document.docType.value, documentErrors) }
-                .bind()
+            withError({ documentErrors -> InvalidDocument(index, document.docType.value, documentErrors) }) {
+                documentValidator
+                    .ensureValid(document, transactionId, handoverInfo)
+            }
         }.mapLeft(DeviceResponseError::InvalidDocuments)
         .bind()

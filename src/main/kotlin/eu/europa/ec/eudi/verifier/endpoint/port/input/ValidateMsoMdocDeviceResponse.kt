@@ -15,10 +15,10 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
-import arrow.core.Either
 import arrow.core.NonEmptyList
-import arrow.core.getOrElse
-import arrow.core.raise.either
+import arrow.core.raise.Raise
+import arrow.core.raise.context.raise
+import arrow.core.raise.context.withError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError
@@ -117,19 +117,6 @@ internal data class DocumentTO(
 )
 
 /**
- * The outcome of trying to validate a DeviceResponse.
- */
-internal sealed interface DeviceResponseValidationResult {
-    data class Valid(
-        val documents: JsonArray,
-    ) : DeviceResponseValidationResult
-
-    data class Invalid(
-        val error: ValidationErrorTO,
-    ) : DeviceResponseValidationResult
-}
-
-/**
  * Tries to validate a value as an MSO MDoc DeviceResponse.
  */
 internal class ValidateMsoMdocDeviceResponse(
@@ -137,36 +124,32 @@ internal class ValidateMsoMdocDeviceResponse(
     private val parsePemEncodedX509Certificates: ParsePemEncodedX509Certificates,
     private val deviceResponseValidatorFactory: (NonEmptyList<X509Certificate>?) -> DeviceResponseValidator,
 ) {
+    context(_: Raise<ValidationErrorTO>)
     suspend operator fun invoke(
         deviceResponse: String,
         issuerChain: String?,
-    ): DeviceResponseValidationResult =
-        either {
-            val validator =
-                deviceResponseValidator(issuerChain)
-                    .getOrElse {
-                        return DeviceResponseValidationResult.Invalid(ValidationErrorTO.invalidIssuerChain())
-                    }
+    ): JsonArray {
+        val validator =
+            deviceResponseValidator(issuerChain)
 
-            val documents =
+        val documents =
+            withError({ error -> error.toValidationFailureTO() }) {
                 validator
                     .ensureValid(deviceResponse)
-                    .mapLeft { it.toValidationFailureTO() }
-                    .bind()
                     .map { Json.encodeToJsonElement(it.toDocumentTO(clock)) }
-                    .let { JsonArray(it) }
+            }
 
-            documents
-        }.fold(
-            ifLeft = { DeviceResponseValidationResult.Invalid(it) },
-            ifRight = { DeviceResponseValidationResult.Valid(it) },
-        )
+        return JsonArray(documents)
+    }
 
-    private fun deviceResponseValidator(issuerChainInPem: String?): Either<Throwable, DeviceResponseValidator> =
-        Either.catch {
+    context(_: Raise<ValidationErrorTO>)
+    private fun deviceResponseValidator(issuerChainInPem: String?): DeviceResponseValidator =
+        try {
             deviceResponseValidatorFactory(
                 issuerChainInPem?.let { parsePemEncodedX509Certificates(it).getOrThrow() },
             )
+        } catch (_: Exception) {
+            raise(ValidationErrorTO.invalidIssuerChain())
         }
 }
 

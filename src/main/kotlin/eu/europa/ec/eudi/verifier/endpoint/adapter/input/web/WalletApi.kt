@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import arrow.core.raise.effect
+import arrow.core.raise.fold
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -97,10 +99,10 @@ class WalletApi(
         val invocationMethod = req.invocationMethod()
 
         logger.info("Handling GetRequestObject for ${requestId.value} ...")
-        val result = retrieveRequestObject(requestId, invocationMethod)
+        val result = effect { retrieveRequestObject(requestId, invocationMethod) }
         return result.fold(
-            ifRight = { requestObjectFound(it) },
-            ifLeft = {
+            transform = { requestObjectFound(it) },
+            recover = {
                 val status =
                     when (it) {
                         RetrieveRequestObjectError.PresentationNotFound -> HttpStatus.NOT_FOUND
@@ -117,30 +119,35 @@ class WalletApi(
      * and the verifiableCredentials
      */
     private suspend fun handlePostWalletResponse(req: ServerRequest): ServerResponse =
-        try {
+        effect {
             logger.info("Handling PostWalletResponse ...")
             val requestId = req.requestId()
             val walletResponse = req.awaitFormData().walletResponse()
-            postWalletResponse(requestId, walletResponse).fold(
-                ifRight = { response ->
-                    logger.info("PostWalletResponse processed")
-                    if (response == null) {
-                        logger.info("Verifier UI will poll for Wallet Response")
-                        ok().json().bodyValueAndAwait(JsonObject(emptyMap()))
-                    } else {
-                        logger.info("Wallet must redirect to ${response.redirectUri}")
-                        ok().json().bodyValueAndAwait(response)
-                    }
-                },
-                ifLeft = { error ->
-                    logger.error("$error while handling post of wallet response ")
-                    badRequest().json().bodyValueAndAwait(error.toJson())
-                },
-            )
-        } catch (t: SerializationException) {
-            logger.error("While handling post of wallet response failed to decode JSON", t)
-            badRequest().buildAndAwait()
-        }
+            postWalletResponse(requestId, walletResponse)
+        }.fold(
+            transform = { response ->
+                logger.info("PostWalletResponse processed")
+                if (response == null) {
+                    logger.info("Verifier UI will poll for Wallet Response")
+                    ok().json().bodyValueAndAwait(JsonObject(emptyMap()))
+                } else {
+                    logger.info("Wallet must redirect to ${response.redirectUri}")
+                    ok().json().bodyValueAndAwait(response)
+                }
+            },
+            recover = { error ->
+                logger.error("$error while handling post of wallet response ")
+                badRequest().json().bodyValueAndAwait(error.toJson())
+            },
+            catch = { t ->
+                if (t is SerializationException) {
+                    logger.error("While handling post of wallet response failed to decode JSON", t)
+                    badRequest().buildAndAwait()
+                } else {
+                    throw t
+                }
+            },
+        )
 
     private suspend fun handleGetPublicJwkSet(): ServerResponse {
         logger.info("Handling GetPublicJwkSet ...")
@@ -252,12 +259,18 @@ class WalletApi(
 
                     WalletResponseValidationError.PresentationNotInExpectedState -> {
                         put("error", "PresentationNotInExpectedState")
-                        put("description", "The referenced presentation transaction is not in state to accept wallet response.")
+                        put(
+                            "description",
+                            "The referenced presentation transaction is not in state to accept wallet response.",
+                        )
                     }
 
                     WalletResponseValidationError.RequiredCredentialSetNotSatisfied -> {
                         put("error", "RequiredCredentialSetNotSatisfied")
-                        put("description", "One or more of the required clauses of the DCQL presentation query was not answered.")
+                        put(
+                            "description",
+                            "One or more of the required clauses of the DCQL presentation query was not answered.",
+                        )
                     }
 
                     is WalletResponseValidationError.UnexpectedResponseMode -> {

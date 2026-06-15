@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.NonEmptyList
 import arrow.core.getOrElse
+import arrow.core.raise.either
 import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationClassifications
 import eu.europa.ec.eudi.etsi1196x2.consultation.AttestationIdentifierPredicate
@@ -86,7 +87,9 @@ object Data {
                 val certs =
                     run {
                         val aliases = keyStore.aliases().toList()
-                        aliases.filter { keyStore.isCertificateEntry(it) }.mapNotNull { keyStore.getCertificate(it) as? X509Certificate }
+                        aliases
+                            .filter { keyStore.isCertificateEntry(it) }
+                            .mapNotNull { keyStore.getCertificate(it) as? X509Certificate }
                     }.toNonEmptyListOrNull()
                 requireNotNull(certs) { "Unable to load X509 Certificates from 'classpath:trusted-issuers.jks'" }
             }
@@ -111,7 +114,7 @@ class DeviceResponseValidatorTest {
             val invalidDocument =
                 run {
                     val validator = deviceResponseValidator(Data.caCerts, clock)
-                    val validated = validator.ensureValid(Data.ThreeDocumentVP)
+                    val validated = either { validator.ensureValid(Data.ThreeDocumentVP) }
                     val invalidDocuments =
                         assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
                             .invalidDocuments
@@ -158,7 +161,7 @@ class DeviceResponseValidatorTest {
                             statusListTokenValidator = null,
                         )
                     val vpValidator = DeviceResponseValidator(docV)
-                    val validated = vpValidator.ensureValid(Data.ThreeDocumentVP)
+                    val validated = either { vpValidator.ensureValid(Data.ThreeDocumentVP) }
                     assertNotNull(validated.getOrNull())
                 }
 
@@ -170,7 +173,7 @@ class DeviceResponseValidatorTest {
         runTest {
             val invalidDocument =
                 run {
-                    val validated = deviceResponseValidator(Data.caCerts, clock).ensureValid(Data.MdlVP)
+                    val validated = either { deviceResponseValidator(Data.caCerts, clock).ensureValid(Data.MdlVP) }
                     val invalidDocuments =
                         assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
                             .invalidDocuments
@@ -211,7 +214,7 @@ class DeviceResponseValidatorTest {
                             statusListTokenValidator = null,
                         )
                     val vpValidator = DeviceResponseValidator(docV)
-                    val validated = vpValidator.ensureValid(Data.MdlVP)
+                    val validated = either { vpValidator.ensureValid(Data.MdlVP) }
                     assertNotNull(validated.getOrNull())
                 }
 
@@ -226,7 +229,8 @@ class DeviceResponseValidatorTest {
                     val vpValidator = ignoreTrustDocumentValidator(clock)
                     val handoverInfo = deviceSignedHandoverInfo()
 
-                    val validated = vpValidator.ensureValid(Data.VPWithDeviceSignedItems, handoverInfo = handoverInfo)
+                    val validated =
+                        either { vpValidator.ensureValid(Data.VPWithDeviceSignedItems, handoverInfo = handoverInfo) }
                     assertNotNull(validated.getOrElse { error -> error("Validation failed: $error") })
                 }
 
@@ -241,7 +245,13 @@ class DeviceResponseValidatorTest {
                     val vpValidator = ignoreTrustDocumentValidator(clock)
                     val handoverInfo = deviceSignedHandoverInfo()
 
-                    val validated = vpValidator.ensureValid(Data.VPWithUnauthorizedDeviceSignedItems, handoverInfo = handoverInfo)
+                    val validated =
+                        either {
+                            vpValidator.ensureValid(
+                                Data.VPWithUnauthorizedDeviceSignedItems,
+                                handoverInfo = handoverInfo,
+                            )
+                        }
                     val invalidDocuments =
                         assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull()).invalidDocuments
                     assertEquals(1, invalidDocuments.size)

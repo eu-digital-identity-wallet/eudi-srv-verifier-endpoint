@@ -101,7 +101,7 @@ class CreateJarNimbus : CreateJar {
                     is RSAKey -> RSAEncrypter(walletJarEncryptionKey)
                     is ECKey -> ECDHEncrypter(walletJarEncryptionKey)
                     is OctetKeyPair -> X25519Encrypter(walletJarEncryptionKey)
-                    else -> error("Unsupported JWK type '${walletJarEncryptionKey::javaClass.name}'")
+                    else -> error("Unsupported JWK type '${walletJarEncryptionKey.javaClass.name}'")
                 }
 
             val header =
