@@ -19,6 +19,7 @@ import arrow.core.nonEmptyListOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
+import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -41,7 +42,7 @@ class QesAuthorizationSerializationTest {
             DocumentDigest(
                 label = Label("Example Contract"),
                 hash = "7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA",
-                hashType = HashType.Default, // HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
+                hashType = HashType.Default,
                 signedProperties =
                     nonEmptyListOf(
                         Attribute(
@@ -49,6 +50,7 @@ class QesAuthorizationSerializationTest {
                         ),
                     ),
                 circumstantialData = "test",
+                href = URI.create("https://test"),
             )
 
         // Create a QesAuthorization instance
@@ -56,7 +58,7 @@ class QesAuthorizationSerializationTest {
             QesApproval(
                 type = Type(QesApproval.TYPE),
                 credentialIds = nonEmptyListOf(CredentialID("607510a9-c957-4095-906d-f99fd006c4ae")),
-                hashAlgorithm = HashAlgorithmOID("SHA-256"),
+                hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
                 signatureQualifier = SignatureQualifier.EuEidasQes,
                 credentialId = null,
                 documentDigests = nonEmptyListOf(documentDigest),
@@ -101,7 +103,7 @@ class QesAuthorizationSerializationTest {
             DocumentDigest(
                 label = Label("Example Contract"),
                 hash = "7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA",
-                hashType = HashType.Default, // HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
+                hashType = HashType.Default,
                 signedProperties =
                     nonEmptyListOf(
                         Attribute(
@@ -109,6 +111,16 @@ class QesAuthorizationSerializationTest {
                         ),
                     ),
                 circumstantialData = "test",
+                href = URI.create("https://test"),
+                checksum =
+                    Hash(
+                        value = "test",
+                        algorithmOID = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
+                    ),
+                access =
+                    AccessControlMethod(
+                        accessMode = AccessMode.Public,
+                    ),
             )
 
         // Create a QesAuthorization instance
@@ -116,7 +128,7 @@ class QesAuthorizationSerializationTest {
             QesApproval(
                 type = Type(QesApproval.TYPE),
                 credentialIds = nonEmptyListOf(CredentialID("607510a9-c957-4095-906d-f99fd006c4ae")),
-                hashAlgorithm = HashAlgorithmOID("SHA-256"),
+                hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
                 signatureQualifier = SignatureQualifier.EuEidasQes,
                 credentialId = null,
                 documentDigests = nonEmptyListOf(documentDigest),
@@ -140,7 +152,7 @@ class QesAuthorizationSerializationTest {
         // Check transaction_data_hashes_alg
         val hashAlgorithms = jsonObject["hashAlgorithmOID"]
         assertNotNull(hashAlgorithms)
-        assertTrue(hashAlgorithms.toString().contains("SHA-256"))
+        assertTrue(hashAlgorithms.toString().contains("2.16.840.1.101.3.4.2.1"))
 
         // Check signatureQualifier
         val signatureQualifier = jsonObject[RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER]
@@ -157,31 +169,55 @@ class QesAuthorizationSerializationTest {
         assertTrue(digestJson.contains("7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA"))
     }
 
-    // TODO:
-//    @Test
-//    fun `test QesAuthorization deserialization from sample JSON`() {
-//        val sample =
-//            """
-//            {
-//                "type": "qes_authorization",
-//                "credential_ids":["607510a9-c957-4095-906d-f99fd006c4ae"],
-//                "signatureQualifier": "eu_eidas_qes",
-//                "documentDigests": [
-//                    {
-//                    "label": "Example Contract",
-//                    "hash": "7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA",
-//                    "hashAlgorithmOID": "2.16.840.1.101.3.4.2.1"
-//                    }
-//                ]
-//            }
-//            """.trimIndent()
-//
-//        val qesAuthorization = json.decodeFromString<QesAuthorization>(sample)
-//
+    @Test
+    fun `test QesAuthorization deserialization from sample JSON`() {
+        val sample =
+            """
+            {
+              "type": "https://cloudsignatureconsortium.org/2025/qes-approval",
+              "credential_ids": [
+                "xyz123"
+              ],
+              "credentialID": "GX0112348",
+              "signatureQualifier": "eu_eidas_qes",
+              "numSignatures": 2,
+              "documentDigests": [
+                {
+                  "label": "Example Contract",
+                  "hash": "sTOgwOm+474gFj0q0x1iSNspKqbcse4IeiqlDg/HWuI=",
+                  "hashType": "sodr",
+                  "access": {
+                    "type": "OTP",
+                    "oneTimePassword": "51623"
+                  },
+                  "href": "https://protected.example/doc-01.pdf?token=...",
+                  "checksum": {
+                    "value": " HZQzZmMAIWekfGH0/ZKW1nsdt0xg3H6bZYztgsMTLw0=",
+                    "algorithmOID": "2.16.840.1.101.3.4.2.1"
+                  }
+                },
+                {
+                  "label": "Terms of Service",
+                  "hash": "HZQzZmMAIWekfGH0/ZKW1nsdt0xg3H6bZYztgsMTLw0=",
+                  "hashType": "sodr",
+                  "access": {
+                    "type": "public"
+                  },
+                  "href": "https://public.example/tos.pdf",
+                  "checksum": {
+                    "value": " HZQzZmMAIWekfGH0/ZKW1nsdt0xg3H6bZYztgsMTLw0=",
+                    "algorithmOID": "2.16.840.1.101.3.4.2.1"
+                  }
+                }
+              ],
+              "hashAlgorithmOID": "2.16.840.1.101.3.4.2.1"
+            }
+            """.trimIndent()
+
+        val qesAuthorization = json.decodeFromString<QesApproval>(sample)
+
 //        // Verify the deserialized object
-//        assertEquals(QesAuthorization.TYPE, qesAuthorization.type)
 //        assertEquals(1, qesAuthorization.credentialIds.size)
-//        assertEquals("607510a9-c957-4095-906d-f99fd006c4ae", qesAuthorization.credentialIds[0])
 //        assertEquals("eu_eidas_qes", qesAuthorization.signatureQualifier?.value)
 //        assertEquals(1, qesAuthorization.documentDigests.size)
 //
@@ -189,5 +225,5 @@ class QesAuthorizationSerializationTest {
 //        assertEquals("Example Contract", digest.label.value)
 //        assertEquals("7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA", digest.hash)
 //        assertEquals("2.16.840.1.101.3.4.2.1", digest.hashAlgorithm?.value)
-//    }
+    }
 }

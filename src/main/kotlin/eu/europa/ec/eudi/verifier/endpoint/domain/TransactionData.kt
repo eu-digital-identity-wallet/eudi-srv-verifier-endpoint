@@ -314,8 +314,6 @@ internal data class AccessControlMethod(
     }
 }
 
-// TODO: Does analysis here has a mistake as per example of etsi?
-
 /**
  * Data of a document to be signed.
  */
@@ -332,6 +330,13 @@ internal data class DocumentDigest(
     val signedProperties: NonEmptyList<Attribute>? = null,
     @SerialName(RQES.DOCUMENT_DIGEST_CIRCUMSTANTIAL_DATA)
     val circumstantialData: String? = null,
+    @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_HREF)
+    @Required
+    val href: StringUri,
+    @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_CHECKSUM)
+    val checksum: Hash? = null,
+    @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_ACCESS)
+    val access: AccessControlMethod? = null,
 )
 
 @Serializable
@@ -456,7 +461,7 @@ internal data class DocumentReference(
     @Required
     val href: StringUri,
     @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_CHECKSUM)
-    val checksum: String? = null, // hash
+    val checksum: Hash? = null,
     @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_CIRCUMSTANTIAL_DATA)
     val circumstantialData: String? = null,
 )
@@ -570,16 +575,6 @@ value class AttributeValue(
 
 @Serializable
 @JvmInline
-value class AttributeName(
-    val value: String,
-) {
-    init {
-        require(value.isNotEmpty())
-    }
-}
-
-@Serializable
-@JvmInline
 value class Type(
     val value: String,
 ) {
@@ -614,6 +609,16 @@ value class HashAlgorithmOID(
         require(value.isNotEmpty())
     }
 }
+
+@Serializable
+data class Hash(
+    @SerialName("value")
+    @Required
+    val value: String,
+    @SerialName("algorithmOID")
+    @Required
+    val algorithmOID: HashAlgorithmOID,
+)
 
 typealias StringUri =
     @Serializable(with = UriStringSerializer::class)
