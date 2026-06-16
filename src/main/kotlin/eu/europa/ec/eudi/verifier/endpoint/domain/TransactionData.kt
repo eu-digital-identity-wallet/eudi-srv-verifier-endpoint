@@ -346,7 +346,7 @@ data class Attribute(
     @Required
     val attributeName: String,
     @SerialName(RQES.ATTRIBUTE_ATTRIBUTE_VALUE)
-    val attributeValue: String? = null, // TODO: Shall calculate it, if needed? csc-dm 7.2
+    val attributeValue: String? = null,
 ) {
     init {
         require(attributeName.isNotBlank()) { "Attribute name must not be blank" }
@@ -361,9 +361,6 @@ internal data class QesApproval(
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE)
     @Required
     val type: Type,
-    // TODO: Required conditional, data-model-bindings 7.1.1
-    //  References to credentials to approve a transaction with.
-    //  MUST be included if and only if the protocol for handling transaction data requires it
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS)
     @Required
     val credentialIds: NonEmptyList<CredentialID>,
@@ -425,7 +422,8 @@ internal data class QesRequest(
 ) {
     init {
         val selectedSignatureFormat = signatureFormat?.value ?: SignatureFormat.CADES
-        val selectedSignedEnvelopeProperty = signedEnvelopeProperty?.value ?: DEFAULT_SIGNED_ENVELOPE_PROPERTIES.getValue(selectedSignatureFormat)
+        val selectedSignedEnvelopeProperty =
+            signedEnvelopeProperty?.value ?: DEFAULT_SIGNED_ENVELOPE_PROPERTIES.getValue(selectedSignatureFormat)
 
         require((documentData != null) xor (documentReference != null)) {
             "One of 'documentData' or 'documentReference' must be present."

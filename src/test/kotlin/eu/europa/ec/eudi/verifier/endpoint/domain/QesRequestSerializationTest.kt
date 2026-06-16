@@ -171,8 +171,8 @@ class QesRequestSerializationTest {
 
     @Test
     fun `test QesRequest deserialization from sample JSON`() {
-
-        val sample = """
+        val sample =
+            """
             {
               "type": "https://cloudsignatureconsortium.org/2025/qes",
               "credential_ids": [
@@ -212,7 +212,7 @@ class QesRequestSerializationTest {
                 }
               ]
             }
-        """.trimIndent()
+            """.trimIndent()
 
         // Parse the normative JSON
         val root = json.parseToJsonElement(sample).jsonObject
