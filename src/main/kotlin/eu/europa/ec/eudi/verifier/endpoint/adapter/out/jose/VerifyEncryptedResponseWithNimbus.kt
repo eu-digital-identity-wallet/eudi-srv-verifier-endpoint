@@ -55,19 +55,7 @@ class VerifyEncryptedResponseWithNimbus(
             catch(
                 block = {
                     val encryptedJwt = EncryptedJWT.parse(encryptedResponse)
-                    val processor =
-                        with(encryptedJwt.header) {
-                            require(algorithm == responseEncryptionOption.algorithm) {
-                                "Encrypted response uses an unsupported JWE Algorithm: ${algorithm.name}, " +
-                                    "expected: ${responseEncryptionOption.algorithm.name}"
-                            }
-                            require(encryptionMethod in responseEncryptionOption.encryptionMethods) {
-                                "Encrypted response uses an unsupported JWE Encryption Method: ${encryptionMethod.name}, " +
-                                    "expected one of: ${responseEncryptionOption.encryptionMethods.joinToString { it.name }}"
-                            }
-
-                            encryptedProcessor(algorithm, encryptionMethod, ephemeralResponseEncryptionKey)
-                        }
+                    val processor = encryptedProcessor(ephemeralResponseEncryptionKey, encryptedJwt)
                     val claimSet = processor.process(encryptedJwt, null)
                     claimSet.mapToDomain()
                 },
@@ -80,6 +68,24 @@ class VerifyEncryptedResponseWithNimbus(
                 },
             )
         }
+
+    private fun encryptedProcessor(
+        ephemeralResponseEncryptionKey: JWK,
+        encryptedJwt: EncryptedJWT,
+    ): JWTProcessor<SecurityContext> {
+        with(encryptedJwt.header) {
+            require(algorithm == responseEncryptionOption.algorithm) {
+                "Encrypted response uses an unsupported JWE Algorithm: ${algorithm.name}, " +
+                    "expected: ${responseEncryptionOption.algorithm.name}"
+            }
+            require(encryptionMethod in responseEncryptionOption.encryptionMethods) {
+                "Encrypted response uses an unsupported JWE Encryption Method: ${encryptionMethod.name}, " +
+                    "expected one of: ${responseEncryptionOption.encryptionMethods.joinToString { it.name }}"
+            }
+
+            return encryptedProcessor(algorithm, encryptionMethod, ephemeralResponseEncryptionKey)
+        }
+    }
 
     private fun encryptedProcessor(
         algorithm: JWEAlgorithm,
