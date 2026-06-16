@@ -32,7 +32,6 @@ class QesApprovalSerializationTest {
     private val json =
         Json {
             prettyPrint = true
-            ignoreUnknownKeys = true
         }
 
     @Test

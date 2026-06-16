@@ -24,7 +24,6 @@ import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
-import eu.europa.ec.eudi.verifier.endpoint.domain.QesApproval.Companion.TYPE
 import eu.europa.ec.eudi.verifier.endpoint.domain.SignedEnvelopeProperty.Companion.ALLOWED_SIGNED_ENVELOPE_PROPERTIES
 import eu.europa.ec.eudi.verifier.endpoint.domain.SignedEnvelopeProperty.Companion.DEFAULT_SIGNED_ENVELOPE_PROPERTIES
 import kotlinx.io.bytestring.decodeToByteString
@@ -35,6 +34,7 @@ import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
@@ -388,10 +388,149 @@ internal data class QesApproval(
             "either '${RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_CREDENTIAL_ID}', " +
                 "or '${RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER}' must be present."
         }
+        require(type.value.isNotEmpty())
+        require(TYPE == type.value) { "Expected '${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' to be '$TYPE'. Was: '${type.value}'." }
     }
 
     companion object {
         const val TYPE = RQES.TYPE_QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION
+    }
+}
+
+@Serializable(with = SignatureRequestSerializer::class)
+internal sealed interface SignatureRequest {
+    val label: Label?
+    val signatureQualifier: SignatureQualifier
+    val responseURI: StringUri?
+    val signatureFormat: SignatureFormat?
+    val conformanceLevel: ConformanceLevel?
+    val signedEnvelopeProperty: SignedEnvelopeProperty?
+    val signedProperties: NonEmptyList<Attribute>?
+    val referenceUri: ReferenceUri?
+    val circumstantialData: String?
+    val signAlgo: String
+    val signAlgoParams: String?
+
+    @Serializable
+    data class SignatureRequestWithDocumentData(
+        @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER)
+        @Required
+        override val signatureQualifier: SignatureQualifier,
+        @SerialName(RQES.SIGNATURE_REQUEST_RESPONSE_URI)
+        override val responseURI: StringUri? = null,
+        @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_FORMAT)
+        override val signatureFormat: SignatureFormat? = null,
+        @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_CONFORMANCE_LEVEL)
+        override val conformanceLevel: ConformanceLevel? = null,
+        @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY)
+        override val signedEnvelopeProperty: SignedEnvelopeProperty? = null,
+        @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_PROPERTIES)
+        override val signedProperties: NonEmptyList<Attribute>? = null,
+        @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_REFERENCE_URI)
+        override val referenceUri: ReferenceUri? = null,
+        @SerialName(RQES.DOCUMENTS_DOCUMENT_DATA_LABEL)
+        override val label: Label? = null,
+        @SerialName(RQES.DOCUMENTS_DOCUMENT_DATA_DOCUMENT)
+        @Required
+        val document: String,
+        @SerialName(RQES.DOCUMENTS_DOCUMENT_DATA_DOCUMENT_TYPE)
+        val documentType: DocumentType = DocumentType.DEFAULT,
+        @SerialName(RQES.DOCUMENTS_DOCUMENT_DATA_CIRCUMSTANTIAL_DATA)
+        override val circumstantialData: String? = null,
+        @SerialName("signAlgo")
+        @Required
+        override val signAlgo: String,
+        @SerialName("signAlgoParams")
+        override val signAlgoParams: String? = null,
+    ) : SignatureRequest {
+        init {
+            validateSignatureRequest(
+                signatureFormat = signatureFormat,
+                signedEnvelopeProperty = signedEnvelopeProperty,
+                referenceUri = referenceUri,
+            )
+        }
+    }
+
+    @Serializable
+    data class SignatureRequestWithDocumentReference(
+        @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER)
+        @Required
+        override val signatureQualifier: SignatureQualifier,
+        @SerialName(RQES.SIGNATURE_REQUEST_RESPONSE_URI)
+        override val responseURI: StringUri? = null,
+        @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_FORMAT)
+        override val signatureFormat: SignatureFormat? = null,
+        @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_CONFORMANCE_LEVEL)
+        override val conformanceLevel: ConformanceLevel? = null,
+        @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY)
+        override val signedEnvelopeProperty: SignedEnvelopeProperty? = null,
+        @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_PROPERTIES)
+        override val signedProperties: NonEmptyList<Attribute>? = null,
+        @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_REFERENCE_URI)
+        override val referenceUri: ReferenceUri? = null,
+        @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_LABEL)
+        override val label: Label? = null,
+        @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_ACCESS)
+        val access: AccessControlMethod? = null,
+        @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_HREF)
+        @Required
+        val href: StringUri,
+        @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_CHECKSUM)
+        val checksum: Hash? = null,
+        @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_CIRCUMSTANTIAL_DATA)
+        override val circumstantialData: String? = null,
+        @SerialName("signAlgo")
+        @Required
+        override val signAlgo: String,
+        @SerialName("signAlgoParams")
+        override val signAlgoParams: String? = null,
+    ) : SignatureRequest {
+        init {
+            validateSignatureRequest(
+                signatureFormat = signatureFormat,
+                signedEnvelopeProperty = signedEnvelopeProperty,
+                referenceUri = referenceUri,
+            )
+        }
+    }
+
+    companion object {
+        private fun validateSignatureRequest(
+            signatureFormat: SignatureFormat?,
+            signedEnvelopeProperty: SignedEnvelopeProperty?,
+            referenceUri: ReferenceUri?,
+        ) {
+            val selectedSignatureFormat = signatureFormat?.value ?: SignatureFormat.CADES
+            val selectedSignedEnvelopeProperty =
+                signedEnvelopeProperty?.value ?: DEFAULT_SIGNED_ENVELOPE_PROPERTIES.getValue(selectedSignatureFormat)
+
+            require(selectedSignedEnvelopeProperty in ALLOWED_SIGNED_ENVELOPE_PROPERTIES.getValue(selectedSignatureFormat)) {
+                "'signed_envelope_property' is not valid for 'signature_format' '$selectedSignatureFormat'. " +
+                    "Was: '$selectedSignedEnvelopeProperty'."
+            }
+
+            if (referenceUri != null) {
+                require(
+                    when (selectedSignatureFormat) {
+                        SignatureFormat.XADES,
+                        SignatureFormat.JADES,
+                        -> {
+                            selectedSignedEnvelopeProperty ==
+                                RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY_DETACHED
+                        }
+
+                        else -> {
+                            false
+                        }
+                    },
+                ) {
+                    "'referenceUri' is only applicable when 'signature_format' is '${SignatureFormat.XADES}' " +
+                        "or '${SignatureFormat.JADES}' and 'signed_envelope_property' is " +
+                        "'${RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY_DETACHED}'."
+                }
+            }
+        }
     }
 }
 
@@ -400,86 +539,27 @@ internal data class QesApproval(
  */
 @Serializable
 internal data class QesRequest(
-    @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER)
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE)
     @Required
-    val signatureQualifier: SignatureQualifier,
-    @SerialName(RQES.SIGNATURE_REQUEST_RESPONSE_URI)
-    val responseURI: StringUri? = null,
-    @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_FORMAT)
-    val signatureFormat: SignatureFormat? = null,
-    @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_CONFORMANCE_LEVEL)
-    val conformanceLevel: ConformanceLevel? = null,
-    @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY)
-    val signedEnvelopeProperty: SignedEnvelopeProperty? = null,
-    @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_PROPERTIES)
-    val signedProperties: NonEmptyList<Attribute>? = null,
-    @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_REFERENCE_URI)
-    val referenceUri: ReferenceUri? = null,
-    @SerialName(RQES.DOCUMENTS_DOCUMENT_DATA)
-    val documentData: DocumentData? = null,
-    @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE)
-    val documentReference: DocumentReference? = null,
+    val type: Type,
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS)
+    @Required
+    val credentialIds: NonEmptyList<CredentialID>,
+    @SerialName("signatureRequests")
+    @Required
+    val signatureRequests: NonEmptyList<SignatureRequest>,
 ) {
     init {
-        val selectedSignatureFormat = signatureFormat?.value ?: SignatureFormat.CADES
-        val selectedSignedEnvelopeProperty =
-            signedEnvelopeProperty?.value ?: DEFAULT_SIGNED_ENVELOPE_PROPERTIES.getValue(selectedSignatureFormat)
+        require(type.value.isNotEmpty())
+        require(
+            TYPE == type.value,
+        ) { "Expected '${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' to be '${QesApproval.TYPE}'. Was: '${type.value}'." }
+    }
 
-        require((documentData != null) xor (documentReference != null)) {
-            "One of 'documentData' or 'documentReference' must be present."
-        }
-
-        require(selectedSignedEnvelopeProperty in ALLOWED_SIGNED_ENVELOPE_PROPERTIES.getValue(selectedSignatureFormat)) {
-            "'signed_envelope_property' is not valid for 'signature_format' '$selectedSignatureFormat'. " +
-                "Was: '$selectedSignedEnvelopeProperty'."
-        }
-
-        if (referenceUri != null) {
-            require(
-                when (selectedSignatureFormat) {
-                    SignatureFormat.XADES, SignatureFormat.JADES -> {
-                        selectedSignedEnvelopeProperty == RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY_DETACHED
-                    }
-
-                    else -> {
-                        false
-                    }
-                },
-            ) {
-                "'referenceUri' is only applicable when 'signature_format' is '${SignatureFormat.XADES}' " +
-                    "or '${SignatureFormat.JADES}' and 'signed_envelope_property' is '${RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY_DETACHED}'."
-            }
-        }
+    companion object {
+        const val TYPE = RQES.TYPE_QUALIFIED_ELECTRONIC_SIGNATURE_REQUEST
     }
 }
-
-@Serializable
-internal data class DocumentReference(
-    @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_LABEL)
-    val documentDigests: Label? = null,
-    @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_ACCESS)
-    val access: AccessControlMethod? = null,
-    @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_HREF)
-    @Required
-    val href: StringUri,
-    @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_CHECKSUM)
-    val checksum: Hash? = null,
-    @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_CIRCUMSTANTIAL_DATA)
-    val circumstantialData: String? = null,
-)
-
-@Serializable
-internal data class DocumentData(
-    @SerialName(RQES.DOCUMENTS_DOCUMENT_DATA_LABEL)
-    val documentDigests: Label? = null,
-    @SerialName(RQES.DOCUMENTS_DOCUMENT_DATA_DOCUMENT)
-    @Required
-    val document: String,
-    @SerialName(RQES.DOCUMENTS_DOCUMENT_DATA_DOCUMENT_TYPE)
-    val documentType: DocumentType = DocumentType.DEFAULT,
-    @SerialName(RQES.DOCUMENTS_DOCUMENT_DATA_CIRCUMSTANTIAL_DATA)
-    val circumstantialData: String? = null,
-)
 
 @Serializable
 @JvmInline
@@ -585,12 +665,7 @@ value class SignatureFormat(
 @JvmInline
 value class Type(
     val value: String,
-) {
-    init {
-        require(value.isNotEmpty())
-        require(TYPE == value) { "Expected '${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' to be '$TYPE'. Was: '$value'." }
-    }
-}
+)
 
 @Serializable
 @JvmInline
@@ -659,4 +734,68 @@ internal object URLStringSerializer : KSerializer<URL> {
     }
 
     override fun deserialize(decoder: Decoder): URL = URL(decoder.decodeString())
+}
+
+/**
+ * [KSerializer] for [SignatureRequest].
+ */
+internal object SignatureRequestSerializer : KSerializer<SignatureRequest> {
+    override val descriptor: SerialDescriptor =
+        buildClassSerialDescriptor("SignatureRequest")
+
+    override fun deserialize(decoder: Decoder): SignatureRequest {
+        require(decoder is JsonDecoder) {
+            "SignatureRequestSerializer supports JSON only."
+        }
+
+        val element = decoder.decodeJsonElement()
+        val jsonObject = element.jsonObject
+
+        val hasDocumentData = RQES.DOCUMENTS_DOCUMENT_DATA_DOCUMENT in jsonObject
+        val hasDocumentReference = RQES.DOCUMENTS_DOCUMENT_REFERENCE_HREF in jsonObject
+
+        require(hasDocumentData xor hasDocumentReference) {
+            "Exactly one of '${RQES.DOCUMENTS_DOCUMENT_DATA_DOCUMENT}' or '${RQES.DOCUMENTS_DOCUMENT_REFERENCE_HREF}' must be present."
+        }
+
+        return if (hasDocumentData) {
+            decoder.json.decodeFromJsonElement(
+                SignatureRequest.SignatureRequestWithDocumentData.serializer(),
+                element,
+            )
+        } else {
+            decoder.json.decodeFromJsonElement(
+                SignatureRequest.SignatureRequestWithDocumentReference.serializer(),
+                element,
+            )
+        }
+    }
+
+    override fun serialize(
+        encoder: Encoder,
+        value: SignatureRequest,
+    ) {
+        require(encoder is JsonEncoder) {
+            "SignatureRequestSerializer supports JSON only."
+        }
+
+        val element =
+            when (value) {
+                is SignatureRequest.SignatureRequestWithDocumentData -> {
+                    encoder.json.encodeToJsonElement(
+                        SignatureRequest.SignatureRequestWithDocumentData.serializer(),
+                        value,
+                    )
+                }
+
+                is SignatureRequest.SignatureRequestWithDocumentReference -> {
+                    encoder.json.encodeToJsonElement(
+                        SignatureRequest.SignatureRequestWithDocumentReference.serializer(),
+                        value,
+                    )
+                }
+            }
+
+        encoder.encodeJsonElement(element)
+    }
 }

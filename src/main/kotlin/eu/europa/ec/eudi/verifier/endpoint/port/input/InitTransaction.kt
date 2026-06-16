@@ -540,6 +540,7 @@ internal fun InitTransactionTO.toDomain(
                         Either.catch {
                             when (transactionData.type) {
                                 QesApproval.TYPE -> QesApproval.serializer()
+                                QesRequest.TYPE -> QesRequest.serializer()
                                 else -> null
                             }?.let { deserializer -> it.decodeAs(deserializer) }
                             transactionData

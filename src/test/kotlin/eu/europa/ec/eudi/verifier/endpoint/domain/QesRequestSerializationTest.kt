@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+import arrow.core.nonEmptyListOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -23,6 +24,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -34,36 +36,38 @@ class QesRequestSerializationTest {
     private val json =
         Json {
             prettyPrint = true
-            ignoreUnknownKeys = true
         }
 
     @Test
     fun `test QesRequest serialization and deserialization`() {
-        // Create a DocumentReference instance
-        val documentReference =
-            DocumentReference(
-                documentDigests = Label("Example Contract"),
-                href = URI.create("https://protected.example/doc-01.pdf?token=..."),
-                checksum =
-                    Hash(
-                        value = "sTOgwOm+474gFj0q0x1iSNspKqbcse4IeiqlDg/HWuI=",
-                        algorithmOID = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
-                    ),
-                access =
-                    AccessControlMethod(
-                        accessMode = AccessMode.Public,
-                    ),
-            )
-
-        // Create a QesRequest instance
-        val qesRequest =
-            QesRequest(
+        // Create a SignatureRequest instance backed by a document reference
+        val signatureRequest =
+            SignatureRequest.SignatureRequestWithDocumentReference(
                 signatureQualifier = SignatureQualifier.EuEidasQes,
                 responseURI = URI.create("https://rp.example/qes/receive"),
                 signatureFormat = SignatureFormat(SignatureFormat.PADES),
                 conformanceLevel = ConformanceLevel("AdES-B-B"),
                 signedEnvelopeProperty = SignedEnvelopeProperty(RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY_CERTIFICATION),
-                documentReference = documentReference,
+                label = Label("Service Agreement #2025-09"),
+                access =
+                    AccessControlMethod(
+                        accessMode = AccessMode.Public,
+                    ),
+                href = URI.create("https://protected.rp.example/contracts/2025-09-01.pdf?token=..."),
+                checksum =
+                    Hash(
+                        value = "sTOgwOm+474gFj0q0x1iSNspKqbcse4IeiqlDg/HWuI=",
+                        algorithmOID = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
+                    ),
+                signAlgo = "1.2.840.113549.1.1.1",
+            )
+
+        // Create a QesRequest instance
+        val qesRequest =
+            QesRequest(
+                type = Type(QesRequest.TYPE),
+                credentialIds = nonEmptyListOf(CredentialID("qes-cert-1")),
+                signatureRequests = nonEmptyListOf(signatureRequest),
             )
 
         // Serialize to JSON
@@ -76,24 +80,29 @@ class QesRequestSerializationTest {
         // Verify JSON structure and values
         val jsonObject = jsonElement.jsonObject
         assertEquals(
-            "eu_eidas_qes",
-            jsonObject[RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER]?.toString()?.trim('"'),
+            QesRequest.TYPE,
+            jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.jsonPrimitive?.content,
         )
 
         // Deserialize back to QesRequest
         val deserializedQesRequest = json.decodeFromString<QesRequest>(jsonString)
 
         // Verify the deserialized object matches the original
-        assertEquals(qesRequest.signatureQualifier.value, deserializedQesRequest.signatureQualifier.value)
-        assertEquals(qesRequest.responseURI, deserializedQesRequest.responseURI)
-        assertEquals(qesRequest.signatureFormat?.value, deserializedQesRequest.signatureFormat?.value)
-        assertEquals(qesRequest.conformanceLevel?.value, deserializedQesRequest.conformanceLevel?.value)
-        assertEquals(qesRequest.signedEnvelopeProperty?.value, deserializedQesRequest.signedEnvelopeProperty?.value)
+        assertEquals(qesRequest.type.value, deserializedQesRequest.type.value)
+        assertEquals(1, deserializedQesRequest.signatureRequests.size)
 
-        // Verify document reference
-        val originalReference = assertNotNull(qesRequest.documentReference)
-        val deserializedReference = assertNotNull(deserializedQesRequest.documentReference)
-        assertEquals(originalReference.documentDigests?.value, deserializedReference.documentDigests?.value)
+        val originalRequest = qesRequest.signatureRequests.first()
+        val deserializedRequest = deserializedQesRequest.signatureRequests.first()
+        assertEquals(originalRequest.signatureQualifier.value, deserializedRequest.signatureQualifier.value)
+        assertEquals(originalRequest.responseURI, deserializedRequest.responseURI)
+        assertEquals(originalRequest.signatureFormat?.value, deserializedRequest.signatureFormat?.value)
+        assertEquals(originalRequest.conformanceLevel?.value, deserializedRequest.conformanceLevel?.value)
+        assertEquals(originalRequest.signedEnvelopeProperty?.value, deserializedRequest.signedEnvelopeProperty?.value)
+
+        // Verify document reference details
+        val originalReference = assertIs<SignatureRequest.SignatureRequestWithDocumentReference>(originalRequest)
+        val deserializedReference = assertIs<SignatureRequest.SignatureRequestWithDocumentReference>(deserializedRequest)
+        assertEquals(originalReference.label?.value, deserializedReference.label?.value)
         assertEquals(originalReference.href, deserializedReference.href)
         assertEquals(originalReference.checksum?.value, deserializedReference.checksum?.value)
         assertEquals(originalReference.checksum?.algorithmOID?.value, deserializedReference.checksum?.algorithmOID?.value)
@@ -101,33 +110,97 @@ class QesRequestSerializationTest {
     }
 
     @Test
-    fun `test QesRequest JSON structure`() {
-        // Create a DocumentReference instance
-        val documentReference =
-            DocumentReference(
-                documentDigests = Label("Example Contract"),
-                href = URI.create("https://protected.example/doc-01.pdf?token=..."),
-                checksum =
-                    Hash(
-                        value = "sTOgwOm+474gFj0q0x1iSNspKqbcse4IeiqlDg/HWuI=",
-                        algorithmOID = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
-                    ),
-                access =
-                    AccessControlMethod(
-                        accessMode = AccessMode.OneTimePassword,
-                        oneTimePassword = OneTimePassword("51623"),
-                    ),
+    fun `test QesRequest serialization and deserialization with document data`() {
+        // Create a SignatureRequest instance backed by document data
+        val signatureRequest =
+            SignatureRequest.SignatureRequestWithDocumentData(
+                signatureQualifier = SignatureQualifier.EuEidasQes,
+                responseURI = URI.create("https://rp.example/qes/receive"),
+                signatureFormat = SignatureFormat(SignatureFormat.JADES),
+                conformanceLevel = ConformanceLevel("AdES-B-B"),
+                signedEnvelopeProperty = SignedEnvelopeProperty(RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY_ATTACHED),
+                label = Label("Annex A - JSON config"),
+                document = "eyJleGFtcGxlS2V5IjoiZXhhbXBsZVZhbHVlIn0K",
+                documentType = DocumentType(RQES.DOCUMENTS_DOCUMENT_TYPE_SFD),
+                signAlgo = "1.2.840.113549.1.1.1",
             )
 
         // Create a QesRequest instance
         val qesRequest =
             QesRequest(
+                type = Type(QesRequest.TYPE),
+                credentialIds = nonEmptyListOf(CredentialID("qes-cert-1")),
+                signatureRequests = nonEmptyListOf(signatureRequest),
+            )
+
+        // Serialize to JSON
+        val jsonString = json.encodeToString(qesRequest)
+
+        // Parse the JSON string to a JsonElement for inspection
+        val jsonElement = json.parseToJsonElement(jsonString)
+        assertTrue(jsonElement is JsonObject)
+
+        // Verify JSON structure and values
+        val jsonObject = jsonElement.jsonObject
+        assertEquals(
+            QesRequest.TYPE,
+            jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.jsonPrimitive?.content,
+        )
+
+        // Deserialize back to QesRequest
+        val deserializedQesRequest = json.decodeFromString<QesRequest>(jsonString)
+
+        // Verify the deserialized object matches the original
+        assertEquals(qesRequest.type.value, deserializedQesRequest.type.value)
+        assertEquals(1, deserializedQesRequest.signatureRequests.size)
+
+        val originalRequest = qesRequest.signatureRequests.first()
+        val deserializedRequest = deserializedQesRequest.signatureRequests.first()
+        assertEquals(originalRequest.signatureQualifier.value, deserializedRequest.signatureQualifier.value)
+        assertEquals(originalRequest.responseURI, deserializedRequest.responseURI)
+        assertEquals(originalRequest.signatureFormat?.value, deserializedRequest.signatureFormat?.value)
+        assertEquals(originalRequest.conformanceLevel?.value, deserializedRequest.conformanceLevel?.value)
+        assertEquals(originalRequest.signedEnvelopeProperty?.value, deserializedRequest.signedEnvelopeProperty?.value)
+
+        // Verify document data details
+        val originalData = assertIs<SignatureRequest.SignatureRequestWithDocumentData>(originalRequest)
+        val deserializedData = assertIs<SignatureRequest.SignatureRequestWithDocumentData>(deserializedRequest)
+        assertEquals(originalData.label?.value, deserializedData.label?.value)
+        assertEquals(originalData.document, deserializedData.document)
+        assertEquals(originalData.documentType.value, deserializedData.documentType.value)
+    }
+
+    @Test
+    fun `test QesRequest JSON structure`() {
+        // Create a SignatureRequest instance backed by a document reference
+        val signatureRequest =
+            SignatureRequest.SignatureRequestWithDocumentReference(
                 signatureQualifier = SignatureQualifier.EuEidasQes,
                 responseURI = URI.create("https://rp.example/qes/receive"),
                 signatureFormat = SignatureFormat(SignatureFormat.PADES),
                 conformanceLevel = ConformanceLevel("AdES-B-B"),
                 signedEnvelopeProperty = SignedEnvelopeProperty(RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY_CERTIFICATION),
-                documentReference = documentReference,
+                label = Label("Service Agreement #2025-09"),
+                access =
+                    AccessControlMethod(
+                        accessMode = AccessMode.OneTimePassword,
+                        oneTimePassword = OneTimePassword("51623"),
+                    ),
+                href = URI.create("https://protected.rp.example/contracts/2025-09-01.pdf?token=..."),
+                checksum =
+                    Hash(
+                        value = "sTOgwOm+474gFj0q0x1iSNspKqbcse4IeiqlDg/HWuI=",
+                        algorithmOID = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
+                    ),
+                signAlgo = "1.2.840.113549.1.1.1",
+            )
+
+        // Create a QesRequest instance
+        val qesRequest =
+            QesRequest(
+                type = Type(QesRequest.TYPE),
+                credentialIds = nonEmptyListOf(CredentialID("qes-cert-1")),
+                signatureRequests = nonEmptyListOf(signatureRequest),
             )
 
         // Serialize to JSON
@@ -136,36 +209,45 @@ class QesRequestSerializationTest {
         // Parse the JSON string to a JsonElement for inspection
         val jsonObject = json.parseToJsonElement(jsonString).jsonObject
 
+        // Check envelope type
+        val type = jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]
+        assertNotNull(type)
+        assertEquals(QesRequest.TYPE, type.jsonPrimitive.content)
+
+        // The per-document fields live inside the nested signatureRequests entries.
+        val signatureRequestsJson = jsonObject["signatureRequests"]?.jsonArray
+        assertNotNull(signatureRequestsJson)
+        assertEquals(1, signatureRequestsJson.size)
+        val signatureRequestJson = signatureRequestsJson[0].jsonObject
+
         // Check signatureQualifier
-        val signatureQualifier = jsonObject[RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER]
+        val signatureQualifier = signatureRequestJson[RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER]
         assertNotNull(signatureQualifier)
-        assertEquals("\"eu_eidas_qes\"", signatureQualifier.toString())
+        assertEquals("eu_eidas_qes", signatureQualifier.jsonPrimitive.content)
 
         // Check responseURI
-        val responseURI = jsonObject[RQES.SIGNATURE_REQUEST_RESPONSE_URI]
+        val responseURI = signatureRequestJson[RQES.SIGNATURE_REQUEST_RESPONSE_URI]
         assertNotNull(responseURI)
         assertTrue(responseURI.toString().contains("https://rp.example/qes/receive"))
 
         // Check signature_format
-        val signatureFormat = jsonObject[RQES.ADES_PARAMETERS_SIGNATURE_FORMAT]
+        val signatureFormat = signatureRequestJson[RQES.ADES_PARAMETERS_SIGNATURE_FORMAT]
         assertNotNull(signatureFormat)
-        assertEquals("\"${SignatureFormat.PADES}\"", signatureFormat.toString())
+        assertEquals(SignatureFormat.PADES, signatureFormat.jsonPrimitive.content)
 
         // Check conformance_level
-        val conformanceLevel = jsonObject[RQES.ADES_PARAMETERS_SIGNATURE_CONFORMANCE_LEVEL]
+        val conformanceLevel = signatureRequestJson[RQES.ADES_PARAMETERS_SIGNATURE_CONFORMANCE_LEVEL]
         assertNotNull(conformanceLevel)
-        assertEquals("\"AdES-B-B\"", conformanceLevel.toString())
+        assertEquals("AdES-B-B", conformanceLevel.jsonPrimitive.content)
 
         // Check signed_envelope_property
-        val signedEnvelopeProperty = jsonObject[RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY]
+        val signedEnvelopeProperty = signatureRequestJson[RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY]
         assertNotNull(signedEnvelopeProperty)
-        assertEquals("\"Certification\"", signedEnvelopeProperty.toString())
+        assertEquals("Certification", signedEnvelopeProperty.jsonPrimitive.content)
 
-        // Check documentReference
-        val documentReferenceJson = jsonObject[RQES.DOCUMENTS_DOCUMENT_REFERENCE]
-        assertNotNull(documentReferenceJson)
-        val digestJson = documentReferenceJson.toString()
-        assertTrue(digestJson.contains("Example Contract"))
+        // Check document reference fields
+        val digestJson = signatureRequestJson.toString()
+        assertTrue(digestJson.contains("Service Agreement #2025-09"))
         assertTrue(digestJson.contains("sTOgwOm+474gFj0q0x1iSNspKqbcse4IeiqlDg/HWuI="))
     }
 
@@ -211,103 +293,50 @@ class QesRequestSerializationTest {
                   "responseURI": "https://rp.example/qes/receive"
                 }
               ]
-            }
+            } 
             """.trimIndent()
-
-        // Parse the normative JSON
-        val root = json.parseToJsonElement(sample).jsonObject
+        val parsed = json.decodeFromString<QesRequest>(sample)
 
         // Verify the envelope
-        assertEquals(
-            "https://cloudsignatureconsortium.org/2025/qes",
-            root[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.jsonPrimitive?.content,
-        )
-        val credentialIds = root[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]?.jsonArray
-        assertNotNull(credentialIds)
-        assertEquals(1, credentialIds.size)
-        assertEquals("qes-cert-1", credentialIds[0].jsonPrimitive.content)
+        assertEquals(QesRequest.TYPE, parsed.type.value)
+        assertEquals(1, parsed.credentialIds.size)
+        assertEquals("qes-cert-1", parsed.credentialIds[0].value)
 
-        val signatureRequests = root["signatureRequests"]?.jsonArray
-        assertNotNull(signatureRequests)
-        assertEquals(2, signatureRequests.size)
-
-        // Map each signature request entry into a QesRequest using its document reference fields
-        val qesRequests =
-            signatureRequests.map { element ->
-                val obj = element.jsonObject
-                val checksum =
-                    obj[RQES.DOCUMENTS_DOCUMENT_REFERENCE_CHECKSUM]?.jsonObject?.let { checksumObj ->
-                        Hash(
-                            value = checksumObj[RQES.DOCUMENTS_DOCUMENT_REFERENCE_HASH_VALUE]!!.jsonPrimitive.content,
-                            algorithmOID =
-                                HashAlgorithmOID(
-                                    checksumObj[RQES.DOCUMENTS_DOCUMENT_REFERENCE_HASH_ALGORITHM_OID]!!.jsonPrimitive.content,
-                                ),
-                        )
-                    }
-                val access =
-                    obj[RQES.DOCUMENTS_DOCUMENT_REFERENCE_ACCESS]?.jsonObject?.let { accessObj ->
-                        AccessControlMethod(
-                            accessMode = AccessMode(accessObj[RQES.ACCESS_CONTROL_METHOD_TYPE]!!.jsonPrimitive.content),
-                            oneTimePassword =
-                                accessObj[RQES.DOCUMENT_ACCESS_METHOD_OTP]?.jsonPrimitive?.content?.let { OneTimePassword(it) },
-                        )
-                    }
-                QesRequest(
-                    signatureQualifier =
-                        SignatureQualifier(
-                            obj[RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER]!!.jsonPrimitive.content,
-                        ),
-                    responseURI = obj[RQES.SIGNATURE_REQUEST_RESPONSE_URI]?.jsonPrimitive?.content?.let { URI.create(it) },
-                    signatureFormat = SignatureFormat(obj[RQES.ADES_PARAMETERS_SIGNATURE_FORMAT]!!.jsonPrimitive.content),
-                    conformanceLevel = ConformanceLevel(obj[RQES.ADES_PARAMETERS_SIGNATURE_CONFORMANCE_LEVEL]!!.jsonPrimitive.content),
-                    signedEnvelopeProperty =
-                        SignedEnvelopeProperty(obj[RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY]!!.jsonPrimitive.content),
-                    documentReference =
-                        DocumentReference(
-                            documentDigests = Label(obj[RQES.DOCUMENTS_DOCUMENT_REFERENCE_LABEL]!!.jsonPrimitive.content),
-                            href = URI.create(obj[RQES.DOCUMENTS_DOCUMENT_REFERENCE_HREF]!!.jsonPrimitive.content),
-                            checksum = checksum,
-                            access = access,
-                        ),
-                )
-            }
-
+        // The per-document fields now live inside the nested SignatureRequest entries.
+        val qesRequests = parsed.signatureRequests
         assertEquals(2, qesRequests.size)
 
         // Verify the first signature request
-        val first = qesRequests[0]
+        val first = assertIs<SignatureRequest.SignatureRequestWithDocumentReference>(qesRequests[0])
         assertEquals("eu_eidas_qes", first.signatureQualifier.value)
         assertEquals(SignatureFormat.PADES, first.signatureFormat?.value)
         assertEquals("AdES-B-B", first.conformanceLevel?.value)
         assertEquals("Certification", first.signedEnvelopeProperty?.value)
         assertNull(first.responseURI)
-        val firstReference = assertNotNull(first.documentReference)
-        assertEquals("Service Agreement #2025-09", firstReference.documentDigests?.value)
+        assertEquals("Service Agreement #2025-09", first.label?.value)
         assertEquals(
             URI.create("https://protected.rp.example/contracts/2025-09-01.pdf?token=..."),
-            firstReference.href,
+            first.href,
         )
-        assertEquals("sTOgwOm+474gFj0q0x1iSNspKqbcse4IeiqlDg/HWuI=", firstReference.checksum?.value)
-        assertEquals("2.16.840.1.101.3.4.2.1", firstReference.checksum?.algorithmOID?.value)
-        assertEquals(RQES.ACCESS_MODE_OTP, firstReference.access?.accessMode?.value)
-        assertEquals("51623", firstReference.access?.oneTimePassword?.value)
+        assertEquals("sTOgwOm+474gFj0q0x1iSNspKqbcse4IeiqlDg/HWuI=", first.checksum?.value)
+        assertEquals("2.16.840.1.101.3.4.2.1", first.checksum?.algorithmOID?.value)
+        assertEquals(RQES.ACCESS_MODE_OTP, first.access?.accessMode?.value)
+        assertEquals("51623", first.access?.oneTimePassword?.value)
 
         // Verify the second signature request
-        val second = qesRequests[1]
+        val second = assertIs<SignatureRequest.SignatureRequestWithDocumentReference>(qesRequests[1])
         assertEquals("eu_eidas_qes", second.signatureQualifier.value)
         assertEquals(SignatureFormat.JADES, second.signatureFormat?.value)
         assertEquals("AdES-B-B", second.conformanceLevel?.value)
         assertEquals("Attached", second.signedEnvelopeProperty?.value)
         assertEquals(URI.create("https://rp.example/qes/receive"), second.responseURI)
-        val secondReference = assertNotNull(second.documentReference)
-        assertEquals("Annex A - JSON config", secondReference.documentDigests?.value)
+        assertEquals("Annex A - JSON config", second.label?.value)
         assertEquals(
             URI.create("data:application/json;base64,eyJleGFtcGxlS2V5IjoiZXhhbXBsZVZhbHVlIn0K"),
-            secondReference.href,
+            second.href,
         )
-        assertEquals("cuKv8Ee9H/rQsteQ1MQZ2Ld2ERXRkkulihFh3/XOXFQ=", secondReference.checksum?.value)
-        assertEquals("2.16.840.1.101.3.4.2.1", secondReference.checksum?.algorithmOID?.value)
-        assertNull(secondReference.access)
+        assertEquals("cuKv8Ee9H/rQsteQ1MQZ2Ld2ERXRkkulihFh3/XOXFQ=", second.checksum?.value)
+        assertEquals("2.16.840.1.101.3.4.2.1", second.checksum?.algorithmOID?.value)
+        assertNull(second.access)
     }
 }
