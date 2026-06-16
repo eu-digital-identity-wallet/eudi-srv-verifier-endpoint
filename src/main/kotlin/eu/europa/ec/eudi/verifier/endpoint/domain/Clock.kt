@@ -28,14 +28,6 @@ interface Clock {
 
     fun timeZone(): TimeZone
 
-    fun Instant.toLocalDateTime(): LocalDateTime = toLocalDateTime(timeZone())
-
-    fun Instant.toLocalDate(): LocalDate = toLocalDateTime().date
-
-    fun Instant.toZonedDateTime(): ZonedDateTime = ZonedDateTime.ofInstant(toJavaInstant(), timeZone().toJavaZoneId())
-
-    fun LocalDate.atStartOfDay(): Instant = atStartOfDayIn(timeZone())
-
     companion object {
         val System: Clock =
             object : Clock {
@@ -56,15 +48,11 @@ interface Clock {
                 override fun timeZone(): TimeZone = timeZone
             }
 
-        fun fixed(now: ZonedDateTime): Clock = fixed(now.toInstant().toKotlinInstant(), now.zone.toKotlinTimeZone())
-
         internal fun Clock.asKotlinClock(): kotlin.time.Clock =
             object : kotlin.time.Clock {
                 override fun now(): Instant = this@asKotlinClock.now()
             }
     }
 }
-
-fun Date.toKotlinInstant(): Instant = toInstant().toKotlinInstant()
 
 fun Instant.toJavaDate(): Date = Date.from(toJavaInstant())

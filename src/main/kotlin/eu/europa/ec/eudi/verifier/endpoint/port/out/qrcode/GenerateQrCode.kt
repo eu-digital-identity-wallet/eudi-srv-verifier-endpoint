@@ -50,5 +50,5 @@ fun interface GenerateQrCode {
     suspend operator fun invoke(
         data: String,
         size: Dimensions,
-    ): Either<Throwable, PNGImage>
+    ): PNGImage
 }

@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode
 
-import arrow.core.Either
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.client.j2se.MatrixToImageConfig
@@ -24,11 +23,13 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.GenerateQrCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 
 val GenerateQrCodeFromData =
     GenerateQrCode { data, size ->
-        Either.catch {
+        withContext(Dispatchers.IO) {
             val writer = QRCodeWriter()
             val matrix =
                 writer.encode(

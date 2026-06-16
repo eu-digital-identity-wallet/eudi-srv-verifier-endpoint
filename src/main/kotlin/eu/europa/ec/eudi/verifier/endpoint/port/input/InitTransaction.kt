@@ -329,7 +329,7 @@ class InitTransactionLive(
 
                 Output.QrCode -> {
                     InitTransactionResponse.QrCode(
-                        generateQrCode(request.authorizationRequestUri, size = (250.pixels by 250.pixels)).getOrThrow(),
+                        generateQrCode(request.authorizationRequestUri, size = (250.pixels by 250.pixels)),
                         request.transactionId,
                         request.authorizationRequestUri,
                     )
