@@ -19,6 +19,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.*
 import arrow.core.raise.Raise
+import arrow.core.raise.catch
 import arrow.core.raise.context.ensure
 import arrow.core.raise.context.ensureNotNull
 import arrow.core.raise.context.raise
@@ -458,13 +459,12 @@ class InitTransactionLive(
         publishPresentationEvent(event)
     }
 
-    context(_: Raise<ValidationError>)
+    context(_: Raise<ValidationError.InvalidIssuerChain>)
     private fun issuerChain(initTransaction: InitTransactionTO): NonEmptyList<X509Certificate>? =
-        try {
-            initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it).getOrThrow() }
-        } catch (_: Throwable) {
-            raise(ValidationError.InvalidIssuerChain)
-        }
+        catch(
+            block = { initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it) } },
+            catch = { raise(ValidationError.InvalidIssuerChain) },
+        )
 
     /**
      * Gets the [UnresolvedAuthorizationRequestUri] for the provided [InitTransactionTO].

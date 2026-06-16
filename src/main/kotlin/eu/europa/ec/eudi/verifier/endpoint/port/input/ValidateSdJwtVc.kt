@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.*
 import arrow.core.raise.Raise
+import arrow.core.raise.catch
 import arrow.core.raise.context.raise
 import arrow.core.raise.context.withError
 import com.nimbusds.jwt.SignedJWT
@@ -26,7 +27,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationErrorCode
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
 import kotlinx.serialization.json.*
@@ -111,13 +111,13 @@ internal class ValidateSdJwtVc(
 
     context(_: Raise<NonEmptyList<SdJwtVcValidationErrorDetailsTO>>)
     private fun sdJwtVcValidator(issuerChain: String?): SdJwtVcValidator =
-        try {
-            sdJwtVcValidatorFactory(
-                issuerChain?.let { parsePemEncodedX509Certificates(it).getOrThrow() },
-            )
-        } catch (e: Exception) {
-            raise(e.toInvalidIssuersChainSdJwtVcValidationError().nel())
-        }
+        catch(
+            block = {
+                val chain = issuerChain?.let { parsePemEncodedX509Certificates(it) }
+                sdJwtVcValidatorFactory(chain)
+            },
+            catch = { e -> raise(e.toInvalidIssuersChainSdJwtVcValidationError().nel()) },
+        )
 }
 
 private fun Throwable.toInvalidIssuersChainSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =

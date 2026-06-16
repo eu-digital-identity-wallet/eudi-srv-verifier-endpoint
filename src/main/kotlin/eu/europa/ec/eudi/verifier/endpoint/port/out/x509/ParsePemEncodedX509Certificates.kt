@@ -17,11 +17,13 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.x509
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.raise.Raise
+import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidationError
 import java.security.cert.X509Certificate
 
 /**
  * Parses PEM encoded X509 Certificates.
  */
 fun interface ParsePemEncodedX509Certificates {
-    operator fun invoke(certificates: String): Either<Throwable, NonEmptyList<X509Certificate>>
+    operator fun invoke(certificates: String): NonEmptyList<X509Certificate>
 }

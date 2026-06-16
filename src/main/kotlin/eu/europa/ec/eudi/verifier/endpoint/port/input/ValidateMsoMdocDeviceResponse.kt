@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.NonEmptyList
 import arrow.core.raise.Raise
+import arrow.core.raise.catch
 import arrow.core.raise.context.raise
 import arrow.core.raise.context.withError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
@@ -144,13 +145,13 @@ internal class ValidateMsoMdocDeviceResponse(
 
     context(_: Raise<ValidationErrorTO>)
     private fun deviceResponseValidator(issuerChainInPem: String?): DeviceResponseValidator =
-        try {
-            deviceResponseValidatorFactory(
-                issuerChainInPem?.let { parsePemEncodedX509Certificates(it).getOrThrow() },
-            )
-        } catch (_: Exception) {
-            raise(ValidationErrorTO.invalidIssuerChain())
-        }
+        catch(
+            block = {
+                val chain = issuerChainInPem?.let { parsePemEncodedX509Certificates(it) }
+                deviceResponseValidatorFactory(chain)
+            },
+            catch = { raise(ValidationErrorTO.invalidIssuerChain()) },
+        )
 }
 
 private fun DeviceResponseError.toValidationFailureTO(): ValidationErrorTO =
