@@ -21,6 +21,7 @@ import arrow.core.raise.context.ensure
 import arrow.core.raise.context.ensureNotNull
 import arrow.core.raise.context.raise
 import arrow.core.raise.effect
+import arrow.core.raise.either
 import arrow.core.raise.recover
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.jwk.JWK
@@ -367,7 +368,9 @@ class PostWalletResponseLive(
                 GetWalletResponseMethod.Poll -> null
                 is GetWalletResponseMethod.Redirect -> generateResponseCode()
             }
-        return presentation.submit(clock, walletResponse, responseCode).getOrThrow()
+        return either { presentation.submit(clock, walletResponse, responseCode) }
+            .mapLeft { IllegalArgumentException(it) }
+            .getOrThrow()
     }
 
     private suspend fun logWalletResponsePosted(

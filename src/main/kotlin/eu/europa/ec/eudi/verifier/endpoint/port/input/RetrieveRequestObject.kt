@@ -26,7 +26,6 @@ import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
@@ -154,7 +153,7 @@ class RetrieveRequestObjectLive(
         ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
             val jar =
                 createJar(presentation, method.walletNonceOrNull, encryptionRequirement)
-            val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
+            val updatedPresentation = presentation.retrieveRequestObject(clock)
             storePresentation(updatedPresentation)
             return updatedPresentation to jar
         }

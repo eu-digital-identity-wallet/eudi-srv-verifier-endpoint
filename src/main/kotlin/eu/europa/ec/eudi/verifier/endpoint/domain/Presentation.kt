@@ -15,8 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
-import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.raise.context.Raise
+import arrow.core.raise.context.ensure
 import kotlinx.serialization.json.JsonObject
 import java.security.cert.X509Certificate
 import kotlin.time.Instant
@@ -190,22 +191,20 @@ sealed interface Presentation {
             fun requestObjectRetrieved(
                 requested: Requested,
                 at: Instant,
-            ): Either<Throwable, RequestObjectRetrieved> =
-                Either.catch {
-                    RequestObjectRetrieved(
-                        requested.id,
-                        requested.initiatedAt,
-                        requested.query,
-                        requested.transactionData,
-                        requested.requestId,
-                        at,
-                        requested.nonce,
-                        requested.responseMode,
-                        requested.getWalletResponseMethod,
-                        requested.issuerChain,
-                        requested.profile,
-                    )
-                }
+            ): RequestObjectRetrieved =
+                RequestObjectRetrieved(
+                    requested.id,
+                    requested.initiatedAt,
+                    requested.query,
+                    requested.transactionData,
+                    requested.requestId,
+                    at,
+                    requested.nonce,
+                    requested.responseMode,
+                    requested.getWalletResponseMethod,
+                    requested.issuerChain,
+                    requested.profile,
+                )
         }
     }
 
@@ -223,25 +222,24 @@ sealed interface Presentation {
         val responseCode: ResponseCode?,
     ) : Presentation {
         companion object {
+            context(_: Raise<String>)
             fun submitted(
                 requestObjectRetrieved: RequestObjectRetrieved,
                 at: Instant,
                 walletResponse: WalletResponse,
                 responseCode: ResponseCode?,
-            ): Either<Throwable, Submitted> =
-                Either.catch {
-                    with(requestObjectRetrieved) {
-                        Submitted(
-                            id,
-                            initiatedAt,
-                            requestId,
-                            requestObjectRetrievedAt,
-                            at,
-                            walletResponse,
-                            nonce,
-                            responseCode,
-                        )
-                    }
+            ): Submitted =
+                with(requestObjectRetrieved) {
+                    Submitted(
+                        id,
+                        initiatedAt,
+                        requestId,
+                        requestObjectRetrievedAt,
+                        at,
+                        walletResponse,
+                        nonce,
+                        responseCode,
+                    )
                 }
         }
     }
@@ -254,44 +252,44 @@ sealed interface Presentation {
         val timedOutAt: Instant,
     ) : Presentation {
         companion object {
+            context(_: Raise<String>)
             fun timeOut(
                 presentation: Requested,
                 at: Instant,
-            ): Either<Throwable, TimedOut> =
-                Either.catch {
-                    require(presentation.initiatedAt < at)
-                    TimedOut(presentation.id, presentation.initiatedAt, null, null, at)
-                }
+            ): TimedOut {
+                ensure(presentation.initiatedAt < at) { "Presentation ${presentation.initiatedAt} is before $at" }
+                return TimedOut(presentation.id, presentation.initiatedAt, null, null, at)
+            }
 
+            context(_: Raise<String>)
             fun timeOut(
                 presentation: RequestObjectRetrieved,
                 at: Instant,
-            ): Either<Throwable, TimedOut> =
-                Either.catch {
-                    require(presentation.initiatedAt < at)
-                    TimedOut(
-                        presentation.id,
-                        presentation.initiatedAt,
-                        presentation.requestObjectRetrievedAt,
-                        null,
-                        at,
-                    )
-                }
+            ): TimedOut {
+                ensure(presentation.initiatedAt < at) { "Presentation ${presentation.initiatedAt} is before $at" }
+                return TimedOut(
+                    presentation.id,
+                    presentation.initiatedAt,
+                    presentation.requestObjectRetrievedAt,
+                    null,
+                    at,
+                )
+            }
 
+            context(_: Raise<String>)
             fun timeOut(
                 presentation: Submitted,
                 at: Instant,
-            ): Either<Throwable, TimedOut> =
-                Either.catch {
-                    require(presentation.initiatedAt < at)
-                    TimedOut(
-                        presentation.id,
-                        presentation.initiatedAt,
-                        presentation.requestObjectRetrievedAt,
-                        presentation.submittedAt,
-                        at,
-                    )
-                }
+            ): TimedOut {
+                ensure(presentation.initiatedAt < at) { "Presentation ${presentation.initiatedAt} is before $at" }
+                return TimedOut(
+                    presentation.id,
+                    presentation.initiatedAt,
+                    presentation.requestObjectRetrievedAt,
+                    presentation.submittedAt,
+                    at,
+                )
+            }
         }
     }
 }
@@ -306,20 +304,21 @@ fun Presentation.isExpired(at: Instant): Boolean {
     }
 }
 
-fun Presentation.Requested.retrieveRequestObject(clock: Clock): Either<Throwable, Presentation.RequestObjectRetrieved> =
+fun Presentation.Requested.retrieveRequestObject(clock: Clock): Presentation.RequestObjectRetrieved =
     Presentation.RequestObjectRetrieved.requestObjectRetrieved(this, clock.now())
 
-fun Presentation.Requested.timedOut(clock: Clock): Either<Throwable, Presentation.TimedOut> =
-    Presentation.TimedOut.timeOut(this, clock.now())
+context(_: Raise<String>)
+fun Presentation.Requested.timedOut(clock: Clock): Presentation.TimedOut = Presentation.TimedOut.timeOut(this, clock.now())
 
-fun Presentation.RequestObjectRetrieved.timedOut(clock: Clock): Either<Throwable, Presentation.TimedOut> =
-    Presentation.TimedOut.timeOut(this, clock.now())
+context(_: Raise<String>)
+fun Presentation.RequestObjectRetrieved.timedOut(clock: Clock): Presentation.TimedOut = Presentation.TimedOut.timeOut(this, clock.now())
 
+context(_: Raise<String>)
 fun Presentation.RequestObjectRetrieved.submit(
     clock: Clock,
     walletResponse: WalletResponse,
     responseCode: ResponseCode?,
-): Either<Throwable, Presentation.Submitted> = Presentation.Submitted.submitted(this, clock.now(), walletResponse, responseCode)
+): Presentation.Submitted = Presentation.Submitted.submitted(this, clock.now(), walletResponse, responseCode)
 
-fun Presentation.Submitted.timedOut(clock: Clock): Either<Throwable, Presentation.TimedOut> =
-    Presentation.TimedOut.timeOut(this, clock.now())
+context(_: Raise<String>)
+fun Presentation.Submitted.timedOut(clock: Clock): Presentation.TimedOut = Presentation.TimedOut.timeOut(this, clock.now())

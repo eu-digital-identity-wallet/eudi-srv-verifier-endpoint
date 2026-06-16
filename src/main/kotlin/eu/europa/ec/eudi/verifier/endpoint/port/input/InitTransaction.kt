@@ -364,7 +364,7 @@ class InitTransactionLive(
                         EncryptionRequirement.NotRequired,
                     )
 
-                val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
+                val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock)
                 requestObjectRetrieved to
                     InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
                         requestedPresentation.id.value,

@@ -20,7 +20,6 @@ import java.util.*
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 
-
 interface Clock {
     fun now(): Instant
 

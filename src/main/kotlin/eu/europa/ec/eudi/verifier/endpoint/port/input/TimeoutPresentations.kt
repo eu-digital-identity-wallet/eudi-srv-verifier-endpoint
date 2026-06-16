@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
+import arrow.core.raise.effect
+import arrow.core.raise.getOrNull
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
@@ -41,19 +43,21 @@ class TimeoutPresentationsLive(
         return loadIncompletePresentationsOlderThan(expireBefore).mapNotNull { timeout(it)?.id }
     }
 
-    private suspend fun timeout(presentation: Presentation): Presentation? {
-        val timeout =
-            when (presentation) {
-                is Presentation.Requested -> presentation.timedOut(clock).getOrNull()
-                is Presentation.RequestObjectRetrieved -> presentation.timedOut(clock).getOrNull()
-                is Presentation.Submitted -> presentation.timedOut(clock).getOrNull()
-                is Presentation.TimedOut -> null
+    private suspend fun timeout(presentation: Presentation): Presentation? =
+        effect {
+            val timeout =
+                when (presentation) {
+                    is Presentation.Requested -> presentation.timedOut(clock)
+                    is Presentation.RequestObjectRetrieved -> presentation.timedOut(clock)
+                    is Presentation.Submitted -> presentation.timedOut(clock)
+                    is Presentation.TimedOut -> null
+                }
+            if (timeout != null) {
+                logExpired(timeout)
+                storePresentation(timeout)
             }
-        return timeout?.also { timedOut ->
-            logExpired(timedOut)
-            storePresentation(timedOut)
-        }
-    }
+            timeout
+        }.getOrNull()
 
     private suspend fun logExpired(presentation: Presentation.TimedOut) {
         val event = PresentationEvent.PresentationExpired(presentation.id, presentation.timedOutAt)
