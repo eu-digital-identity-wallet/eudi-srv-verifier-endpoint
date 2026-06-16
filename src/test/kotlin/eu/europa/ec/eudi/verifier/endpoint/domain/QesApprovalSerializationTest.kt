@@ -26,9 +26,9 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Test class focusing on JSON serialization for QesAuthorization.
+ * Test class focusing on JSON serialization for QesApproval.
  */
-class QesAuthorizationSerializationTest {
+class QesApprovalSerializationTest {
     private val json =
         Json {
             prettyPrint = true
@@ -36,7 +36,7 @@ class QesAuthorizationSerializationTest {
         }
 
     @Test
-    fun `test QesAuthorization serialization and deserialization`() {
+    fun `test QesApproval serialization and deserialization`() {
         // Create a DocumentDigest instance
         val documentDigest =
             DocumentDigest(
@@ -53,7 +53,7 @@ class QesAuthorizationSerializationTest {
                 href = URI.create("https://test"),
             )
 
-        // Create a QesAuthorization instance
+        // Create a QesApproval instance
         val qesApproval =
             QesApproval(
                 type = Type(QesApproval.TYPE),
@@ -76,28 +76,28 @@ class QesAuthorizationSerializationTest {
         val jsonObject = jsonElement.jsonObject
         assertEquals(QesApproval.TYPE, jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.toString()?.trim('"'))
 
-        // Deserialize back to QesAuthorization
-        val deserializedQesAuthorization = json.decodeFromString<QesApproval>(jsonString)
+        // Deserialize back to QesApproval
+        val deserializedQesApproval = json.decodeFromString<QesApproval>(jsonString)
 
         // Verify the deserialized object matches the original
-        assertEquals(qesApproval.type, deserializedQesAuthorization.type)
-        assertEquals(qesApproval.credentialIds, deserializedQesAuthorization.credentialIds)
-        assertEquals(qesApproval.hashAlgorithm, deserializedQesAuthorization.hashAlgorithm)
-        assertEquals(qesApproval.signatureQualifier?.value, deserializedQesAuthorization.signatureQualifier?.value)
-        assertEquals(qesApproval.credentialId, deserializedQesAuthorization.credentialId)
-        assertEquals(qesApproval.numSignatures, deserializedQesAuthorization.numSignatures)
+        assertEquals(qesApproval.type, deserializedQesApproval.type)
+        assertEquals(qesApproval.credentialIds, deserializedQesApproval.credentialIds)
+        assertEquals(qesApproval.hashAlgorithm, deserializedQesApproval.hashAlgorithm)
+        assertEquals(qesApproval.signatureQualifier?.value, deserializedQesApproval.signatureQualifier?.value)
+        assertEquals(qesApproval.credentialId, deserializedQesApproval.credentialId)
+        assertEquals(qesApproval.numSignatures, deserializedQesApproval.numSignatures)
 
         // Verify document digests
-        assertEquals(qesApproval.documentDigests.size, deserializedQesAuthorization.documentDigests.size)
+        assertEquals(qesApproval.documentDigests.size, deserializedQesApproval.documentDigests.size)
         val originalDigest = qesApproval.documentDigests[0]
-        val deserializedDigest = deserializedQesAuthorization.documentDigests[0]
+        val deserializedDigest = deserializedQesApproval.documentDigests[0]
         assertEquals(originalDigest.label?.value, deserializedDigest.label?.value)
         assertEquals(originalDigest.hash, deserializedDigest.hash)
         assertEquals(originalDigest.hashType?.value, deserializedDigest.hashType?.value)
     }
 
     @Test
-    fun `test QesAuthorization JSON structure`() {
+    fun `test QesApproval JSON structure`() {
         // Create a DocumentDigest instance
         val documentDigest =
             DocumentDigest(
@@ -123,7 +123,7 @@ class QesAuthorizationSerializationTest {
                     ),
             )
 
-        // Create a QesAuthorization instance
+        // Create a QesApproval instance
         val qesApproval =
             QesApproval(
                 type = Type(QesApproval.TYPE),
@@ -170,7 +170,7 @@ class QesAuthorizationSerializationTest {
     }
 
     @Test
-    fun `test QesAuthorization deserialization from sample JSON`() {
+    fun `test QesApproval deserialization from sample JSON`() {
         val sample =
             """
             {
@@ -214,16 +214,26 @@ class QesAuthorizationSerializationTest {
             }
             """.trimIndent()
 
-        val qesAuthorization = json.decodeFromString<QesApproval>(sample)
+        val qesApproval = json.decodeFromString<QesApproval>(sample)
 
-//        // Verify the deserialized object
-//        assertEquals(1, qesAuthorization.credentialIds.size)
-//        assertEquals("eu_eidas_qes", qesAuthorization.signatureQualifier?.value)
-//        assertEquals(1, qesAuthorization.documentDigests.size)
-//
-//        val digest = qesAuthorization.documentDigests[0]
-//        assertEquals("Example Contract", digest.label.value)
-//        assertEquals("7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA", digest.hash)
-//        assertEquals("2.16.840.1.101.3.4.2.1", digest.hashAlgorithm?.value)
+        // Verify the deserialized object
+        assertEquals(QesApproval.TYPE, qesApproval.type.value)
+        assertEquals(1, qesApproval.credentialIds.size)
+        assertEquals("xyz123", qesApproval.credentialIds[0].value)
+        assertEquals("GX0112348", qesApproval.credentialId?.value)
+        assertEquals("eu_eidas_qes", qesApproval.signatureQualifier?.value)
+        assertEquals(2u, qesApproval.numSignatures)
+        assertEquals("2.16.840.1.101.3.4.2.1", qesApproval.hashAlgorithm.value)
+        assertEquals(2, qesApproval.documentDigests.size)
+
+        val firstDigest = qesApproval.documentDigests[0]
+        assertEquals("Example Contract", firstDigest.label?.value)
+        assertEquals("sTOgwOm+474gFj0q0x1iSNspKqbcse4IeiqlDg/HWuI=", firstDigest.hash)
+        assertEquals("sodr", firstDigest.hashType?.value)
+
+        val secondDigest = qesApproval.documentDigests[1]
+        assertEquals("Terms of Service", secondDigest.label?.value)
+        assertEquals("HZQzZmMAIWekfGH0/ZKW1nsdt0xg3H6bZYztgsMTLw0=", secondDigest.hash)
+        assertEquals("sodr", secondDigest.hashType?.value)
     }
 }

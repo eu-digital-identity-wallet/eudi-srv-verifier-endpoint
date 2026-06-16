@@ -77,6 +77,8 @@ object RQES {
     const val DOCUMENTS_DOCUMENT_REFERENCE_HREF = "href"
     const val DOCUMENTS_DOCUMENT_REFERENCE_ACCESS = "access"
     const val DOCUMENTS_DOCUMENT_REFERENCE_CHECKSUM = "checksum"
+    const val DOCUMENTS_DOCUMENT_REFERENCE_HASH_VALUE = "value"
+    const val DOCUMENTS_DOCUMENT_REFERENCE_HASH_ALGORITHM_OID = "algorithmOID"
     const val DOCUMENTS_DOCUMENT_REFERENCE_CIRCUMSTANTIAL_DATA = "circumstantialData"
 
     const val DOCUMENTS_DOCUMENT_DATA_LABEL = "label"
@@ -86,8 +88,4 @@ object RQES {
 
     const val DOCUMENTS_DOCUMENT_TYPE_SOD = "sod"
     const val DOCUMENTS_DOCUMENT_TYPE_SFD = "sfd"
-}
-
-object RFC9396 {
-    const val LOCATIONS = "locations"
 }

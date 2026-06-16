@@ -218,7 +218,7 @@ internal value class Label(
 }
 
 /**
- * OID Hash Algorithm.
+ * Indication of the type of hash
  */
 @Serializable
 @JvmInline
@@ -315,7 +315,8 @@ internal data class AccessControlMethod(
 }
 
 /**
- * Data of a document to be signed.
+ * Data of a document to be signed as per
+ * [TS 119 432 v1.3.1](https://www.etsi.org/deliver/etsi_ts/119400_119499/119432/01.03.01_60/ts_119432v010301p.pdf).
  */
 @Serializable
 internal data class DocumentDigest(
@@ -345,7 +346,7 @@ data class Attribute(
     @Required
     val attributeName: String,
     @SerialName(RQES.ATTRIBUTE_ATTRIBUTE_VALUE)
-    val attributeValue: String? = null, // Shall calculate it, if needed?
+    val attributeValue: String? = null, // TODO: Shall calculate it, if needed? csc-dm 7.2
 ) {
     init {
         require(attributeName.isNotBlank()) { "Attribute name must not be blank" }
@@ -353,14 +354,14 @@ data class Attribute(
 }
 
 /**
- * Transaction Data for Qualified Electronic Signature (QES) Authorization.
+ * Transaction Data for Qualified Electronic Signature (QES) Approval.
  */
 @Serializable
-internal data class QesApproval( // Possibly rename to qesApprovalRequest
+internal data class QesApproval(
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE)
     @Required
     val type: Type,
-    // TODO: Required conditional,
+    // TODO: Required conditional, data-model-bindings 7.1.1
     //  References to credentials to approve a transaction with.
     //  MUST be included if and only if the protocol for handling transaction data requires it
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS)
@@ -393,10 +394,13 @@ internal data class QesApproval( // Possibly rename to qesApprovalRequest
     }
 
     companion object {
-        val TYPE = RQES.TYPE_QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION
+        const val TYPE = RQES.TYPE_QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION
     }
 }
 
+/**
+ * Transaction Data for Qualified Electronic Signature (QES) Request.
+ */
 @Serializable
 internal data class QesRequest(
     @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER)
@@ -407,7 +411,7 @@ internal data class QesRequest(
     @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_FORMAT)
     val signatureFormat: SignatureFormat? = null,
     @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_CONFORMANCE_LEVEL)
-    val conformanceLevel: String? = null, // This is complex but??
+    val conformanceLevel: ConformanceLevel? = null,
     @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_ENVELOPE_PROPERTY)
     val signedEnvelopeProperty: SignedEnvelopeProperty? = null,
     @SerialName(RQES.ADES_PARAMETERS_SIGNATURE_SIGNED_PROPERTIES)
@@ -478,6 +482,22 @@ internal data class DocumentData(
     @SerialName(RQES.DOCUMENTS_DOCUMENT_DATA_CIRCUMSTANTIAL_DATA)
     val circumstantialData: String? = null,
 )
+
+@Serializable
+@JvmInline
+value class ConformanceLevel(
+    val value: String,
+) {
+    init {
+        require(value.isNotBlank()) { "ConformanceLevel must not be empty" }
+        require(value in requiredConformanceLevel)
+    }
+
+    companion object {
+        private val requiredConformanceLevel =
+            listOf("AdES-B-B", "AdES-B-T", "AdES-B-LT", "AdES-B-LTA", "AdES-B", "AdES-T", "AdES-LT", "AdES-LTA")
+    }
+}
 
 @Serializable
 @JvmInline
@@ -565,16 +585,6 @@ value class SignatureFormat(
 
 @Serializable
 @JvmInline
-value class AttributeValue(
-    val value: String,
-) {
-    init {
-        require(value.isNotEmpty())
-    }
-}
-
-@Serializable
-@JvmInline
 value class Type(
     val value: String,
 ) {
@@ -612,10 +622,10 @@ value class HashAlgorithmOID(
 
 @Serializable
 data class Hash(
-    @SerialName("value")
+    @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_HASH_VALUE)
     @Required
     val value: String,
-    @SerialName("algorithmOID")
+    @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_HASH_ALGORITHM_OID)
     @Required
     val algorithmOID: HashAlgorithmOID,
 )
