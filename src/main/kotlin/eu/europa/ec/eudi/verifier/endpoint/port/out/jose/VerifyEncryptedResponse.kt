@@ -16,15 +16,18 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
 import arrow.core.Either
+import arrow.core.raise.Raise
 import com.nimbusds.jose.jwk.JWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 
 fun interface VerifyEncryptedResponse {
-    operator fun invoke(
+    context(_: Raise<WalletResponseValidationError.InvalidEncryptedResponse>)
+    suspend operator fun invoke(
         ephemeralResponseEncryptionKey: JWK,
         encryptedResponse: Jwt,
         apv: Nonce,
-    ): Either<Throwable, AuthorisationResponseTO>
+    ): AuthorisationResponseTO
 }

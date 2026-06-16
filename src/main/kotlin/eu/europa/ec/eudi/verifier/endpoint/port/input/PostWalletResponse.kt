@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
-import arrow.core.getOrElse
 import arrow.core.raise.Raise
 import arrow.core.raise.context.bind
 import arrow.core.raise.context.ensure
@@ -25,7 +24,6 @@ import arrow.core.raise.effect
 import arrow.core.raise.recover
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.jwk.JWK
-import com.nimbusds.jose.proc.BadJOSEException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
@@ -89,7 +87,7 @@ sealed interface WalletResponseValidationError {
     data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
 
     data class InvalidEncryptedResponse(
-        val error: BadJOSEException,
+        val error: Exception,
     ) : WalletResponseValidationError
 
     sealed interface HAIPValidationError : WalletResponseValidationError {
@@ -308,7 +306,7 @@ class PostWalletResponseLive(
     }
 
     context(_: Raise<WalletResponseValidationError>)
-    private fun responseObject(
+    private suspend fun responseObject(
         walletResponse: AuthorisationResponse,
         presentation: RequestObjectRetrieved,
     ): AuthorisationResponseTO =
@@ -342,21 +340,7 @@ class PostWalletResponseLive(
                             ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
                             encryptedResponse = walletResponse.encryptedResponse,
                             apv = presentation.nonce,
-                        ).getOrElse {
-                            when (it) {
-                                is BadJOSEException -> {
-                                    raise(
-                                        WalletResponseValidationError.InvalidEncryptedResponse(
-                                            it,
-                                        ),
-                                    )
-                                }
-
-                                else -> {
-                                    throw it
-                                }
-                            }
-                        }
+                        )
                     }
                 }
             }
