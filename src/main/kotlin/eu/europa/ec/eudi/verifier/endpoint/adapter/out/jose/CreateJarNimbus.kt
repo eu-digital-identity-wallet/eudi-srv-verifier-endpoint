@@ -37,6 +37,8 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJackson
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.dropRootCAIfPresent
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.nimbusds.oauth2.sdk.ResponseMode as NimbusResponseMode
 
 /**
@@ -46,18 +48,19 @@ class CreateJarNimbus(
     private val clock: Clock,
     private val verifierConfig: VerifierConfig,
 ) : CreateJar {
-    override fun invoke(
+    override suspend fun invoke(
         presentation: Presentation.Requested,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,
-    ): Jwt {
-        val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-        val signedJar = sign(presentation.responseMode, requestObject, walletNonce)
-        return when (walletJarEncryptionRequirement) {
-            EncryptionRequirement.NotRequired -> signedJar.serialize()
-            is EncryptionRequirement.Required -> encrypt(walletJarEncryptionRequirement, signedJar).serialize()
+    ): Jwt =
+        withContext(Dispatchers.Default) {
+            val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
+            val signedJar = sign(presentation.responseMode, requestObject, walletNonce)
+            when (walletJarEncryptionRequirement) {
+                EncryptionRequirement.NotRequired -> signedJar.serialize()
+                is EncryptionRequirement.Required -> encrypt(walletJarEncryptionRequirement, signedJar).serialize()
+            }
         }
-    }
 
     internal fun sign(
         responseMode: ResponseMode,

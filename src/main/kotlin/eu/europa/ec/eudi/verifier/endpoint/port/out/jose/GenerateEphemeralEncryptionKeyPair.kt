@@ -15,12 +15,11 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
-import arrow.core.Either
 import com.nimbusds.jose.jwk.JWK
 
 /**
- * An out port that generates ephemeral key
+ * An out port that generates an ephemeral key
  */
 fun interface GenerateEphemeralEncryptionKeyPair {
-    operator fun invoke(): Either<Throwable, JWK>
+    suspend operator fun invoke(): JWK
 }

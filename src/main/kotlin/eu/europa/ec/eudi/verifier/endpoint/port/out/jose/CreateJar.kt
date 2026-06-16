@@ -22,7 +22,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
  * An out port that signs and encrypts a [Presentation.Requested]
  */
 fun interface CreateJar {
-    operator fun invoke(
+    suspend operator fun invoke(
         presentation: Presentation.Requested,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,

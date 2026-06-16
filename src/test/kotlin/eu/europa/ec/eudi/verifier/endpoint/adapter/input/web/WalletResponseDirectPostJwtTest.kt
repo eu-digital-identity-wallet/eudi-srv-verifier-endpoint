@@ -375,7 +375,7 @@ internal class DeviceResponseValidationTest {
         @Bean
         @Primary
         fun generateEphemeralEncryptionKeyPair(): GenerateEphemeralEncryptionKeyPair =
-            GenerateEphemeralEncryptionKeyPair { ephemeralEncryptionKey.right() }
+            GenerateEphemeralEncryptionKeyPair { ephemeralEncryptionKey }
 
         companion object {
             val requestId: RequestId = RequestId("1234567890")

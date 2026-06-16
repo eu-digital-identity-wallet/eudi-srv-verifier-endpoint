@@ -350,7 +350,7 @@ class InitTransactionLive(
      *
      * Otherwise, [requestedPresentation] will remain as is
      */
-    private fun createRequest(
+    private suspend fun createRequest(
         requestedPresentation: Presentation.Requested,
         requestJarOption: EmbedOption<RequestId>,
         authorizationRequestUri: UnresolvedAuthorizationRequestUri,
@@ -405,7 +405,7 @@ class InitTransactionLive(
     /**
      * Gets the [ResponseMode] for the provided [InitTransactionTO].
      */
-    private fun responseMode(initTransaction: InitTransactionTO): ResponseMode {
+    private suspend fun responseMode(initTransaction: InitTransactionTO): ResponseMode {
         val responseModeOption =
             when (initTransaction.responseMode) {
                 ResponseModeTO.DirectPost -> ResponseModeOption.DirectPost
@@ -419,7 +419,7 @@ class InitTransactionLive(
             }
 
             ResponseModeOption.DirectPostJwt -> {
-                val responseEncryptionKey = generateEphemeralEncryptionKeyPair().getOrThrow()
+                val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
                 ResponseMode.DirectPostJwt(responseEncryptionKey)
             }
         }

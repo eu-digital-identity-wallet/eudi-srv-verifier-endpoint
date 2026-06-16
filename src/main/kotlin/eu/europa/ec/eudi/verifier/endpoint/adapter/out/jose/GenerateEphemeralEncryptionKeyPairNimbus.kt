@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import arrow.core.Either
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
@@ -24,6 +23,8 @@ import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseEncryptionOption
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.*
 
 /**
@@ -32,18 +33,18 @@ import java.util.*
 class GenerateEphemeralEncryptionKeyPairNimbus(
     private val responseEncryptionOption: ResponseEncryptionOption,
 ) : GenerateEphemeralEncryptionKeyPair {
-    override fun invoke(): Either<Throwable, JWK> {
-        val alg = responseEncryptionOption.algorithm
-        return createEphemeralEncryptionKey(alg)
-    }
-
-    private fun createEphemeralEncryptionKey(alg: JWEAlgorithm): Either<Throwable, ECKey> =
-        Either.catch {
-            val ecKeyGenerator =
-                ECKeyGenerator(Curve.P_256)
-                    .keyUse(KeyUse.ENCRYPTION)
-                    .algorithm(alg)
-                    .keyID(UUID.randomUUID().toString())
-            ecKeyGenerator.generate()
+    override suspend fun invoke(): JWK =
+        withContext(Dispatchers.Default) {
+            val alg = responseEncryptionOption.algorithm
+            createEphemeralEncryptionKey(alg)
         }
+
+    private fun createEphemeralEncryptionKey(alg: JWEAlgorithm): ECKey {
+        val ecKeyGenerator =
+            ECKeyGenerator(Curve.P_256)
+                .keyUse(KeyUse.ENCRYPTION)
+                .algorithm(alg)
+                .keyID(UUID.randomUUID().toString())
+        return ecKeyGenerator.generate()
+    }
 }
