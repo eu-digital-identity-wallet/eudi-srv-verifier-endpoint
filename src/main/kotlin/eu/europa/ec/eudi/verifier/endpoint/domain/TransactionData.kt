@@ -425,7 +425,7 @@ internal data class QesRequest(
 ) {
     init {
         val selectedSignatureFormat = signatureFormat?.value ?: SignatureFormat.CADES
-        val selectedSignedEnvelopeProperty = signedEnvelopeProperty ?: DEFAULT_SIGNED_ENVELOPE_PROPERTIES.getValue(selectedSignatureFormat)
+        val selectedSignedEnvelopeProperty = signedEnvelopeProperty?.value ?: DEFAULT_SIGNED_ENVELOPE_PROPERTIES.getValue(selectedSignatureFormat)
 
         require((documentData != null) xor (documentReference != null)) {
             "One of 'documentData' or 'documentReference' must be present."
