@@ -73,45 +73,32 @@ class WalletApi(
      * the Request Object of the presentation.
      * If found, the Request Object will be returned as JWT
      */
-    private suspend fun handleRetrieveRequestObject(req: ServerRequest): ServerResponse {
-        suspend fun ServerRequest.invocationMethod(): RetrieveRequestObjectMethod =
-            when (method()) {
-                HttpMethod.GET -> {
-                    RetrieveRequestObjectMethod.Get
-                }
-
-                HttpMethod.POST -> {
-                    val form = awaitFormData()
-                    RetrieveRequestObjectMethod.Post(
-                        walletMetadata = form.getFirst(OpenId4VPSpec.WALLET_METADATA),
-                        walletNonce = form.getFirst(OpenId4VPSpec.WALLET_NONCE),
-                    )
-                }
-
-                else -> {
-                    error("Allowed HTTP Method: GET, POST")
-                }
-            }
-
-        suspend fun requestObjectFound(jwt: String) = ok().contentType(REQUEST_OBJECT_MEDIA_TYPE).bodyValueAndAwait(jwt)
-
-        val requestId = req.requestId()
-        val invocationMethod = req.invocationMethod()
-
-        logger.info("Handling GetRequestObject for ${requestId.value} ...")
-        val result = effect { retrieveRequestObject(requestId, invocationMethod) }
-        return result.fold(
-            transform = { requestObjectFound(it) },
-            recover = {
+    private suspend fun handleRetrieveRequestObject(req: ServerRequest): ServerResponse =
+        effect {
+            val requestId = req.requestId()
+            logger.info("Handling GetRequestObject for $requestId ...")
+            val invocationMethod = req.retrieveRequestObjectMethod()
+            retrieveRequestObject(requestId, invocationMethod)
+        }.fold(
+            transform = { jwt ->
+                ok().contentType(REQUEST_OBJECT_MEDIA_TYPE).bodyValueAndAwait(jwt)
+            },
+            recover = { error ->
+                logger.error("$error while handling retrieve request object ")
                 val status =
-                    when (it) {
+                    when (error) {
                         RetrieveRequestObjectError.PresentationNotFound -> HttpStatus.NOT_FOUND
-                        else -> HttpStatus.BAD_REQUEST
+
+                        is RetrieveRequestObjectError.InvalidRequestUriMethod,
+                        is RetrieveRequestObjectError.InvalidState,
+                        is RetrieveRequestObjectError.InvalidWalletMetadata,
+                        is RetrieveRequestObjectError.UnparsableWalletMetadata,
+                        is RetrieveRequestObjectError.UnsupportedWalletMetadata,
+                        -> HttpStatus.BAD_REQUEST
                     }
                 status(status).buildAndAwait()
             },
         )
-    }
 
     /**
      * Handles a POST request placed by the wallet, input order to submit
@@ -139,12 +126,12 @@ class WalletApi(
                 logger.error("$error while handling post of wallet response ")
                 badRequest().json().bodyValueAndAwait(error.toJson())
             },
-            catch = { t ->
-                if (t is SerializationException) {
-                    logger.error("While handling post of wallet response failed to decode JSON", t)
+            catch = { exception ->
+                if (exception is SerializationException) {
+                    logger.error("While handling post of wallet response failed to decode JSON", exception)
                     badRequest().buildAndAwait()
                 } else {
-                    throw t
+                    throw exception
                 }
             },
         )
@@ -176,6 +163,25 @@ class WalletApi(
          * Extracts from the request the [RequestId]
          */
         private fun ServerRequest.requestId() = RequestId(pathVariable("requestId"))
+
+        private suspend fun ServerRequest.retrieveRequestObjectMethod(): RetrieveRequestObjectMethod =
+            when (method()) {
+                HttpMethod.GET -> {
+                    RetrieveRequestObjectMethod.Get
+                }
+
+                HttpMethod.POST -> {
+                    val form = awaitFormData()
+                    RetrieveRequestObjectMethod.Post(
+                        walletMetadata = form.getFirst(OpenId4VPSpec.WALLET_METADATA),
+                        walletNonce = form.getFirst(OpenId4VPSpec.WALLET_NONCE),
+                    )
+                }
+
+                else -> {
+                    error("Allowed HTTP Method: GET, POST")
+                }
+            }
 
         private fun MultiValueMap<String, String>.walletResponse(): AuthorisationResponse {
             fun directPost(): AuthorisationResponse.DirectPost {

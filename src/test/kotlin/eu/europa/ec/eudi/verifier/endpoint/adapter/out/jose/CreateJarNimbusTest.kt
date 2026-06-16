@@ -129,8 +129,7 @@ class CreateJarNimbusTest {
             c
                 .getJSONObjectClaim(OpenId4VPSpec.DCQL_QUERY)
                 .toJsonObject()
-                .decodeAs<DCQL>()
-                .getOrThrow(),
+                .decodeAs<DCQL>(),
         )
         assertEquals(r.scope.joinToString(separator = " "), c.getStringClaim("scope"))
         assertEquals(r.nonce, c.getStringClaim("nonce"))

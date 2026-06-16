@@ -18,12 +18,10 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwt
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
-import eu.europa.ec.eudi.statium.StatusIndex
 import eu.europa.ec.eudi.statium.StatusReference
 import eu.europa.ec.eudi.statium.TokenStatusListSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import kotlinx.serialization.json.JsonObject
 
 fun SdJwt<SignedJWT>.statusReference(): StatusReference? = jwt.statusReference()
@@ -38,15 +36,10 @@ private fun SignedJWT.statusReference(): StatusReference? {
     val statusElement = jwtClaimsSet.getJSONObjectClaim(TokenStatusListSpec.STATUS) ?: return null
     val statusJsonObject = statusElement.toJsonObject()
     val statusListElement = statusJsonObject[TokenStatusListSpec.STATUS_LIST]
-    requireNotNull(statusListElement) {
-        "Expected status_list element but not found"
+    return statusListElement?.let {
+        require(statusListElement is JsonObject) {
+            "Malformed status_list element"
+        }
+        statusListElement.decodeAs()
     }
-    require(statusListElement is JsonObject) {
-        "Malformed status_list element"
-    }
-
-    val index = StatusIndex(statusListElement[TokenStatusListSpec.IDX]?.decodeAs<Int>()?.getOrThrow()!!)
-    val uri = statusListElement[TokenStatusListSpec.URI]?.decodeAs<String>()!!.getOrThrow()
-
-    return StatusReference(index, uri)
 }

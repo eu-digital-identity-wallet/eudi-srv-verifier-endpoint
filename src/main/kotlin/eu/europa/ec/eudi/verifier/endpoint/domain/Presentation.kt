@@ -44,6 +44,8 @@ value class RequestId(
     init {
         require(value.isNotBlank())
     }
+
+    override fun toString(): String = value
 }
 
 @JvmInline

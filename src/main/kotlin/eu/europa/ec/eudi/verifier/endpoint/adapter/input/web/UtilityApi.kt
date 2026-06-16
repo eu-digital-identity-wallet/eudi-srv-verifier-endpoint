@@ -28,9 +28,12 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.toJson
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
 import org.springframework.http.MediaType.APPLICATION_JSON
+import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.badRequest
 import org.springframework.web.reactive.function.server.ServerResponse.ok
+import kotlin.collections.filterNot
+import kotlin.collections.firstOrNull
 
 private val log = LoggerFactory.getLogger(UtilityApi::class.java)
 
@@ -76,8 +79,7 @@ internal class UtilityApi(
                     .let {
                         requireNotNull(it) { "device_response must be provided" }
                     }
-            val issuerChain = form["issuer_chain"]?.filterNot { it.isBlank() }?.firstOrNull()
-
+            val issuerChain = form.issuerChain()
             validateMsoMdocDeviceResponse(deviceResponse = deviceResponse, issuerChain = issuerChain)
         }.fold(
             transform = { documents -> ok().json().bodyValueAndAwait(documents) },
@@ -87,28 +89,15 @@ internal class UtilityApi(
     private suspend fun handleValidateSdJwtVc(request: ServerRequest): ServerResponse =
         effect {
             val form = request.awaitFormData()
-            val unverifiedSdJwtVc =
-                form["sd_jwt_vc"]
-                    ?.firstOrNull { it.isNotBlank() }
-                    .let {
-                        requireNotNull(it) { "sd_jwt_vc must be provided" }
-                    }
-            val nonce =
-                form["nonce"]
-                    ?.firstOrNull { it.isNotBlank() }
-                    .let {
-                        requireNotNull(it) { "nonce must be provided" }
-                        Nonce(it)
-                    }
-            val issuerChain = form["issuer_chain"]?.filterNot { it.isBlank() }?.firstOrNull()
+            val unverifiedSdJwtVc = form.unprocessedSdJwtVc()
+            val nonce = form.nonce()
+            val issuerChain = form.issuerChain()
             validateSdJwtVc(unverifiedSdJwtVc, nonce, issuerChain)
         }.fold(
             transform = { result ->
-                val reCreated =
+                val (reCreated, _) =
                     with(NimbusSdJwtOps) {
-                        result.sdJwt
-                            .recreateClaimsAndDisclosuresPerClaim()
-                            .first
+                        result.sdJwt.recreateClaimsAndDisclosuresPerClaim()
                     }
                 ok().json().bodyValueAndAwait(reCreated)
             },
@@ -119,13 +108,7 @@ internal class UtilityApi(
         catch(
             block = {
                 val form = request.awaitFormData()
-                val unprocessedSdJwtVc =
-                    form["sd_jwt_vc"]
-                        ?.firstOrNull { it.isNotBlank() }
-                        .let {
-                            requireNotNull(it) { "sd_jwt_vc must be provided" }
-                        }
-
+                val unprocessedSdJwtVc = form.unprocessedSdJwtVc()
                 processSdJwtVc(unprocessedSdJwtVc)
             },
             transform = { ok().json().bodyValueAndAwait(it) },
@@ -145,3 +128,20 @@ internal class UtilityApi(
         const val ATTESTATION_CLASSIFICATIONS_PATH = "/utilities/attestationClassifications"
     }
 }
+
+private fun MultiValueMap<String, String>.unprocessedSdJwtVc(): String {
+    val unprocessedSdJwtVc = this["sd_jwt_vc"]?.firstOrNull { it.isNotBlank() }
+    return requireNotNull(unprocessedSdJwtVc) { "sd_jwt_vc must be provided" }
+}
+
+private fun MultiValueMap<String, String>.nonce(): Nonce {
+    val nonce = this["nonce"]?.firstOrNull { it.isNotBlank() }?.let(::Nonce)
+    return requireNotNull(nonce) { "nonce must be provided" }
+}
+
+private fun MultiValueMap<String, String>.deviceResponse(): String {
+    val deviceResponse = this["device_response"]?.firstOrNull { it.isNotBlank() }
+    return requireNotNull(deviceResponse) { "device_response must be provided" }
+}
+
+private fun MultiValueMap<String, String>.issuerChain(): String? = this["issuer_chain"]?.filterNot { it.isBlank() }?.firstOrNull()
