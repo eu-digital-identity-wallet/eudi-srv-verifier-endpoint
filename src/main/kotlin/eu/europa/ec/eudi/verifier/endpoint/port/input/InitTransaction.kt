@@ -359,12 +359,10 @@ class InitTransactionLive(
             is EmbedOption.ByValue -> {
                 val jwt =
                     createJar(
-                        verifierConfig,
-                        clock,
                         requestedPresentation,
                         null,
                         EncryptionRequirement.NotRequired,
-                    ).getOrThrow()
+                    )
 
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
                 requestObjectRetrieved to

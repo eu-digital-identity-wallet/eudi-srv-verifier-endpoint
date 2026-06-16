@@ -60,7 +60,10 @@ object TestContext {
                 .toECKey()
         }
     private val responseEncryptionOption =
-        ResponseEncryptionOption(JWEAlgorithm.ECDH_ES, nonEmptyListOf(EncryptionMethod.A128GCM, EncryptionMethod.A256GCM))
+        ResponseEncryptionOption(
+            JWEAlgorithm.ECDH_ES,
+            nonEmptyListOf(EncryptionMethod.A128GCM, EncryptionMethod.A256GCM),
+        )
     val clientMetaData =
         ClientMetaData(
             responseEncryptionOption = responseEncryptionOption,
@@ -78,7 +81,6 @@ object TestContext {
         )
     private val accessCertificate: AccessCertificate = AccessCertificate(ecJwk, JWSAlgorithm.ES512)
     val verifierId = VerifierId.X509SanDns("verifier", accessCertificate)
-    val createJar: CreateJarNimbus = CreateJarNimbus()
     val signedRequestObjectVerifier: JWSVerifier = ECDSAVerifier(ecJwk)
     private val repo = PresentationInMemoryRepo()
     val loadPresentationById = repo.loadPresentationById
@@ -94,7 +96,7 @@ object TestContext {
             generatedTransactionId,
             generateRequestId,
             storePresentation,
-            createJar,
+            CreateJarNimbus(testClock, verifierConfig),
             verifierConfig,
             testClock,
             generateEphemeralKey,
@@ -107,7 +109,7 @@ object TestContext {
 }
 
 /**
- * Meta annotation to be used with integration tests of the application
+ * Meta-annotation to be used with integration tests of the application
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)

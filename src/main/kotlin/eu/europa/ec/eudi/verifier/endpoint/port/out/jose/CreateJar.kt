@@ -23,10 +23,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
  */
 fun interface CreateJar {
     operator fun invoke(
-        verifierConfig: VerifierConfig,
-        clock: Clock,
         presentation: Presentation.Requested,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,
-    ): Either<Throwable, Jwt>
+    ): Jwt
 }

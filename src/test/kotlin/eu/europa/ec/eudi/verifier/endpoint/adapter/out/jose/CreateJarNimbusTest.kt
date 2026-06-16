@@ -34,20 +34,41 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.DCQL
+import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.HashAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
+import eu.europa.ec.eudi.verifier.endpoint.domain.RequestUriMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseModeOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.UnresolvedAuthorizationRequestUri
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import kotlinx.serialization.json.Json
 import net.minidev.json.JSONObject
 import java.net.URL
 import java.util.*
 import kotlin.test.*
+import kotlin.time.Duration.Companion.days
 
 class CreateJarNimbusTest {
-    private val createJar = TestContext.createJar
     private val verifier = TestContext.signedRequestObjectVerifier
     private val clientMetaData = TestContext.clientMetaData
     private val verifierId = TestContext.verifierId
+
+    private val verifierConfig =
+        VerifierConfig(
+            verifierId = verifierId,
+            requestJarOption = EmbedOption.ByValue,
+            responseUriBuilder = { _ -> URL("https://foo") },
+            responseModeOption = ResponseModeOption.DirectPostJwt,
+            maxAge = 3.days,
+            clientMetaData = clientMetaData,
+            transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
+            requestUriMethod = RequestUriMethod.Get,
+            authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
+        )
+
+    private val createJar = CreateJarNimbus(TestContext.testClock, verifierConfig)
 
     @Test
     fun `given a request object, it should be signed and decoded`() {
@@ -76,8 +97,7 @@ class CreateJarNimbusTest {
 
         val jwt =
             createJar
-                .sign(clientMetaData, ResponseMode.DirectPostJwt(ecKey), requestObject, null)
-                .getOrThrow()
+                .sign(ResponseMode.DirectPostJwt(ecKey), requestObject, null)
                 .serialize()
                 .also { println(it) }
         val signedJwt = decode(jwt).getOrThrow().also { println(it) }

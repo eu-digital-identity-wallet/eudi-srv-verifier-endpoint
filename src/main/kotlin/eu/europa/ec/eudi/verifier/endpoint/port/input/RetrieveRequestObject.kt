@@ -153,13 +153,7 @@ class RetrieveRequestObjectLive(
             encryptionRequirement: EncryptionRequirement,
         ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
             val jar =
-                createJar(
-                    verifierConfig,
-                    clock,
-                    presentation,
-                    method.walletNonceOrNull,
-                    encryptionRequirement,
-                ).getOrThrow()
+                createJar(presentation, method.walletNonceOrNull, encryptionRequirement)
             val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
             storePresentation(updatedPresentation)
             return updatedPresentation to jar

@@ -15,8 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import arrow.core.Either
-import arrow.core.flatMap
 import com.nimbusds.jose.*
 import com.nimbusds.jose.crypto.ECDHEncrypter
 import com.nimbusds.jose.crypto.RSAEncrypter
@@ -44,75 +42,73 @@ import com.nimbusds.oauth2.sdk.ResponseMode as NimbusResponseMode
 /**
  * An implementation of [CreateJar] that uses Nimbus SDK
  */
-class CreateJarNimbus : CreateJar {
+class CreateJarNimbus(
+    private val clock: Clock,
+    private val verifierConfig: VerifierConfig,
+) : CreateJar {
     override fun invoke(
-        verifierConfig: VerifierConfig,
-        clock: Clock,
         presentation: Presentation.Requested,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,
-    ): Either<Throwable, Jwt> {
+    ): Jwt {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-        val signedJar = sign(verifierConfig.clientMetaData, presentation.responseMode, requestObject, walletNonce)
+        val signedJar = sign(presentation.responseMode, requestObject, walletNonce)
         return when (walletJarEncryptionRequirement) {
-            EncryptionRequirement.NotRequired -> signedJar.map { it.serialize() }
-            is EncryptionRequirement.Required -> signedJar.flatMap { encrypt(walletJarEncryptionRequirement, it) }.map { it.serialize() }
+            EncryptionRequirement.NotRequired -> signedJar.serialize()
+            is EncryptionRequirement.Required -> encrypt(walletJarEncryptionRequirement, signedJar).serialize()
         }
     }
 
     internal fun sign(
-        clientMetaData: ClientMetaData,
         responseMode: ResponseMode,
         requestObject: RequestObject,
         walletNonce: String?,
-    ): Either<Throwable, SignedJWT> =
-        Either.catch {
-            val (key, algorithm) = requestObject.verifierId.accessCertificate
-            val header =
-                JWSHeader
-                    .Builder(algorithm)
-                    .apply {
-                        when (requestObject.verifierId) {
-                            is VerifierId.PreRegistered -> {
-                                keyID(key.keyID)
-                            }
-
-                            is VerifierId.X509SanDns, is VerifierId.X509Hash -> {
-                                x509CertChain(
-                                    key.parsedX509CertChain.dropRootCAIfPresent().map { Base64.encode(it.encoded) },
-                                )
-                            }
+    ): SignedJWT {
+        val (key, algorithm) = requestObject.verifierId.accessCertificate
+        val header =
+            JWSHeader
+                .Builder(algorithm)
+                .apply {
+                    when (requestObject.verifierId) {
+                        is VerifierId.PreRegistered -> {
+                            keyID(key.keyID)
                         }
-                    }.type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
-                    .build()
-            val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode), requestObject, walletNonce)
 
-            SignedJWT(header, claimSet).apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
-        }
+                        is VerifierId.X509SanDns, is VerifierId.X509Hash -> {
+                            x509CertChain(
+                                key.parsedX509CertChain.dropRootCAIfPresent().map { Base64.encode(it.encoded) },
+                            )
+                        }
+                    }
+                    type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
+                }.build()
+        val clientMetaData = verifierConfig.clientMetaData
+        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode), requestObject, walletNonce)
+        return SignedJWT(header, claimSet).apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
+    }
 
     internal fun encrypt(
         walletJarEncryptionRequirement: EncryptionRequirement.Required,
         signed: SignedJWT,
-    ): Either<Throwable, JWEObject> =
-        Either.catch {
-            val (walletJarEncryptionKey, encryptionAlgorithm, encryptionMethod) = walletJarEncryptionRequirement
-            val encrypter =
-                when (walletJarEncryptionKey) {
-                    is RSAKey -> RSAEncrypter(walletJarEncryptionKey)
-                    is ECKey -> ECDHEncrypter(walletJarEncryptionKey)
-                    is OctetKeyPair -> X25519Encrypter(walletJarEncryptionKey)
-                    else -> error("Unsupported JWK type '${walletJarEncryptionKey.javaClass.name}'")
-                }
+    ): JWEObject {
+        val (walletJarEncryptionKey, encryptionAlgorithm, encryptionMethod) = walletJarEncryptionRequirement
+        val encrypter =
+            when (walletJarEncryptionKey) {
+                is RSAKey -> RSAEncrypter(walletJarEncryptionKey)
+                is ECKey -> ECDHEncrypter(walletJarEncryptionKey)
+                is OctetKeyPair -> X25519Encrypter(walletJarEncryptionKey)
+                else -> error("Unsupported JWK type '${walletJarEncryptionKey.javaClass.name}'")
+            }
 
-            val header =
-                JWEHeader
-                    .Builder(encryptionAlgorithm, encryptionMethod)
-                    .contentType("JWT")
-                    .build()
-            val payload = Payload(signed)
+        val header =
+            JWEHeader
+                .Builder(encryptionAlgorithm, encryptionMethod)
+                .contentType("JWT")
+                .build()
+        val payload = Payload(signed)
 
-            JWEObject(header, payload).apply { encrypt(encrypter) }
-        }
+        return JWEObject(header, payload).apply { encrypt(encrypter) }
+    }
 
     /**
      * Maps a [RequestObject] into a Nimbus [JWTClaimsSet]
