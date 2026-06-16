@@ -15,13 +15,11 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
-import kotlinx.datetime.*
 import kotlinx.datetime.TimeZone
-import java.time.ZonedDateTime
 import java.util.*
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
-import kotlin.time.toKotlinInstant
+
 
 interface Clock {
     fun now(): Instant
