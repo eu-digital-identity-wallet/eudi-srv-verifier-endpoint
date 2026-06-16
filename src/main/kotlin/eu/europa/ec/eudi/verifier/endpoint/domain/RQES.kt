@@ -71,9 +71,10 @@ object RQES {
     const val ADES_PARAMETERS_SIGNATURE_SIGNED_PROPERTIES = "signed_props"
     const val ADES_PARAMETERS_SIGNATURE_REFERENCE_URI = "referenceUri"
 
-    const val DOCUMENTS_DOCUMENT_DATA = "documentData"
-    const val DOCUMENTS_DOCUMENT_REFERENCE = "documentReference"
+    const val SIGNING_ALGORITHM_SIGN_ALGO = "signAlgo"
+    const val SIGNING_ALGORITHM_SIGN_ALGO_PARAMS = "signAlgoParams"
 
+    const val REQUESTS_SIGNATURE_REQUESTS = "signatureRequests"
     const val DOCUMENTS_DOCUMENT_REFERENCE_LABEL = "label"
     const val DOCUMENTS_DOCUMENT_REFERENCE_HREF = "href"
     const val DOCUMENTS_DOCUMENT_REFERENCE_ACCESS = "access"

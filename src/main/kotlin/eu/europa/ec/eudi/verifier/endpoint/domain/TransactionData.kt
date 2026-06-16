@@ -437,10 +437,10 @@ internal sealed interface SignatureRequest {
         val documentType: DocumentType = DocumentType.DEFAULT,
         @SerialName(RQES.DOCUMENTS_DOCUMENT_DATA_CIRCUMSTANTIAL_DATA)
         override val circumstantialData: String? = null,
-        @SerialName("signAlgo")
+        @SerialName(RQES.SIGNING_ALGORITHM_SIGN_ALGO)
         @Required
         override val signAlgo: String,
-        @SerialName("signAlgoParams")
+        @SerialName(RQES.SIGNING_ALGORITHM_SIGN_ALGO_PARAMS)
         override val signAlgoParams: String? = null,
     ) : SignatureRequest {
         init {
@@ -480,10 +480,10 @@ internal sealed interface SignatureRequest {
         val checksum: Hash? = null,
         @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_CIRCUMSTANTIAL_DATA)
         override val circumstantialData: String? = null,
-        @SerialName("signAlgo")
+        @SerialName(RQES.SIGNING_ALGORITHM_SIGN_ALGO)
         @Required
         override val signAlgo: String,
-        @SerialName("signAlgoParams")
+        @SerialName(RQES.SIGNING_ALGORITHM_SIGN_ALGO_PARAMS)
         override val signAlgoParams: String? = null,
     ) : SignatureRequest {
         init {
@@ -545,7 +545,7 @@ internal data class QesRequest(
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS)
     @Required
     val credentialIds: NonEmptyList<CredentialID>,
-    @SerialName("signatureRequests")
+    @SerialName(RQES.REQUESTS_SIGNATURE_REQUESTS)
     @Required
     val signatureRequests: NonEmptyList<SignatureRequest>,
 ) {
