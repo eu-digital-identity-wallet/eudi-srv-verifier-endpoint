@@ -78,7 +78,7 @@ enum class ResponseModeTO {
     @SerialName(OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT)
     DirectPostJwt,
 
-    @SerialName("dcapi") // OpenId4VPSpec.RESPONSE_MODE_DCAPI)
+    @SerialName(OpenId4VPSpec.RESPONSE_MODE_DCAPI)
     DCApi,
 }
 
