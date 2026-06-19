@@ -25,4 +25,5 @@ object RFC6749 {
     const val ERROR_DESCRIPTION: String = "error_description"
 
     const val RESPONSE_MODE: String = "response_mode"
+    const val RESPONSE_TYPE: String = "response_type"
 }

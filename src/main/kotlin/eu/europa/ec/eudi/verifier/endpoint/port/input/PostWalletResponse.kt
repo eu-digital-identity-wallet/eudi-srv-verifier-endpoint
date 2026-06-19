@@ -29,6 +29,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.Submitted
+import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyEncryptedResponse
@@ -59,6 +60,10 @@ sealed interface AuthorisationResponse {
     ) : AuthorisationResponse
 
     data class DirectPostJwt(
+        val encryptedResponse: Jwt,
+    ) : AuthorisationResponse
+
+    data class DCApiJwt(
         val encryptedResponse: Jwt,
     ) : AuthorisationResponse
 }
@@ -314,7 +319,7 @@ class PostWalletResponseLive(
         when (val responseMode = presentation.responseMode) {
             ResponseMode.DirectPost -> {
                 ensure(walletResponse is AuthorisationResponse.DirectPost) {
-                    WalletResponseValidationError.UnexpectedResponseMode(
+                    UnexpectedResponseMode(
                         presentation.requestId,
                         expected = ResponseModeOption.DirectPost,
                         actual = ResponseModeOption.DirectPostJwt,
@@ -327,13 +332,41 @@ class PostWalletResponseLive(
                 when (walletResponse) {
                     is AuthorisationResponse.DirectPost -> {
                         ensure(walletResponse.isErrorResponse()) {
-                            WalletResponseValidationError.UnexpectedResponseMode(
+                            UnexpectedResponseMode(
                                 presentation.requestId,
                                 expected = ResponseModeOption.DirectPostJwt,
                                 actual = ResponseModeOption.DirectPost,
                             )
                         }
                         walletResponse.response
+                    }
+
+                    is AuthorisationResponse.DirectPostJwt -> {
+                        verifyEncryptedResponse(
+                            ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
+                            encryptedResponse = walletResponse.encryptedResponse,
+                            apv = presentation.nonce,
+                        )
+                    }
+
+                    is AuthorisationResponse.DCApiJwt -> {
+                        verifyEncryptedResponse(
+                            ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
+                            encryptedResponse = walletResponse.encryptedResponse,
+                            apv = presentation.nonce,
+                        )
+                    }
+                }
+            }
+
+            is ResponseMode.DCApi -> {
+                when (walletResponse) {
+                    is AuthorisationResponse.DCApiJwt -> {
+                        TODO()
+                    }
+
+                    is AuthorisationResponse.DirectPost -> {
+                        TODO()
                     }
 
                     is AuthorisationResponse.DirectPostJwt -> {
@@ -411,6 +444,7 @@ private val AuthorisationResponse.encryptedResponseOrNull: Jwt?
         when (this) {
             is AuthorisationResponse.DirectPost -> null
             is AuthorisationResponse.DirectPostJwt -> encryptedResponse
+            is AuthorisationResponse.DCApiJwt -> encryptedResponse
         }
 
 private val AuthorisationResponse.vpTokenOrNull: JsonObject?
@@ -418,6 +452,7 @@ private val AuthorisationResponse.vpTokenOrNull: JsonObject?
         when (this) {
             is AuthorisationResponse.DirectPost -> response.vpToken
             is AuthorisationResponse.DirectPostJwt -> null
+            is AuthorisationResponse.DCApiJwt -> null
         }
 
 private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
@@ -425,6 +460,7 @@ private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
         when (responseMode) {
             ResponseMode.DirectPost -> null
             is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey
+            is ResponseMode.DCApi -> responseMode.ephemeralResponseEncryptionKey
         }
 
 private fun Logger.debug(

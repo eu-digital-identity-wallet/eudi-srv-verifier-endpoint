@@ -181,6 +181,21 @@ internal class AppBeans :
             )
         }
 
+        registerBean {
+            InitDCApiTransactionLive(
+                bean(),
+                bean(),
+                bean(),
+                bean(),
+                bean(),
+                bean(),
+                bean(),
+                bean(),
+                bean(),
+                bean(),
+            )
+        }
+
         registerBean { RetrieveRequestObjectLive(bean(), bean(), bean(), bean(), bean(), bean()) }
 
         registerBean {
@@ -394,6 +409,7 @@ internal class AppBeans :
                 )
             val verifierApi =
                 VerifierApi(
+                    bean(),
                     bean(),
                     bean(),
                     bean(),
@@ -635,15 +651,17 @@ private fun Environment.clientMetaData(): ClientMetaData {
 
             VpFormatsSupported(sdJwtVc, msoMdoc)
         }
-
-    return ClientMetaData(
-        responseEncryptionOption =
-            ResponseEncryptionOption(
-                algorithm = JWEAlgorithm.parse(responseEncryptionOptionAlgorithm),
-                encryptionMethods = responseEncryptionOptionMethods.map { EncryptionMethod.parse(it) },
-            ),
-        vpFormatsSupported = vpFormatsSupportedSupported,
-    )
+    val z =
+        ClientMetaData(
+            responseEncryptionOption =
+                ResponseEncryptionOption(
+                    algorithm = JWEAlgorithm.parse(responseEncryptionOptionAlgorithm),
+                    encryptionMethods = responseEncryptionOptionMethods.map { EncryptionMethod.parse(it) },
+                ),
+            vpFormatsSupported = vpFormatsSupportedSupported,
+        )
+    println("CLIENTMETADATA: " + z)
+    return z
 }
 
 /**

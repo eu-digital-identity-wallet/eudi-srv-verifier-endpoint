@@ -94,4 +94,6 @@ object OpenId4VPSpec {
 
     const val OPENID4VP_HANDOVER_IDENTIFIER = "OpenID4VPHandover"
     const val OPENID4VP_DCAPI_HANDOVER_IDENTIFIER = "OpenID4VPDCAPIHandover"
+
+    const val RESPONSE_MODE_DCAPI = "dc_api.jwt"
 }
