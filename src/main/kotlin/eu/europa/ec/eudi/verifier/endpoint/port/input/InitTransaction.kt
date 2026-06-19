@@ -634,7 +634,7 @@ private fun interface ProfileValidator {
                         ValidationError.HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported
                     }
                 }
-                println("config: $config")
+
                 ensure(config.verifierId is VerifierId.X509Hash) {
                     ValidationError.HaipNotSupported.ClientIdPrefixX509HashMustBeUsed
                 }

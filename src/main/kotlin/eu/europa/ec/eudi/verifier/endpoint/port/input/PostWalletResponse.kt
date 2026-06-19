@@ -362,18 +362,20 @@ class PostWalletResponseLive(
             is ResponseMode.DCApi -> {
                 when (walletResponse) {
                     is AuthorisationResponse.DCApiJwt -> {
-                        TODO()
-                    }
-
-                    is AuthorisationResponse.DirectPost -> {
-                        TODO()
-                    }
-
-                    is AuthorisationResponse.DirectPostJwt -> {
                         verifyEncryptedResponse(
                             ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
                             encryptedResponse = walletResponse.encryptedResponse,
                             apv = presentation.nonce,
+                        )
+                    }
+
+                    else -> {
+                        raise(
+                            UnexpectedResponseMode(
+                                presentation.requestId,
+                                expected = ResponseModeOption.DCApiJwt,
+                                actual = ResponseModeOption.DirectPostJwt,
+                            ),
                         )
                     }
                 }
