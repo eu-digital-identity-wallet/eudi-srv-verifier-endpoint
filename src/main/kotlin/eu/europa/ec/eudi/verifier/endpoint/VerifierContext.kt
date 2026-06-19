@@ -651,17 +651,15 @@ private fun Environment.clientMetaData(): ClientMetaData {
 
             VpFormatsSupported(sdJwtVc, msoMdoc)
         }
-    val z =
-        ClientMetaData(
-            responseEncryptionOption =
-                ResponseEncryptionOption(
-                    algorithm = JWEAlgorithm.parse(responseEncryptionOptionAlgorithm),
-                    encryptionMethods = responseEncryptionOptionMethods.map { EncryptionMethod.parse(it) },
-                ),
-            vpFormatsSupported = vpFormatsSupportedSupported,
-        )
-    println("CLIENTMETADATA: " + z)
-    return z
+
+    return ClientMetaData(
+        responseEncryptionOption =
+            ResponseEncryptionOption(
+                algorithm = JWEAlgorithm.parse(responseEncryptionOptionAlgorithm),
+                encryptionMethods = responseEncryptionOptionMethods.map { EncryptionMethod.parse(it) },
+            ),
+        vpFormatsSupported = vpFormatsSupportedSupported,
+    )
 }
 
 /**
