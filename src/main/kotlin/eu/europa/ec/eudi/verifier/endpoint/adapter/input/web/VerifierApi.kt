@@ -51,7 +51,7 @@ internal class VerifierApi(
             ) { request -> handleInitTransaction(request, VerifierApiVersion.V2) }
             POST(
                 INIT_TRANSACTION_PATH_DC_API,
-                contentType(APPLICATION_JSON) and accept(APPLICATION_JSON, MediaType.parseMediaType("application/jwt")),
+                contentType(APPLICATION_JSON) and accept(APPLICATION_JSON),
             ) { request -> handleInitDCApiTransaction(request) }
 
             GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
@@ -123,11 +123,13 @@ internal class VerifierApi(
         }.fold(
             transform = {
                 if (it.request != null) {
-                    ok().contentType(MediaType.parseMediaType("application/jwt")).bodyValueAndAwait(it.request)
+                    ok()
+                        .json()
+                        .bodyValueAndAwait(InitTransactionRequest.JwtSignedRequest(it.request, it.transactionId))
                 } else {
                     ok()
                         .json()
-                        .bodyValueAndAwait(it)
+                        .bodyValueAndAwait(InitTransactionRequest.JwtUnsignedRequest(it, it.transactionId))
                 }
             },
             recover = { it.asBadRequest() },
@@ -274,6 +276,24 @@ internal class VerifierApi(
 private enum class VerifierApiVersion {
     V1,
     V2,
+}
+
+private sealed interface InitTransactionRequest {
+    val transactionId: String
+
+    data class JwtSignedRequest(
+        @SerialName("request")
+        val request: String,
+        @SerialName("transaction_id")
+        override val transactionId: String,
+    ) : InitTransactionRequest
+
+    data class JwtUnsignedRequest(
+        @SerialName("request")
+        val request: InitDCApiTransactionResponseTO,
+        @SerialName("transaction_id")
+        override val transactionId: String,
+    ) : InitTransactionRequest
 }
 
 @Serializable

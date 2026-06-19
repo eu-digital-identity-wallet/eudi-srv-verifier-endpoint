@@ -631,7 +631,7 @@ private fun interface ProfileValidator {
                         ValidationError.HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported
                     }
                 }
-
+                println("config: $config")
                 ensure(config.verifierId is VerifierId.X509Hash) {
                     ValidationError.HaipNotSupported.ClientIdPrefixX509HashMustBeUsed
                 }
@@ -726,7 +726,7 @@ class InitDCApiTransactionLive(
                 expectedOrigins = initDCApiTransactionTO.expectedOrigins,
             )
 
-        val jarMode = jarMode(initTransactionTO)
+        val jarMode = EmbedOption.ByValue
 
         // validate according to the selected profile
         with(profile.validator) {
@@ -762,6 +762,7 @@ class InitDCApiTransactionLive(
                     transactionData = initDCApiTransactionTO.transactionData,
                     clientMetadata = clientMetadata,
                     verifierInfo = verifierInfo,
+                    transactionId = request.transactionId,
                 )
             }
 
@@ -778,6 +779,7 @@ class InitDCApiTransactionLive(
                     clientMetadata = clientMetadata,
                     verifierInfo = verifierInfo,
                     expectedOrigins = checkNotNull(initDCApiTransactionTO.expectedOrigins),
+                    transactionId = request.transactionId,
                 )
             }
         }
@@ -811,42 +813,6 @@ class InitDCApiTransactionLive(
                 error("Unsupported request jar option for DC api: $requestJarOption")
             }
         }
-//        when (requestJarOption) {
-//            is EmbedOption.ByValue -> {
-//                val jwt =
-//                    createJar(
-//                        requestedPresentation,
-//                        null,
-//                        EncryptionRequirement.NotRequired,
-//                    )
-//
-//                val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock)
-//                requestObjectRetrieved to
-//                    InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
-//                        requestedPresentation.id.value,
-//                        verifierConfig.verifierId.clientId,
-//                        jwt,
-//                        authorizationRequestUri.resolve(verifierConfig.verifierId, jwt).toURI(),
-//                    )
-//            }
-//
-//            is EmbedOption.ByReference -> {
-//                val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId)
-//                requestedPresentation to
-//                    InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
-//                        requestedPresentation.id.value,
-//                        verifierConfig.verifierId.clientId,
-//                        requestUri,
-//                        requestedPresentation.requestUriMethod.toTO(),
-//                        authorizationRequestUri
-//                            .resolve(
-//                                verifierConfig.verifierId,
-//                                Uri.parse(requestUri.toString()),
-//                                requestedPresentation.requestUriMethod,
-//                            ).toURI(),
-//                    )
-//            }
-//        }
 
     context(_: Raise<ValidationError>)
     private fun getWalletResponseMethod(initTransactionTO: InitTransactionTO): GetWalletResponseMethod =
@@ -857,20 +823,6 @@ class InitDCApiTransactionLive(
                 }
                 GetWalletResponseMethod.Redirect(template)
             } ?: GetWalletResponseMethod.Poll
-
-    // TODO Is jar mode always by value
-
-    /**
-     * Gets the JAR [EmbedOption] for the provided [InitTransactionTO].
-     * If none has been provided, falls back to [VerifierConfig.requestJarOption].
-     */
-    private fun jarMode(initTransaction: InitTransactionTO): EmbedOption<RequestId> =
-        when (initTransaction.jarMode) {
-            EmbedModeTO.ByValue -> EmbedOption.ByValue
-            null -> verifierConfig.requestJarOption
-            else -> EmbedOption.ByValue
-//            EmbedModeTO.ByReference -> requestJarByReference
-        }
 
     /**
      * Gets the JAR [RequestUriMethod] for the provided [InitTransactionTO].
@@ -965,6 +917,7 @@ data class InitDCApiTransactionResponseTO(
     @Required @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL,
     @SerialName("verifier_info") val verifierInfo: VerifierInfoTO? = null,
     @SerialName("expected_origins") val expectedOrigins: List<String>? = null,
+    @Required @SerialName("transaction_id") val transactionId: String,
 ) {
     companion object {
         fun unsigned(
@@ -973,6 +926,7 @@ data class InitDCApiTransactionResponseTO(
             transactionData: List<JsonObject>?,
             clientMetadata: ClientMetadataTO,
             verifierInfo: VerifierInfoTO,
+            transactionId: String,
         ): InitDCApiTransactionResponseTO =
             InitDCApiTransactionResponseTO(
                 clientId = null,
@@ -985,6 +939,7 @@ data class InitDCApiTransactionResponseTO(
                 dcqlQuery = dcqlQuery,
                 verifierInfo = verifierInfo,
                 expectedOrigins = null,
+                transactionId = transactionId,
             )
 
         fun signed(
@@ -996,6 +951,7 @@ data class InitDCApiTransactionResponseTO(
             clientMetadata: ClientMetadataTO,
             verifierInfo: VerifierInfoTO,
             expectedOrigins: List<String>,
+            transactionId: String,
         ): InitDCApiTransactionResponseTO =
             InitDCApiTransactionResponseTO(
                 clientId = clientId,
@@ -1008,6 +964,7 @@ data class InitDCApiTransactionResponseTO(
                 dcqlQuery = dcqlQuery,
                 verifierInfo = verifierInfo,
                 expectedOrigins = expectedOrigins,
+                transactionId = transactionId,
             )
     }
 }
