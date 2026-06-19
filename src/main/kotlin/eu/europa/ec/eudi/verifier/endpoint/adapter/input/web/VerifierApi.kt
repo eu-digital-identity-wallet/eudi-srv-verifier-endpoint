@@ -122,15 +122,7 @@ internal class VerifierApi(
             initDCApiTransaction(input)
         }.fold(
             transform = {
-                if (it.request != null) {
-                    ok()
-                        .json()
-                        .bodyValueAndAwait(InitTransactionRequest.JwtSignedRequest(it.request, it.transactionId))
-                } else {
-                    ok()
-                        .json()
-                        .bodyValueAndAwait(InitTransactionRequest.JwtUnsignedRequest(it, it.transactionId))
-                }
+                ok().json().bodyValueAndAwait(it)
             },
             recover = { it.asBadRequest() },
             catch = { t ->
@@ -276,26 +268,6 @@ internal class VerifierApi(
 private enum class VerifierApiVersion {
     V1,
     V2,
-}
-
-private sealed interface InitTransactionRequest {
-    val transactionId: String
-
-    @Serializable
-    data class JwtSignedRequest(
-        @SerialName("request")
-        val request: String,
-        @SerialName("transaction_id")
-        override val transactionId: String,
-    ) : InitTransactionRequest
-
-    @Serializable
-    data class JwtUnsignedRequest(
-        @SerialName("request")
-        val request: InitDCApiTransactionResponseTO,
-        @SerialName("transaction_id")
-        override val transactionId: String,
-    ) : InitTransactionRequest
 }
 
 @Serializable
