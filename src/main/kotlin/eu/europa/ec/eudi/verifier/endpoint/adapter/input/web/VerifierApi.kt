@@ -281,6 +281,7 @@ private enum class VerifierApiVersion {
 private sealed interface InitTransactionRequest {
     val transactionId: String
 
+    @Serializable
     data class JwtSignedRequest(
         @SerialName("request")
         val request: String,
@@ -288,6 +289,7 @@ private sealed interface InitTransactionRequest {
         override val transactionId: String,
     ) : InitTransactionRequest
 
+    @Serializable
     data class JwtUnsignedRequest(
         @SerialName("request")
         val request: InitDCApiTransactionResponseTO,

@@ -905,6 +905,7 @@ data class VerifierInfoTO(
     @SerialName("credential_ids") val credentialIds: List<String>?,
 )
 
+// TODO: this will have to change with the wrap dto.
 @Serializable
 data class InitDCApiTransactionResponseTO(
     @SerialName(RFC6749.CLIENT_ID) val clientId: ClientId? = null,
@@ -915,9 +916,9 @@ data class InitDCApiTransactionResponseTO(
     @SerialName(RFC9101.REQUEST) val request: String? = null,
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
     @Required @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL,
-    @SerialName("verifier_info") val verifierInfo: VerifierInfoTO? = null,
+    @Transient @SerialName("verifier_info") val verifierInfo: VerifierInfoTO? = null,
     @SerialName("expected_origins") val expectedOrigins: List<String>? = null,
-    @Required @SerialName("transaction_id") val transactionId: String,
+    @Transient val transactionId: String = "",
 ) {
     companion object {
         fun unsigned(
