@@ -25,6 +25,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.IMAGE_PNG
 import org.springframework.web.reactive.function.server.*
@@ -50,7 +51,7 @@ internal class VerifierApi(
             ) { request -> handleInitTransaction(request, VerifierApiVersion.V2) }
             POST(
                 INIT_TRANSACTION_PATH_DC_API,
-                contentType(APPLICATION_JSON) and accept(APPLICATION_JSON),
+                contentType(APPLICATION_JSON) and accept(APPLICATION_JSON, MediaType.parseMediaType("application/jwt")),
             ) { request -> handleInitDCApiTransaction(request) }
 
             GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
@@ -121,9 +122,13 @@ internal class VerifierApi(
             initDCApiTransaction(input)
         }.fold(
             transform = {
-                ok()
-                    .json()
-                    .bodyValueAndAwait(it)
+                if (it.request != null) {
+                    ok().contentType(MediaType.parseMediaType("application/jwt")).bodyValueAndAwait(it.request)
+                } else {
+                    ok()
+                        .json()
+                        .bodyValueAndAwait(it)
+                }
             },
             recover = { it.asBadRequest() },
             catch = { t ->
@@ -211,6 +216,10 @@ internal class VerifierApi(
 
                     ValidationError.InvalidIssuerChain -> {
                         "InvalidIssuerChain"
+                    }
+
+                    ValidationError.MissingExpectedOrigins -> {
+                        "MissingExpectedOrigins"
                     }
 
                     ValidationError.ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme -> {

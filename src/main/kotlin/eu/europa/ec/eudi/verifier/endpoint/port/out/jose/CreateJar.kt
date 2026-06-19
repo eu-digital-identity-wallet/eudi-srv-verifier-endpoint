@@ -15,8 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
-import arrow.core.Either
-import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.domain.EncryptionRequirement
+import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
+import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 
 /**
  * An out port that signs and encrypts a [Presentation.Requested]

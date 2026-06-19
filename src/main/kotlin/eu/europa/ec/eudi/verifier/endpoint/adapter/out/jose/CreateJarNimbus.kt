@@ -86,7 +86,9 @@ class CreateJarNimbus(
                     type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
                 }.build()
         val clientMetaData = verifierConfig.clientMetaData
-        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode), requestObject, walletNonce)
+        val expectedOrigins = if (requestObject.responseMode == OpenId4VPSpec.RESPONSE_MODE_DCAPI) requestObject.expectedOrigins else null
+
+        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode), requestObject, walletNonce, expectedOrigins)
         return SignedJWT(header, claimSet).apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
     }
 
@@ -120,6 +122,7 @@ class CreateJarNimbus(
         clientMetaData: OIDCClientMetadata?,
         r: RequestObject,
         walletNonce: String?,
+        expectedOrigins: List<String>?,
     ): JWTClaimsSet {
         val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
         val clientId = ClientID(r.verifierId.clientId)
@@ -151,6 +154,7 @@ class CreateJarNimbus(
             optionalClaim(OpenId4VPSpec.DCQL_QUERY, r.dcqlQuery?.toJackson())
             optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, r.transactionData?.toJackson())
             optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)
+            optionalClaim("expected_origins", expectedOrigins?.toJackson())
             build()
         }
     }

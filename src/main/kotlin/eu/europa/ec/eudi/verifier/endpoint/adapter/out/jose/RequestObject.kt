@@ -31,6 +31,8 @@ internal data class RequestObject(
     val state: String,
     val issuedAt: Instant,
     val transactionData: List<String>? = null,
+    val expectedOrigins: List<String>? = null,
+    val verifierInfo: String? = null, // wrong type here
 )
 
 internal fun requestObjectFromDomain(
@@ -60,5 +62,13 @@ internal fun requestObjectFromDomain(
         responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
         issuedAt = clock.now(),
         transactionData = transactionData,
+        expectedOrigins = if (presentation.responseMode is ResponseMode.DCApi) presentation.expectedOrigins else null,
+        verifierInfo =
+            if (presentation.responseMode is ResponseMode.DCApi) {
+                print("currently no verifierinfo are available")
+                null
+            } else {
+                null
+            },
     )
 }

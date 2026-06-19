@@ -153,6 +153,8 @@ sealed interface ValidationError {
 
     data object InvalidAuthorizationRequestScheme : ValidationError
 
+    data object MissingExpectedOrigins : ValidationError
+
     sealed interface HaipNotSupported : ValidationError {
         data object SdJwtVcOrMsoMdocMustBeSupported : HaipNotSupported
 
@@ -307,6 +309,7 @@ class InitTransactionLive(
                 requestUriMethod = requestUriMethod(initTransactionTO),
                 issuerChain = issuerChain,
                 profile = profile,
+                expectedOrigins = null,
             )
 
         val jarMode = jarMode(initTransactionTO)
@@ -430,10 +433,6 @@ class InitTransactionLive(
             ResponseModeOption.DCApiJwt -> {
                 val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
                 ResponseMode.DCApi(responseEncryptionKey)
-            }
-
-            else -> {
-                error("Unsupported response mode option: $responseModeOption")
             }
         }
     }
@@ -724,6 +723,7 @@ class InitDCApiTransactionLive(
                 requestUriMethod = requestUriMethod(initTransactionTO),
                 issuerChain = issuerChain,
                 profile = profile,
+                expectedOrigins = initDCApiTransactionTO.expectedOrigins,
             )
 
         val jarMode = jarMode(initTransactionTO)
@@ -751,7 +751,8 @@ class InitDCApiTransactionLive(
                 vpFormatsSupported = verifierConfig.clientMetaData.vpFormatsSupported,
                 encryptedResponseEncValueSupported = verifierConfig.clientMetaData.responseEncryptionOption.toDto(),
             )
-        val verifierInfo = VerifierInfoTO()
+
+        val verifierInfo = VerifierInfoTO(null, null, null)
         println("######### $verifierInfo")
         return when (initDCApiTransactionTO.requestType) {
             RequestTypeTO.Unsigned -> {
@@ -806,23 +807,46 @@ class InitDCApiTransactionLive(
                     )
             }
 
-            is EmbedOption.ByReference -> {
-                val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId)
-                requestedPresentation to
-                    InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
-                        requestedPresentation.id.value,
-                        verifierConfig.verifierId.clientId,
-                        requestUri,
-                        requestedPresentation.requestUriMethod.toTO(),
-                        authorizationRequestUri
-                            .resolve(
-                                verifierConfig.verifierId,
-                                Uri.parse(requestUri.toString()),
-                                requestedPresentation.requestUriMethod,
-                            ).toURI(),
-                    )
+            else -> {
+                error("Unsupported request jar option for DC api: $requestJarOption")
             }
         }
+//        when (requestJarOption) {
+//            is EmbedOption.ByValue -> {
+//                val jwt =
+//                    createJar(
+//                        requestedPresentation,
+//                        null,
+//                        EncryptionRequirement.NotRequired,
+//                    )
+//
+//                val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock)
+//                requestObjectRetrieved to
+//                    InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
+//                        requestedPresentation.id.value,
+//                        verifierConfig.verifierId.clientId,
+//                        jwt,
+//                        authorizationRequestUri.resolve(verifierConfig.verifierId, jwt).toURI(),
+//                    )
+//            }
+//
+//            is EmbedOption.ByReference -> {
+//                val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId)
+//                requestedPresentation to
+//                    InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
+//                        requestedPresentation.id.value,
+//                        verifierConfig.verifierId.clientId,
+//                        requestUri,
+//                        requestedPresentation.requestUriMethod.toTO(),
+//                        authorizationRequestUri
+//                            .resolve(
+//                                verifierConfig.verifierId,
+//                                Uri.parse(requestUri.toString()),
+//                                requestedPresentation.requestUriMethod,
+//                            ).toURI(),
+//                    )
+//            }
+//        }
 
     context(_: Raise<ValidationError>)
     private fun getWalletResponseMethod(initTransactionTO: InitTransactionTO): GetWalletResponseMethod =
@@ -833,6 +857,8 @@ class InitDCApiTransactionLive(
                 }
                 GetWalletResponseMethod.Redirect(template)
             } ?: GetWalletResponseMethod.Poll
+
+    // TODO Is jar mode always by value
 
     /**
      * Gets the JAR [EmbedOption] for the provided [InitTransactionTO].
@@ -922,9 +948,9 @@ private fun ResponseEncryptionOption.toDto(): List<String> = this.encryptionMeth
 
 @Serializable
 data class VerifierInfoTO(
-    @SerialName("format") val format: String = "format",
-    @SerialName("data") val data: String = "data",
-    @SerialName("credential_ids") val credentialIds: List<String> = listOf("pid"),
+    @SerialName("format") val format: String?,
+    @SerialName("data") val data: String?,
+    @SerialName("credential_ids") val credentialIds: List<String>?,
 )
 
 @Serializable
@@ -937,7 +963,7 @@ data class InitDCApiTransactionResponseTO(
     @SerialName(RFC9101.REQUEST) val request: String? = null,
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
     @Required @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL,
-    @Required @SerialName("verifier_info") val verifierInfo: VerifierInfoTO,
+    @SerialName("verifier_info") val verifierInfo: VerifierInfoTO? = null,
     @SerialName("expected_origins") val expectedOrigins: List<String>? = null,
 ) {
     companion object {
@@ -1012,13 +1038,13 @@ data class InitDCApiTransactionTO(
 )
 
 private val InitDCApiTransactionTO.profileOrDefault: ProfileTO
-    get() = profile ?: ProfileTO.OpenId4VP
+    get() = profile
 
 context(_: Raise<ValidationError>)
 internal fun InitDCApiTransactionTO.toInitTransactionTO(): InitTransactionTO {
     if (requestType == RequestTypeTO.Signed) {
         ensure(!expectedOrigins.isNullOrEmpty()) {
-            ValidationError.UnsupportedFormat // MissingExpectedOrigins
+            ValidationError.MissingExpectedOrigins
         }
     }
 
