@@ -59,7 +59,13 @@ internal fun requestObjectFromDomain(
                 is ResponseMode.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
                 is ResponseMode.DCApi -> OpenId4VPSpec.RESPONSE_MODE_DCAPI
             },
-        responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
+        responseUri =
+            if (presentation.responseMode is ResponseMode.DCApi)
+                null
+            else
+                verifierConfig.responseUriBuilder(
+                    presentation.requestId,
+                ),
         issuedAt = clock.now(),
         transactionData = transactionData,
         expectedOrigins = if (presentation.responseMode is ResponseMode.DCApi) presentation.expectedOrigins else null,
