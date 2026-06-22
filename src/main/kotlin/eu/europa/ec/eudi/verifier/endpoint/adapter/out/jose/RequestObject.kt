@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import arrow.core.NonEmptyList
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import java.net.URL
 import kotlin.time.Instant
@@ -32,7 +33,13 @@ internal data class RequestObject(
     val issuedAt: Instant,
     val transactionData: List<String>? = null,
     val expectedOrigins: List<String>? = null,
-    val verifierInfo: String? = null, // wrong type here
+    val verifierInfo: VerifierInfo? = null,
+)
+
+internal data class VerifierInfo(
+    val format: String,
+    val data: String,
+    val credentialIds: NonEmptyList<String>?,
 )
 
 internal fun requestObjectFromDomain(
