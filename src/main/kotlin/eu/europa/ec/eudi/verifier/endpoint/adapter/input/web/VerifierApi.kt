@@ -25,7 +25,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.IMAGE_PNG
 import org.springframework.web.reactive.function.server.*
@@ -34,7 +33,6 @@ import kotlin.jvm.optionals.getOrNull
 
 internal class VerifierApi(
     private val initTransaction: InitTransaction,
-    private val initDCApiTransaction: InitDCApiTransaction,
     private val getWalletResponse: GetWalletResponse,
     private val getPresentationEvents: GetPresentationEvents,
 ) {
@@ -119,10 +117,13 @@ internal class VerifierApi(
             val input = request.awaitBody<InitDCApiTransactionTO>()
 
             logger.info("Handling InitDCApiTransaction nonce=${input.nonce} requestType=${input.requestType} ... ")
-            initDCApiTransaction(input)
+            initTransaction(input)
         }.fold(
             transform = {
-                ok().json().bodyValueAndAwait(it)
+                ok()
+                    .header(TRANSACTION_ID_HEADER, it.transactionId)
+                    .json()
+                    .bodyValueAndAwait(it)
             },
             recover = { it.asBadRequest() },
             catch = { t ->

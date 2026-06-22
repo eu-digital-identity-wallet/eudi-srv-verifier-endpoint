@@ -68,13 +68,11 @@ internal fun requestObjectFromDomain(
                 ),
         issuedAt = clock.now(),
         transactionData = transactionData,
-        expectedOrigins = if (presentation.responseMode is ResponseMode.DCApi) presentation.expectedOrigins else null,
-        verifierInfo =
-            if (presentation.responseMode is ResponseMode.DCApi) {
-                print("currently no verifierinfo are available")
-                null
-            } else {
-                null
+        expectedOrigins =
+            when (presentation.channel) {
+                is Channel.OverDcApi -> presentation.channel.expectedOrigins?.toList()
+                else -> null
             },
+        verifierInfo = null,
     )
 }

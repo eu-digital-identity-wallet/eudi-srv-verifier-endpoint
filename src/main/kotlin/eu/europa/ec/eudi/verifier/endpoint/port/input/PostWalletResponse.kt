@@ -131,14 +131,14 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormatsSupported: VpFormatsSupported,
 ): VerifiablePresentations {
-    ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
+    ensureNotNull(vpToken) { MissingVpToken }
 
     suspend fun JsonObject.toVerifiablePresentations(): Map<QueryId, List<VerifiablePresentation>> {
         val vpToken =
             try {
                 Json.decodeFromJsonElement<Map<QueryId, List<JsonElement>>>(this)
             } catch (e: Exception) {
-                raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", e))
+                raise(InvalidVpToken("Failed to decode vp_token", e))
             }
 
         val credentialQueries =
@@ -148,7 +148,7 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
             val format =
                 credentialQueries[queryId]?.format
                     ?: raise(
-                        WalletResponseValidationError.InvalidVpToken(
+                        InvalidVpToken(
                             "vp_token references non-existing Credential Query",
                             null,
                         ),
@@ -159,7 +159,7 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                     ?.filter { queryId.value in it.credentialIds }
                     ?.toNonEmptyListOrNull()
             ensure(vpFormatsSupported.supports(format)) {
-                WalletResponseValidationError.InvalidVpToken(
+                InvalidVpToken(
                     "vp_token contains a Verifiable Presentation in an unsupported format",
                     null,
                 )
@@ -176,7 +176,7 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
 
     val verifiablePresentations = vpToken.toVerifiablePresentations()
     ensure(presentation.query.satisfiedBy(verifiablePresentations)) {
-        WalletResponseValidationError.RequiredCredentialSetNotSatisfied
+        RequiredCredentialSetNotSatisfied
     }
 
     return VerifiablePresentations(verifiablePresentations)
@@ -187,7 +187,7 @@ private fun JsonElement.toVerifiablePresentation(format: Format): VerifiablePres
     fun JsonElement.asString(): VerifiablePresentation.Str {
         val element = this@asString
         ensure(element is JsonPrimitive && element.isString) {
-            WalletResponseValidationError.InvalidVpToken("vp_token contains a non-string element", null)
+            InvalidVpToken("vp_token contains a non-string element", null)
         }
         return VerifiablePresentation.Str(element.content, format)
     }
@@ -197,7 +197,7 @@ private fun JsonElement.toVerifiablePresentation(format: Format): VerifiablePres
             is JsonPrimitive -> {
                 ensure(
                     element.isString,
-                ) { WalletResponseValidationError.InvalidVpToken("vp_token contains a non-string element", null) }
+                ) { InvalidVpToken("vp_token contains a non-string element", null) }
                 VerifiablePresentation.Str(element.content, format)
             }
 
@@ -207,7 +207,7 @@ private fun JsonElement.toVerifiablePresentation(format: Format): VerifiablePres
 
             else -> {
                 raise(
-                    WalletResponseValidationError.InvalidVpToken(
+                    InvalidVpToken(
                         "vp_token must contain either json strings, or json objects",
                         null,
                     ),
@@ -263,7 +263,7 @@ class PostWalletResponseLive(
 
         val presentation = loadPresentation(requestId)
         ensure(presentation is RequestObjectRetrieved) {
-            WalletResponseValidationError.PresentationNotInExpectedState
+            PresentationNotInExpectedState
         }
         log.debug(presentation, walletResponse)
 
@@ -308,7 +308,7 @@ class PostWalletResponseLive(
     context(_: Raise<WalletResponseValidationError>)
     private suspend fun loadPresentation(requestId: RequestId): Presentation {
         val presentation = loadPresentationByRequestId(requestId)
-        return ensureNotNull(presentation) { WalletResponseValidationError.PresentationNotFound }
+        return ensureNotNull(presentation) { PresentationNotFound }
     }
 
     context(_: Raise<WalletResponseValidationError>)
@@ -350,10 +350,12 @@ class PostWalletResponseLive(
                     }
 
                     is AuthorisationResponse.DCApiJwt -> {
-                        verifyEncryptedResponse(
-                            ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
-                            encryptedResponse = walletResponse.encryptedResponse,
-                            apv = presentation.nonce,
+                        raise(
+                            UnexpectedResponseMode(
+                                presentation.requestId,
+                                expected = ResponseModeOption.DirectPostJwt,
+                                actual = ResponseModeOption.DCApiJwt,
+                            ),
                         )
                     }
                 }
@@ -388,7 +390,7 @@ class PostWalletResponseLive(
         responseObject: AuthorisationResponseTO,
     ): Submitted {
         // Verify response `state` is RequestId
-        ensure(presentation.requestId.value == responseObject.state) { WalletResponseValidationError.IncorrectState }
+        ensure(presentation.requestId.value == responseObject.state) { IncorrectState }
 
         // add the wallet response to the presentation
         val walletResponse =

@@ -181,21 +181,6 @@ internal class AppBeans :
             )
         }
 
-        registerBean {
-            InitDCApiTransactionLive(
-                bean(),
-                bean(),
-                bean(),
-                bean(),
-                bean(),
-                bean(),
-                bean(),
-                bean(),
-                bean(),
-                bean(),
-            )
-        }
-
         registerBean { RetrieveRequestObjectLive(bean(), bean(), bean(), bean(), bean(), bean()) }
 
         registerBean {
@@ -409,7 +394,6 @@ internal class AppBeans :
                 )
             val verifierApi =
                 VerifierApi(
-                    bean(),
                     bean(),
                     bean(),
                     bean(),

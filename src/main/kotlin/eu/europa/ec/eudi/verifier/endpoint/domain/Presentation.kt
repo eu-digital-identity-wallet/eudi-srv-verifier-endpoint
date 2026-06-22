@@ -142,6 +142,14 @@ sealed interface Profile {
     data object HAIP : Profile
 }
 
+sealed interface Channel {
+    data object OverHttp : Channel
+
+    data class OverDcApi(
+        val expectedOrigins: NonEmptyList<String>?,
+    ) : Channel
+}
+
 /**
  * The entity that represents the presentation process
  */
@@ -164,8 +172,15 @@ sealed interface Presentation {
         val getWalletResponseMethod: GetWalletResponseMethod,
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
-        val expectedOrigins: List<String>?,
-    ) : Presentation
+        val channel: Channel,
+    ) : Presentation {
+        init {
+            if (responseMode is ResponseMode.DCApi) {
+                require(channel is Channel.OverDcApi)
+                require(channel.expectedOrigins != null)
+            }
+        }
+    }
 
     /**
      * A presentation process for which the wallet has obtained the request object.
