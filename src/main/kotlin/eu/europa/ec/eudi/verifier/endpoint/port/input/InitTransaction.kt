@@ -168,9 +168,13 @@ sealed interface ValidationError {
 
         data object EncryptionMethodsA128GCMAndA256GCMMustBeSupported : HaipNotSupported
 
+        data object ResponseModeDcAPiMustBeUsed : HaipNotSupported
+
         data object ResponseModeDirectPostJwtMustBeUsed : HaipNotSupported
 
         data object AuthorizationRequestMustBeProvidedByReference : HaipNotSupported
+
+        data object AuthorizationRequestMustBeProvidedByValueinDcApi : HaipNotSupported
     }
 }
 
@@ -319,7 +323,7 @@ class InitTransactionLive(
 
         // validate according to the selected profile
         with(profile.validator) {
-            validate(verifierConfig, requestedPresentation, jarMode)
+            validate(verifierConfig, requestedPresentation, jarMode, channel = Channel.OverHttp)
         }
 
         // create the request, which may update the presentation
@@ -370,6 +374,10 @@ class InitTransactionLive(
 
         val profile = initDCApiTransactionTO.profileOrDefault.toProfile()
 
+        val channel =
+            Channel.OverDcApi(
+                initDCApiTransactionTO.expectedOrigins?.toNonEmptyListOrNull(),
+            )
         // Initialize presentation
         val requestedPresentation =
             Presentation.Requested(
@@ -384,17 +392,14 @@ class InitTransactionLive(
                 requestUriMethod = requestUriMethod(initTransactionTO),
                 issuerChain = issuerChain,
                 profile = profile,
-                channel =
-                    Channel.OverDcApi(
-                        initDCApiTransactionTO.expectedOrigins?.toNonEmptyListOrNull(),
-                    ),
+                channel = channel,
             )
 
         val jarMode = EmbedOption.ByValue
 
         // validate according to the selected profile
         with(profile.validator) {
-            validate(verifierConfig, requestedPresentation, jarMode)
+            validate(verifierConfig, requestedPresentation, jarMode, channel)
         }
 
         // create the request, which may update the presentation
@@ -687,12 +692,13 @@ private fun interface ProfileValidator {
         config: VerifierConfig,
         presentation: Presentation.Requested,
         jarMode: EmbedOption<RequestId>,
+        channel: Channel,
     )
 
     companion object {
-        val OpenId4VP = ProfileValidator { _, _, _ -> }
+        val OpenId4VP = ProfileValidator { _, _, _, _ -> }
         val HAIP =
-            ProfileValidator { config, presentation, jarMode ->
+            ProfileValidator { config, presentation, jarMode, channel ->
                 with(config.clientMetaData.vpFormatsSupported) {
                     ensure(null != sdJwtVc || null != msoMdoc) {
                         ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported
@@ -744,12 +750,24 @@ private fun interface ProfileValidator {
                     ValidationError.HaipNotSupported.SelfSignedCertificateMustNotBeUsed
                 }
 
-                ensure(presentation.responseMode is ResponseMode.DirectPostJwt) {
-                    ValidationError.HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed
-                }
+                when (channel) {
+                    is Channel.OverDcApi -> {
+                        ensure(presentation.responseMode is ResponseMode.DCApi) {
+                            ValidationError.HaipNotSupported.ResponseModeDcAPiMustBeUsed
+                        }
+                        ensure(jarMode is EmbedOption.ByValue) {
+                            ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference
+                        }
+                    }
 
-                ensure(jarMode is EmbedOption.ByReference) {
-                    ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference
+                    Channel.OverHttp -> {
+                        ensure(presentation.responseMode is ResponseMode.DirectPostJwt) {
+                            ValidationError.HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed
+                        }
+                        ensure(jarMode is EmbedOption.ByReference) {
+                            ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference
+                        }
+                    }
                 }
             }
     }
