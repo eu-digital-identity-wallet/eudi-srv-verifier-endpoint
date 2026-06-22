@@ -853,12 +853,12 @@ class InitDCApiTransactionLive(
 
 @Serializable
 data class ClientMetadataTO(
-    @SerialName("jwks")
+    @SerialName(RFC8414.JWKS)
     val jwks: List<String>? = null,
-    @SerialName("vp_formats_supported")
+    @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED)
     @Required
     val vpFormatsSupported: VpFormatsSupported,
-    @SerialName("encrypted_response_enc_values_supported")
+    @SerialName(OpenId4VPSpec.ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED)
     @Required
     val encryptedResponseEncValueSupported: List<String>,
 )
@@ -867,9 +867,9 @@ private fun ResponseEncryptionOption.toDto(): List<String> = this.encryptionMeth
 
 @Serializable
 data class VerifierInfoTO(
-    @SerialName("format") val format: String?,
-    @SerialName("data") val data: String?,
-    @SerialName("credential_ids") val credentialIds: List<String>?,
+    @SerialName(OpenId4VPSpec.VERIFIER_INFO_FORMAT) val format: String?,
+    @SerialName(OpenId4VPSpec.VERIFIER_INFO_DATA) val data: String?,
+    @SerialName(OpenId4VPSpec.VERIFIER_INFO_CREDENTIAL_IDS) val credentialIds: List<String>?,
 )
 
 @Serializable
@@ -878,12 +878,12 @@ data class InitDCApiTransactionResponseTO(
     @Required @SerialName(RFC6749.RESPONSE_TYPE) val responseType: String,
     @Required @SerialName(RFC6749.RESPONSE_MODE) val responseMode: String,
     @Required @SerialName(OpenId4VPSpec.NONCE) val nonce: String,
-    @Required @SerialName("client_metadata") val clientMetadata: ClientMetadataTO,
+    @Required @SerialName(OpenId4VPSpec.CLIENT_METADATA) val clientMetadata: ClientMetadataTO,
     @SerialName(RFC9101.REQUEST) val request: String? = null,
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
     @Required @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL,
-    @Transient @SerialName("verifier_info") val verifierInfo: VerifierInfoTO? = null,
-    @SerialName("expected_origins") val expectedOrigins: List<String>? = null,
+    @Transient @SerialName(OpenId4VPSpec.VERIFIER_INFO) val verifierInfo: VerifierInfoTO? = null,
+    @SerialName(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS) val expectedOrigins: List<String>? = null,
     @Transient val transactionId: String = "",
 ) {
     companion object {
@@ -893,12 +893,11 @@ data class InitDCApiTransactionResponseTO(
             transactionData: List<JsonObject>?,
             clientMetadata: ClientMetadataTO,
             verifierInfo: VerifierInfoTO,
-//            transactionId: String,
         ): InitDCApiTransactionResponseTO =
             InitDCApiTransactionResponseTO(
                 clientId = null,
-                responseType = "vp_token",
-                responseMode = "dc_api.jwt",
+                responseType = OpenId4VPSpec.VP_TOKEN,
+                responseMode = OpenId4VPSpec.RESPONSE_MODE_DCAPI,
                 nonce = nonce,
                 clientMetadata = clientMetadata,
                 request = null,
@@ -917,10 +916,10 @@ data class InitDCApiTransactionResponseTO(
  */
 @Serializable
 enum class RequestTypeTO {
-    @SerialName("signed")
+    @SerialName(OpenId4VPSpec.DCAPI_REQUEST_TYPE_SIGNED)
     Signed,
 
-    @SerialName("unsigned")
+    @SerialName(OpenId4VPSpec.DCAPI_REQUEST_TYPE_UNSIGNED)
     Unsigned,
 }
 
@@ -932,7 +931,7 @@ data class InitDCApiTransactionTO(
     @SerialName("profile") val profile: ProfileTO = ProfileTO.OpenId4VP,
     @SerialName("request_type") val requestType: RequestTypeTO = RequestTypeTO.Signed,
     @SerialName("issuer_chain") val issuerChain: String? = null,
-    @SerialName("expected_origins") val expectedOrigins: List<String>? = null,
+    @SerialName(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS) val expectedOrigins: List<String>? = null,
 )
 
 private val InitDCApiTransactionTO.profileOrDefault: ProfileTO
