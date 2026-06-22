@@ -174,7 +174,7 @@ sealed interface ValidationError {
 
         data object AuthorizationRequestMustBeProvidedByReference : HaipNotSupported
 
-        data object AuthorizationRequestMustBeProvidedByValueinDcApi : HaipNotSupported
+        data object AuthorizationRequestMustBeProvidedByValueInDcApi : HaipNotSupported
     }
 }
 

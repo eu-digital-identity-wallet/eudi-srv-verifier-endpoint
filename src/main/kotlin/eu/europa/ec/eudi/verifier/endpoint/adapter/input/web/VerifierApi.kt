@@ -265,7 +265,7 @@ internal class VerifierApi(
                         "HaipNotSupported.ResponseModeDcApiMustBeUsed"
                     }
 
-                    ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByValueinDcApi -> {
+                    ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByValueInDcApi -> {
                         "HaipNotSupported.AuthorizationRequestMustBeProvidedByValueinDcApi"
                     }
                 }
