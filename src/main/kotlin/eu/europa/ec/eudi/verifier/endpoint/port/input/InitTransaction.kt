@@ -265,7 +265,7 @@ interface InitTransaction {
     suspend operator fun invoke(initTransactionTO: InitTransactionTO): InitTransactionResponse
 
     context(_: Raise<ValidationError>)
-    suspend operator fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponse
+    suspend operator fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponseSignedRequest
 }
 
 /**
@@ -361,7 +361,7 @@ class InitTransactionLive(
     }
 
     context(_: Raise<ValidationError>)
-    override suspend fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponse {
+    override suspend fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponseSignedRequest {
         val initTransactionTO = initDCApiTransactionTO.toInitTransactionTO()
 
         // validate input
@@ -379,17 +379,11 @@ class InitTransactionLive(
 
         val profile = initDCApiTransactionTO.profileOrDefault.toProfile()
 
-        val requestType: RequestType =
-            when (initDCApiTransactionTO.requestType) {
-                RequestTypeTO.Signed -> RequestType.Signed
-                RequestTypeTO.Unsigned -> RequestType.Unsigned
-            }
-        val expectedOrigins = initDCApiTransactionTO.expectedOrigins?.toNonEmptyListOrNull()
+        val expectedOrigins = nonEmptyListOf(URI.create(initDCApiTransactionTO.expectedOrigins))
 
         val channel =
             Channel.OverDcApi(
                 responseMode = responseMode,
-                requestType = requestType,
                 expectedOrigins = expectedOrigins,
             )
 
@@ -427,39 +421,14 @@ class InitTransactionLive(
         storePresentation(updatedPresentation)
         logTransactionInitialized(updatedPresentation, request, profile.toTO())
 
-        val clientMetadata =
-            ClientMetadataTO(
-                vpFormatsSupported = verifierConfig.clientMetaData.vpFormatsSupported,
-                encryptedResponseEncValueSupported = verifierConfig.clientMetaData.responseEncryptionOption.toDto(),
-            )
-
         val verifierInfo = VerifierInfoTO(null, null, null)
 
-        return when (initDCApiTransactionTO.requestType) {
-            RequestTypeTO.Unsigned -> {
-                val response =
-                    InitDCApiTransactionResponseTO.unsigned(
-                        nonce = initDCApiTransactionTO.nonce,
-                        dcqlQuery = initDCApiTransactionTO.dcqlQuery,
-                        transactionData = initDCApiTransactionTO.transactionData,
-                        clientMetadata = clientMetadata,
-                        verifierInfo = verifierInfo,
-                    )
-                DCApiTransactionResponse.UnsignedRequest(
-                    response,
-                    request.transactionId,
-                )
-            }
-
-            RequestTypeTO.Signed -> {
-                DCApiTransactionResponse.SignedRequest(
-                    checkNotNull(request.request) {
-                        "Signed DC API response requires request or request_uri"
-                    },
-                    request.transactionId,
-                )
-            }
-        }
+        return DCApiTransactionResponseSignedRequest(
+            checkNotNull(request.request) {
+                "Signed DC API response requires request or request_uri"
+            },
+            request.transactionId,
+        )
     }
 
     /**
@@ -862,51 +831,26 @@ data class InitDCApiTransactionResponseTO(
     }
 }
 
-/**
- * Specifies whether the DC API request will be signed or unsigned.
- *
- * Multisigned requests are not supported in the initial implementation.
- */
-@Serializable
-enum class RequestTypeTO {
-    @SerialName(OpenId4VPSpec.DCAPI_REQUEST_TYPE_SIGNED)
-    Signed,
-
-    @SerialName(OpenId4VPSpec.DCAPI_REQUEST_TYPE_UNSIGNED)
-    Unsigned,
-}
-
 @Serializable
 data class InitDCApiTransactionTO(
     @Required @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL,
     @Required @SerialName(OpenId4VPSpec.NONCE) val nonce: String,
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
     @SerialName("profile") val profile: ProfileTO = ProfileTO.OpenId4VP,
-    @SerialName("request_type") val requestType: RequestTypeTO = RequestTypeTO.Signed,
     @SerialName("issuer_chain") val issuerChain: String? = null,
-    @SerialName(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS) val expectedOrigins: List<String>? = null,
+    @SerialName(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS) val expectedOrigins: String,
 )
 
 private val InitDCApiTransactionTO.profileOrDefault: ProfileTO
     get() = profile
 
 context(_: Raise<ValidationError>)
-internal fun InitDCApiTransactionTO.toInitTransactionTO(): InitTransactionTO {
-    if (requestType == RequestTypeTO.Signed) {
-        ensure(!expectedOrigins.isNullOrEmpty()) {
-            ValidationError.MissingExpectedOrigins
-        }
-    }
-
-    return InitTransactionTO(
+internal fun InitDCApiTransactionTO.toInitTransactionTO(): InitTransactionTO =
+    InitTransactionTO(
         dcqlQuery = dcqlQuery,
         nonce = nonce,
-        responseMode = ResponseModeTO.DirectPostJwt,
-        jarMode =
-            when (requestType) {
-                RequestTypeTO.Signed -> EmbedModeTO.ByReference
-                RequestTypeTO.Unsigned -> EmbedModeTO.ByValue
-            },
+        responseMode = ResponseModeTO.DCApiJwt,
+        jarMode = EmbedModeTO.ByValue,
         requestUriMethod = RequestUriMethodTO.Get,
         redirectUriTemplate = null,
         transactionData = transactionData,
@@ -916,24 +860,11 @@ internal fun InitDCApiTransactionTO.toInitTransactionTO(): InitTransactionTO {
         profile = profile,
         output = Output.Json,
     )
-}
 
-sealed interface DCApiTransactionResponse {
-    val transactionId: String
-
-    @Serializable
-    data class SignedRequest(
-        @SerialName("request")
-        val request: String,
-        @SerialName("transaction_id")
-        override val transactionId: String,
-    ) : DCApiTransactionResponse
-
-    @Serializable
-    data class UnsignedRequest(
-        @SerialName("request")
-        val request: InitDCApiTransactionResponseTO,
-        @SerialName("transaction_id")
-        override val transactionId: String,
-    ) : DCApiTransactionResponse
-}
+@Serializable
+data class DCApiTransactionResponseSignedRequest(
+    @SerialName("request")
+    val request: String,
+    @SerialName("transaction_id")
+    val transactionId: String,
+)

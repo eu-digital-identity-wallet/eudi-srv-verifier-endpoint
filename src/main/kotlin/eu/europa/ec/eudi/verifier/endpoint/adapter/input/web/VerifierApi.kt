@@ -116,7 +116,7 @@ internal class VerifierApi(
         effect {
             val input = request.awaitBody<InitDCApiTransactionTO>()
 
-            logger.info("Handling InitDCApiTransaction nonce=${input.nonce} requestType=${input.requestType} ... ")
+            logger.info("Handling InitDCApiTransaction nonce=${input.nonce} ... ")
             initTransaction(input)
         }.fold(
             transform = {

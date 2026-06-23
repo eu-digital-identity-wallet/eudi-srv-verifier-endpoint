@@ -19,6 +19,7 @@ import arrow.core.NonEmptyList
 import arrow.core.raise.context.Raise
 import arrow.core.raise.context.ensure
 import kotlinx.serialization.json.JsonObject
+import java.net.URI
 import java.security.cert.X509Certificate
 import kotlin.time.Instant
 
@@ -149,20 +150,8 @@ sealed interface Channel {
 
     data class OverDcApi(
         val responseMode: ResponseMode.OverDcApi,
-        val requestType: RequestType,
-        val expectedOrigins: NonEmptyList<String>?,
-    ) : Channel {
-        init {
-            if (requestType == RequestType.Signed) {
-                require(expectedOrigins != null)
-            }
-        }
-    }
-}
-
-enum class RequestType {
-    Signed,
-    Unsigned,
+        val expectedOrigins: NonEmptyList<URI>,
+    ) : Channel
 }
 
 /**

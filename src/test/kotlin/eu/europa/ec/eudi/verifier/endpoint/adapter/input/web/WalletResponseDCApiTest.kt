@@ -21,7 +21,6 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.RFC6749
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ProfileTO
-import eu.europa.ec.eudi.verifier.endpoint.port.input.RequestTypeTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
@@ -34,11 +33,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 /**
  * Tests the initialization of a Transaction over the Digital Credentials API (DC API),
@@ -100,33 +95,12 @@ internal class WalletResponseDCApiTest {
     }
 
     @Test
-    fun `openid4vp - unsigned dc_api request is initialized`(): Unit =
-        runBlocking {
-            val initTransaction =
-                VerifierApiClient
-                    .loadInitDCApiTransactionTO("09-dcApi-dcql.json")
-                    .copy(profile = ProfileTO.OpenId4VP, requestType = RequestTypeTO.Unsigned)
-
-            val (body, transactionId) = VerifierApiClient.initDCApiTransaction(client, initTransaction)
-            assertNotNull(transactionId, "Transaction-Id header is missing")
-            assertEquals(transactionId, body["transaction_id"]?.jsonPrimitive?.contentOrNull)
-
-            // for an unsigned request, the 'request' is a plain JSON object holding the request parameters
-            val request = assertNotNull(body["request"]?.jsonObject, "request is not a JSON object")
-            assertDCApiRequest(request, initTransaction.nonce)
-
-            // an unsigned request advertises the supported response encryption methods in client_metadata
-            val supportedEncryptionMethods = assertNotNull(request.supportedEncryptionMethods())
-            assertEquals(config.clientMetaData.responseEncryptionOption.encryptionMethods, supportedEncryptionMethods)
-        }
-
-    @Test
     fun `openid4vp - signed dc_api request is initialized`(): Unit =
         runBlocking {
             val initTransaction =
                 VerifierApiClient
                     .loadInitDCApiTransactionTO("09-dcApi-dcql.json")
-                    .copy(profile = ProfileTO.OpenId4VP, requestType = RequestTypeTO.Signed)
+                    .copy(profile = ProfileTO.OpenId4VP)
 
             val (body, transactionId) = VerifierApiClient.initDCApiTransaction(client, initTransaction)
             assertNotNull(transactionId, "Transaction-Id header is missing")
@@ -143,27 +117,6 @@ internal class WalletResponseDCApiTest {
         }
 
     @Test
-    fun `haip - unsigned dc_api request is initialized`(): Unit =
-        runBlocking {
-            // HAIP mandates the x509_hash Client Identifier Prefix
-            assertIs<VerifierId.X509Hash>(config.verifierId)
-
-            val initTransaction =
-                VerifierApiClient
-                    .loadInitDCApiTransactionTO("09-dcApi-dcql.json")
-                    .copy(profile = ProfileTO.HAIP, requestType = RequestTypeTO.Unsigned)
-
-            val (body, transactionId) = VerifierApiClient.initDCApiTransaction(client, initTransaction)
-            assertNotNull(transactionId, "Transaction-Id header is missing")
-
-            val request = assertNotNull(body["request"]?.jsonObject, "request is not a JSON object")
-            assertDCApiRequest(request, initTransaction.nonce)
-
-            val supportedEncryptionMethods = assertNotNull(request.supportedEncryptionMethods())
-            assertEquals(config.clientMetaData.responseEncryptionOption.encryptionMethods, supportedEncryptionMethods)
-        }
-
-    @Test
     fun `haip - signed dc_api request is initialized`(): Unit =
         runBlocking {
             assertIs<VerifierId.X509Hash>(config.verifierId)
@@ -171,7 +124,7 @@ internal class WalletResponseDCApiTest {
             val initTransaction =
                 VerifierApiClient
                     .loadInitDCApiTransactionTO("09-dcApi-dcql.json")
-                    .copy(profile = ProfileTO.HAIP, requestType = RequestTypeTO.Signed)
+                    .copy(profile = ProfileTO.HAIP)
 
             val (body, transactionId) = VerifierApiClient.initDCApiTransaction(client, initTransaction)
             assertNotNull(transactionId, "Transaction-Id header is missing")
