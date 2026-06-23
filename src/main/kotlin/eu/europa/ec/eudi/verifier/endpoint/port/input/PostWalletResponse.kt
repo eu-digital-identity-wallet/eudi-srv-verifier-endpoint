@@ -316,69 +316,77 @@ class PostWalletResponseLive(
         walletResponse: AuthorisationResponse,
         presentation: RequestObjectRetrieved,
     ): AuthorisationResponseTO =
-        when (val responseMode = presentation.responseMode) {
-            ResponseMode.DirectPost -> {
-                ensure(walletResponse is AuthorisationResponse.DirectPost) {
-                    UnexpectedResponseMode(
-                        presentation.requestId,
-                        expected = ResponseModeOption.DirectPost,
-                        actual = ResponseModeOption.DirectPostJwt,
-                    )
-                }
-                walletResponse.response
-            }
-
-            is ResponseMode.DirectPostJwt -> {
-                when (walletResponse) {
-                    is AuthorisationResponse.DirectPost -> {
-                        ensure(walletResponse.isErrorResponse()) {
+        when (val channel = presentation.channel) {
+            is Channel.OverHttp -> {
+                when (val responseMode = channel.responseMode) {
+                    ResponseMode.OverHttp.DirectPost -> {
+                        ensure(walletResponse is AuthorisationResponse.DirectPost) {
                             UnexpectedResponseMode(
                                 presentation.requestId,
-                                expected = ResponseModeOption.DirectPostJwt,
-                                actual = ResponseModeOption.DirectPost,
+                                expected = ResponseModeOption.DirectPost,
+                                actual = walletResponse.responseModeOption,
                             )
                         }
                         walletResponse.response
                     }
 
-                    is AuthorisationResponse.DirectPostJwt -> {
-                        verifyEncryptedResponse(
-                            ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
-                            encryptedResponse = walletResponse.encryptedResponse,
-                            apv = presentation.nonce,
-                        )
-                    }
+                    is ResponseMode.OverHttp.DirectPostJwt -> {
+                        when (walletResponse) {
+                            is AuthorisationResponse.DirectPost -> {
+                                ensure(walletResponse.isErrorResponse()) {
+                                    UnexpectedResponseMode(
+                                        presentation.requestId,
+                                        expected = ResponseModeOption.DirectPostJwt,
+                                        actual = ResponseModeOption.DirectPost,
+                                    )
+                                }
+                                walletResponse.response
+                            }
 
-                    is AuthorisationResponse.DCApiJwt -> {
-                        raise(
-                            UnexpectedResponseMode(
-                                presentation.requestId,
-                                expected = ResponseModeOption.DirectPostJwt,
-                                actual = ResponseModeOption.DCApiJwt,
-                            ),
-                        )
+                            is AuthorisationResponse.DirectPostJwt -> {
+                                verifyEncryptedResponse(
+                                    ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
+                                    encryptedResponse = walletResponse.encryptedResponse,
+                                    apv = presentation.nonce,
+                                )
+                            }
+
+                            is AuthorisationResponse.DCApiJwt -> {
+                                raise(
+                                    UnexpectedResponseMode(
+                                        presentation.requestId,
+                                        expected = ResponseModeOption.DirectPostJwt,
+                                        actual = ResponseModeOption.DCApiJwt,
+                                    ),
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            is ResponseMode.DCApiJwt -> {
-                when (walletResponse) {
-                    is AuthorisationResponse.DCApiJwt -> {
-                        verifyEncryptedResponse(
-                            ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
-                            encryptedResponse = walletResponse.encryptedResponse,
-                            apv = presentation.nonce,
-                        )
-                    }
+            is Channel.OverDcApi -> {
+                when (val responseMode = channel.responseMode) {
+                    is ResponseMode.OverDcApi.DCApiJwt -> {
+                        when (walletResponse) {
+                            is AuthorisationResponse.DCApiJwt -> {
+                                verifyEncryptedResponse(
+                                    ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
+                                    encryptedResponse = walletResponse.encryptedResponse,
+                                    apv = presentation.nonce,
+                                )
+                            }
 
-                    else -> {
-                        raise(
-                            UnexpectedResponseMode(
-                                presentation.requestId,
-                                expected = ResponseModeOption.DCApiJwt,
-                                actual = ResponseModeOption.DirectPostJwt,
-                            ),
-                        )
+                            else -> {
+                                raise(
+                                    UnexpectedResponseMode(
+                                        presentation.requestId,
+                                        expected = ResponseModeOption.DCApiJwt,
+                                        actual = walletResponse.responseModeOption,
+                                    ),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -443,6 +451,13 @@ private fun DCQL.satisfiedBy(response: Map<QueryId, List<VerifiablePresentation>
         ?.fold(true, Boolean::and)
         ?: response.keys.containsAll(credentials.ids)
 
+private val AuthorisationResponse.responseModeOption: ResponseModeOption
+    get() =
+        when (this) {
+            is AuthorisationResponse.DirectPost -> ResponseModeOption.DirectPost
+            is AuthorisationResponse.DirectPostJwt -> ResponseModeOption.DirectPostJwt
+            is AuthorisationResponse.DCApiJwt -> ResponseModeOption.DCApiJwt
+        }
 private val AuthorisationResponse.encryptedResponseOrNull: Jwt?
     get() =
         when (this) {
@@ -461,10 +476,19 @@ private val AuthorisationResponse.vpTokenOrNull: JsonObject?
 
 private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
     get() =
-        when (responseMode) {
-            ResponseMode.DirectPost -> null
-            is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey
-            is ResponseMode.DCApiJwt -> responseMode.ephemeralResponseEncryptionKey
+        when (val channel = this.channel) {
+            is Channel.OverHttp -> {
+                when (val responseMode = channel.responseMode) {
+                    ResponseMode.OverHttp.DirectPost -> null
+                    is ResponseMode.OverHttp.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey
+                }
+            }
+
+            is Channel.OverDcApi -> {
+                when (val responseMode = channel.responseMode) {
+                    is ResponseMode.OverDcApi.DCApiJwt -> responseMode.ephemeralResponseEncryptionKey
+                }
+            }
         }
 
 private fun Logger.debug(

@@ -261,8 +261,8 @@ internal class VerifierApi(
                         "HaipNotSupported.AuthorizationRequestMustBeProvidedByReference"
                     }
 
-                    ValidationError.HaipNotSupported.ResponseModeDcAPiMustBeUsed -> {
-                        "HaipNotSupported.ResponseModeDcApiMustBeUsed"
+                    ValidationError.HaipNotSupported.ResponseModeDcApiJwtMustBeUsed -> {
+                        "HaipNotSupported.ResponseModeDcApiJwtMustBeUsed"
                     }
 
                     ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByValueInDcApi -> {

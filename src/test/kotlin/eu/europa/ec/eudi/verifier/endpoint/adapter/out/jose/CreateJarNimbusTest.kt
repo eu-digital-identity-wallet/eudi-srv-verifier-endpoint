@@ -97,7 +97,7 @@ class CreateJarNimbusTest {
 
         val jwt =
             createJar
-                .sign(ResponseMode.DirectPostJwt(ecKey), requestObject, null)
+                .sign(ResponseMode.OverHttp.DirectPostJwt(ecKey), requestObject, null)
                 .serialize()
                 .also { println(it) }
         val signedJwt = decode(jwt).getOrThrow().also { println(it) }

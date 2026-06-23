@@ -52,6 +52,32 @@ internal fun requestObjectFromDomain(
     val aud = listOf("https://self-issued.me/v2")
     val transactionData = presentation.transactionData?.map { it.base64Url }
 
+    val (responseMode, requestId, expectedOrigins) =
+        when (val z = presentation.channel) {
+            is Channel.OverDcApi -> {
+                Triple(OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT, null, z.expectedOrigins)
+            }
+
+            is Channel.OverHttp -> {
+                when (presentation.channel.responseMode) {
+                    ResponseMode.OverHttp.DirectPost -> {
+                        Triple(
+                            OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST,
+                            presentation.requestId,
+                            null,
+                        )
+                    }
+
+                    is ResponseMode.OverHttp.DirectPostJwt -> {
+                        Triple(
+                            OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT,
+                            presentation.requestId,
+                            null,
+                        )
+                    }
+                }
+            }
+        }
     return RequestObject(
         verifierId = verifierConfig.verifierId,
         scope = scope,
@@ -60,26 +86,17 @@ internal fun requestObjectFromDomain(
         aud = aud,
         nonce = presentation.nonce.value,
         state = presentation.requestId.value,
-        responseMode =
-            when (presentation.responseMode) {
-                ResponseMode.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
-                is ResponseMode.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
-                is ResponseMode.DCApiJwt -> OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT
-            },
+        responseMode = responseMode,
         responseUri =
-            if (presentation.responseMode is ResponseMode.DCApiJwt)
-                null
-            else
+            if (requestId != null)
                 verifierConfig.responseUriBuilder(
                     presentation.requestId,
-                ),
+                )
+            else
+                null,
         issuedAt = clock.now(),
         transactionData = transactionData,
-        expectedOrigins =
-            when (presentation.channel) {
-                is Channel.OverDcApi -> presentation.channel.expectedOrigins?.toList()
-                else -> null
-            },
+        expectedOrigins = expectedOrigins,
         verifierInfo = null,
     )
 }

@@ -168,7 +168,7 @@ sealed interface ValidationError {
 
         data object EncryptionMethodsA128GCMAndA256GCMMustBeSupported : HaipNotSupported
 
-        data object ResponseModeDcAPiMustBeUsed : HaipNotSupported
+        data object ResponseModeDcApiJwtMustBeUsed : HaipNotSupported
 
         data object ResponseModeDirectPostJwtMustBeUsed : HaipNotSupported
 
@@ -297,6 +297,12 @@ class InitTransactionLive(
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO)
 
+        require(responseMode is ResponseMode.OverHttp)
+        val channel =
+            Channel.OverHttp(
+                responseMode = responseMode,
+            )
+
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO)
         val issuerChain = issuerChain(initTransactionTO)
 
@@ -311,19 +317,18 @@ class InitTransactionLive(
                 transactionData = type.transactionData,
                 requestId = generateRequestId(),
                 nonce = nonce,
-                responseMode = responseMode,
                 getWalletResponseMethod = getWalletResponseMethod,
                 requestUriMethod = requestUriMethod(initTransactionTO),
                 issuerChain = issuerChain,
                 profile = profile,
-                channel = Channel.OverHttp,
+                channel = channel,
             )
 
         val jarMode = jarMode(initTransactionTO)
 
         // validate according to the selected profile
         with(profile.validator) {
-            validate(verifierConfig, requestedPresentation, jarMode, channel = Channel.OverHttp)
+            validate(verifierConfig, requestedPresentation, jarMode)
         }
 
         // create the request, which may update the presentation
@@ -368,22 +373,26 @@ class InitTransactionLive(
 
         // if response mode is direct post jwt then generate ephemeral key
         val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
-        val responseMode = ResponseMode.DCApiJwt(responseEncryptionKey)
+        val responseMode = ResponseMode.OverDcApi.DCApiJwt(responseEncryptionKey)
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO)
         val issuerChain = issuerChain(initTransactionTO)
 
         val profile = initDCApiTransactionTO.profileOrDefault.toProfile()
-
-        val channel =
-            Channel.OverDcApi(
-                initDCApiTransactionTO.expectedOrigins?.toNonEmptyListOrNull(),
-            )
 
         val requestType: RequestType =
             when (initDCApiTransactionTO.requestType) {
                 RequestTypeTO.Signed -> RequestType.Signed
                 RequestTypeTO.Unsigned -> RequestType.Unsigned
             }
+        val expectedOrigins = initDCApiTransactionTO.expectedOrigins?.toNonEmptyListOrNull()
+
+        val channel =
+            Channel.OverDcApi(
+                responseMode = responseMode,
+                requestType = requestType,
+                expectedOrigins = expectedOrigins,
+            )
+
         // Initialize presentation
         val requestedPresentation =
             Presentation.Requested(
@@ -393,20 +402,18 @@ class InitTransactionLive(
                 transactionData = type.transactionData,
                 requestId = generateRequestId(),
                 nonce = nonce,
-                responseMode = responseMode,
                 getWalletResponseMethod = getWalletResponseMethod,
                 requestUriMethod = requestUriMethod(initTransactionTO),
                 issuerChain = issuerChain,
                 profile = profile,
                 channel = channel,
-                requestType = requestType,
             )
 
         val jarMode = EmbedOption.ByValue
 
         // validate according to the selected profile
         with(profile.validator) {
-            validate(verifierConfig, requestedPresentation, jarMode, channel)
+            validate(verifierConfig, requestedPresentation, jarMode)
         }
 
         // create the request, which may update the presentation
@@ -533,17 +540,17 @@ class InitTransactionLive(
 
         return when (responseModeOption) {
             ResponseModeOption.DirectPost -> {
-                ResponseMode.DirectPost
+                ResponseMode.OverHttp.DirectPost
             }
 
             ResponseModeOption.DirectPostJwt -> {
                 val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
-                ResponseMode.DirectPostJwt(responseEncryptionKey)
+                ResponseMode.OverHttp.DirectPostJwt(responseEncryptionKey)
             }
 
             ResponseModeOption.DCApiJwt -> {
                 val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
-                ResponseMode.DCApiJwt(responseEncryptionKey)
+                ResponseMode.OverDcApi.DCApiJwt(responseEncryptionKey)
             }
         }
     }
@@ -699,13 +706,12 @@ private fun interface ProfileValidator {
         config: VerifierConfig,
         presentation: Presentation.Requested,
         jarMode: EmbedOption<RequestId>,
-        channel: Channel,
     )
 
     companion object {
-        val OpenId4VP = ProfileValidator { _, _, _, _ -> }
+        val OpenId4VP = ProfileValidator { _, _, _ -> }
         val HAIP =
-            ProfileValidator { config, presentation, jarMode, channel ->
+            ProfileValidator { config, presentation, jarMode ->
                 with(config.clientMetaData.vpFormatsSupported) {
                     ensure(null != sdJwtVc || null != msoMdoc) {
                         ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported
@@ -756,19 +762,18 @@ private fun interface ProfileValidator {
                 ) {
                     ValidationError.HaipNotSupported.SelfSignedCertificateMustNotBeUsed
                 }
-
-                when (channel) {
+                when (presentation.channel) {
                     is Channel.OverDcApi -> {
-                        ensure(presentation.responseMode is ResponseMode.DCApiJwt) {
-                            ValidationError.HaipNotSupported.ResponseModeDcAPiMustBeUsed
+                        ensure(presentation.channel.responseMode is ResponseMode.OverDcApi.DCApiJwt) {
+                            ValidationError.HaipNotSupported.ResponseModeDcApiJwtMustBeUsed
                         }
                         ensure(jarMode is EmbedOption.ByValue) {
                             ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference
                         }
                     }
 
-                    Channel.OverHttp -> {
-                        ensure(presentation.responseMode is ResponseMode.DirectPostJwt) {
+                    is Channel.OverHttp -> {
+                        ensure(presentation.channel.responseMode is ResponseMode.OverHttp.DirectPostJwt) {
                             ValidationError.HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed
                         }
                         ensure(jarMode is EmbedOption.ByReference) {

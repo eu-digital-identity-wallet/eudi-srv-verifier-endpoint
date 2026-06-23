@@ -143,11 +143,21 @@ sealed interface Profile {
 }
 
 sealed interface Channel {
-    data object OverHttp : Channel
+    data class OverHttp(
+        val responseMode: ResponseMode.OverHttp,
+    ) : Channel
 
     data class OverDcApi(
+        val responseMode: ResponseMode.OverDcApi,
+        val requestType: RequestType,
         val expectedOrigins: NonEmptyList<String>?,
-    ) : Channel
+    ) : Channel {
+        init {
+            if (requestType == RequestType.Signed) {
+                require(expectedOrigins != null)
+            }
+        }
+    }
 }
 
 enum class RequestType {
@@ -173,20 +183,11 @@ sealed interface Presentation {
         val requestId: RequestId,
         val requestUriMethod: RequestUriMethod,
         val nonce: Nonce,
-        val responseMode: ResponseMode,
         val getWalletResponseMethod: GetWalletResponseMethod,
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
         val channel: Channel,
-        val requestType: RequestType? = null,
-    ) : Presentation {
-        init {
-            if (requestType == RequestType.Signed && responseMode is ResponseMode.DCApiJwt) {
-                require(channel is Channel.OverDcApi)
-                require(channel.expectedOrigins != null)
-            }
-        }
-    }
+    ) : Presentation
 
     /**
      * A presentation process for which the wallet has obtained the request object.
@@ -202,10 +203,10 @@ sealed interface Presentation {
         val requestId: RequestId,
         val requestObjectRetrievedAt: Instant,
         val nonce: Nonce,
-        val responseMode: ResponseMode,
         val getWalletResponseMethod: GetWalletResponseMethod,
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
+        val channel: Channel,
     ) : Presentation {
         init {
             require(initiatedAt <= requestObjectRetrievedAt)
@@ -224,10 +225,10 @@ sealed interface Presentation {
                     requested.requestId,
                     at,
                     requested.nonce,
-                    requested.responseMode,
                     requested.getWalletResponseMethod,
                     requested.issuerChain,
                     requested.profile,
+                    requested.channel,
                 )
         }
     }

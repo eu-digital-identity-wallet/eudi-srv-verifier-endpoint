@@ -297,12 +297,21 @@ private class WalletMetadataValidator(
         metadata: WalletMetadataTO,
         presentation: Presentation.Requested,
     ) {
-        val responseMode = presentation.responseMode.option.name()
+        val responseMode =
+            presentation.channel.responseMode.option
+                .name()
         val supportedResponseModes = metadata.responseModesSupported ?: RFC8414.DEFAULT_RESPONSE_MODES_SUPPORTED
         ensure(responseMode in supportedResponseModes) {
             RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Mode '$responseMode'")
         }
     }
+
+    private val Channel.responseMode: ResponseMode
+        get() =
+            when (this) {
+                is Channel.OverHttp -> responseMode
+                is Channel.OverDcApi -> responseMode
+            }
 
     context(_: Raise<RetrieveRequestObjectError>)
     private fun encryptionRequirement(metadata: WalletMetadataTO): EncryptionRequirement {

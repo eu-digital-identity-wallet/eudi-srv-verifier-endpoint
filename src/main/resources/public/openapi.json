@@ -1169,7 +1169,7 @@
           "HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported",
           "HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed",
           "HaipNotSupported.AuthorizationRequestMustBeProvidedByReference",
-          "HaipNotSupported.ResponseModeDcApiMustBeUsed",
+          "HaipNotSupported.ResponseModeDcApiJwtMustBeUsed",
           "HaipNotSupported.AuthorizationRequestMustBeProvidedByValueinDcApi"
         ]
       },

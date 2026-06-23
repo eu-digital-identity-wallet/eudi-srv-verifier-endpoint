@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import com.nimbusds.jose.jwk.JWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import java.net.URI
 import java.net.URL
 
 sealed interface HandoverInfo {
@@ -50,16 +51,31 @@ sealed interface HandoverInfo {
             presentation: Presentation.RequestObjectRetrieved,
             config: VerifierConfig,
         ): HandoverInfo =
-            OpenID4VPHandoverInfo(
-                clientId = config.verifierId,
-                nonce = presentation.nonce,
-                ephemeralEncryptionKey =
-                    when (val responseMode = presentation.responseMode) {
-                        ResponseMode.DirectPost -> null
-                        is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
-                        is ResponseMode.DCApiJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
-                    },
-                responseUri = config.responseUriBuilder(presentation.requestId),
-            )
+            when (presentation.channel) {
+                is Channel.OverDcApi -> {
+                    OpenID4VPDCAPIHandoverInfo(
+                        // TODO This will change to sigle value
+                        origin = URI.create(presentation.channel.expectedOrigins?.first()).toURL(),
+                        nonce = presentation.nonce,
+                        ephemeralEncryptionKey =
+                            when (val responseMode = presentation.channel.responseMode) {
+                                is ResponseMode.OverDcApi.DCApiJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
+                            },
+                    )
+                }
+
+                is Channel.OverHttp -> {
+                    OpenID4VPHandoverInfo(
+                        clientId = config.verifierId,
+                        nonce = presentation.nonce,
+                        ephemeralEncryptionKey =
+                            when (val responseMode = presentation.channel.responseMode) {
+                                ResponseMode.OverHttp.DirectPost -> null
+                                is ResponseMode.OverHttp.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
+                            },
+                        responseUri = config.responseUriBuilder(presentation.requestId),
+                    )
+                }
+            }
     }
 }

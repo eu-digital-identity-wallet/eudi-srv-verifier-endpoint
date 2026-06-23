@@ -169,7 +169,7 @@ class InitTransactionTest {
             assertNotNull(jwtSecuredAuthorizationRequest.request)
             val presentation = loadPresentationById(testTransactionId)
             val requestObjectRetrieved = assertIs<Presentation.RequestObjectRetrieved>(presentation)
-            assertEquals(ResponseModeOption.DirectPost, requestObjectRetrieved.responseMode.option)
+            assertEquals(ResponseModeOption.DirectPost, requestObjectRetrieved.channel.responseMode.option)
         }
 
     /**
@@ -434,4 +434,11 @@ class InitTransactionTest {
     private suspend fun loadPresentationById(id: TransactionId) = TestContext.loadPresentationById(id)
 
     private fun dcqlQuery() = VerifierApiClient.loadInitTransactionTO("00-dcql.json").dcqlQuery!!
+
+    private val Channel.responseMode: ResponseMode
+        get() =
+            when (this) {
+                is Channel.OverHttp -> responseMode
+                is Channel.OverDcApi -> responseMode
+            }
 }
