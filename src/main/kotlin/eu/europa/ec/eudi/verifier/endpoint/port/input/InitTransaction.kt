@@ -378,6 +378,12 @@ class InitTransactionLive(
             Channel.OverDcApi(
                 initDCApiTransactionTO.expectedOrigins?.toNonEmptyListOrNull(),
             )
+
+        val requestType: RequestType =
+            when (initDCApiTransactionTO.requestType) {
+                RequestTypeTO.Signed -> RequestType.Signed
+                RequestTypeTO.Unsigned -> RequestType.Unsigned
+            }
         // Initialize presentation
         val requestedPresentation =
             Presentation.Requested(
@@ -393,6 +399,7 @@ class InitTransactionLive(
                 issuerChain = issuerChain,
                 profile = profile,
                 channel = channel,
+                requestType = requestType,
             )
 
         val jarMode = EmbedOption.ByValue

@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
 import arrow.core.NonEmptyList
 import arrow.core.raise.context.Raise
 import arrow.core.raise.context.ensure
+import eu.europa.ec.eudi.verifier.endpoint.port.input.RequestTypeTO
 import kotlinx.serialization.json.JsonObject
 import java.security.cert.X509Certificate
 import kotlin.time.Instant
@@ -150,6 +151,11 @@ sealed interface Channel {
     ) : Channel
 }
 
+enum class RequestType {
+    Signed,
+    Unsigned,
+}
+
 /**
  * The entity that represents the presentation process
  */
@@ -173,9 +179,10 @@ sealed interface Presentation {
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
         val channel: Channel,
+        val requestType: RequestType? = null,
     ) : Presentation {
         init {
-            if (responseMode is ResponseMode.DCApi) {
+            if (requestType == RequestType.Signed && responseMode is ResponseMode.DCApi) {
                 require(channel is Channel.OverDcApi)
                 require(channel.expectedOrigins != null)
             }
