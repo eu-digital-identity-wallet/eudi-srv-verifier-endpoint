@@ -206,9 +206,6 @@
                 "$ref": "#/components/schemas/InitTransactionDCApi"
               },
               "examples": {
-                "InitUnsignedTransactionByValueOverDcApi": {
-                  "$ref": "#/components/examples/InitUnsignedTransactionByValueOverDcApi"
-                },
                 "InitSignedTransactionByValueOverDcApi": {
                   "$ref": "#/components/examples/InitSignedTransactionByValueOverDcApi"
                 }
@@ -230,11 +227,8 @@
                   "$ref": "#/components/schemas/InitTransactionDCApi"
                 },
                 "examples": {
-                  "TransactionByValue": {
+                  "TransactionDCApiSigned": {
                     "$ref": "#/components/examples/TransactionDCApiSigned"
-                  },
-                  "TransactionByReference": {
-                    "$ref": "#/components/examples/TransactionByTransactionDCApiUnsigned"
                   }
                 }
               }
@@ -671,24 +665,9 @@
         ],
         "nullable": false
       },
-      "RequestType": {
-        "type": "string",
-        "nullable": false,
-        "enum": [
-          "signed",
-          "unsigned"
-        ]
-      },
       "ExpectedOrigins": {
-        "type": "array",
-        "nullable": false,
-        "items": {
-          "type": "string",
-          "nullable": false,
-          "format": "uri",
-          "minLength": 1
-        },
-        "minItems": 1
+        "type": "string",
+        "nullable": false
       },
       "InitTransaction": {
         "type": "object",
@@ -856,17 +835,6 @@
               }
             ]
           },
-          "request_type": {
-            "allOf": [
-              {
-                "description": "Controls whether the DC API authorization request is returned as signed or unsigned.",
-                "default": "signed"
-              },
-              {
-                "$ref": "#/components/schemas/RequestType"
-              }
-            ]
-          },
           "issuer_chain": {
             "allOf": [
               {
@@ -890,7 +858,8 @@
         },
         "required": [
           "dcql_query",
-          "nonce"
+          "nonce",
+          "expected_origins"
         ],
         "additionalProperties": false
       },
@@ -2197,39 +2166,6 @@
           ]
         }
       },
-      "InitUnsignedTransactionByValueOverDcApi": {
-        "description": "Initialize an unsigned Transaction over DC API, using DCQL. The authorization request is returned as an unsigned JSON object.",
-        "value": {
-          "dcql_query": {
-            "credentials": [
-              {
-                "id": "pid",
-                "format": "mso_mdoc",
-                "meta": {
-                  "doctype_value": "eu.europa.ec.eudi.pid.1"
-                },
-                "claims": [
-                  {
-                    "path": [
-                      "eu.europa.ec.eudi.pid.1",
-                      "family_name"
-                    ]
-                  },
-                  {
-                    "path": [
-                      "eu.europa.ec.eudi.pid.1",
-                      "given_name"
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
-          "profile": "openid4vp",
-          "request_type": "unsigned"
-        }
-      },
       "InitSignedTransactionByValueOverDcApi": {
         "description": "Initialize a signed Transaction over DC API, using DCQL. The authorization request is returned as a signed JWT.",
         "value": {
@@ -2260,10 +2196,7 @@
           },
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
           "profile": "openid4vp",
-          "request_type": "signed",
-          "expected_origins": [
-            "https://wallet.example.com"
-          ]
+          "expected_origins": "https://wallet.example.com"
         }
       },
       "TransactionDCApiSigned": {
@@ -2271,70 +2204,6 @@
         "value": {
           "request": "eyJ4NWMiOlsiTUlJQjV6Q0NBVXFnQXdJQkFnSUVaWUtlVnpBS0JnZ3Foa2pPUFFRREJEQVhNUlV3RXdZRFZRUUREQXhwYm5SbGNtMWxaR2xoZEdVd0lCY05Nak14TWpJd01EYzFOekV4V2hnUE1qRXlNekV5TWpBd056VTNNVEZhTUJNeEVUQVBCZ05WQkFNTUNIWmxjbWxtYVdWeU1JR2JNQkFHQnlxR1NNNDlBZ0VHQlN1QkJBQWpBNEdHQUFRQTlhRGhQY1ZBaDRrUC9GQTNTUnFua3pPbnVVblhzSzJEOVB3YkxiaVhBNm44UWlFUE1FcjB5Z0s1OUlnaE5HaVZhVnlNVk9QZFBMM1VMMnR5MU81Si9RVUFTY1VNcUo1eTZxZG54Y3dxQzN0MFZsWkYrYk04V3VCQ1pxN0NWdGNNTFNRY0ptRlh2cFU2QUtoWjNOOUl0NkFzb2FmNmNnMEFoR285SDJmWW8rbERBcWVqUXpCQk1DRUdBMVVkRVFFQi93UVhNQldDQ1d4dlkyRnNhRzl6ZElJSWRtVnlhV1pwWlhJd0RBWURWUjBUQVFIL0JBSXdBREFPQmdOVkhROEJBZjhFQkFNQ0I0QXdDZ1lJS29aSXpqMEVBd1FEZ1lvQU1JR0dBa0UzTmVBejlGOCtEbVROV1pYdHRZbDZ5Y2FtQ3FLWlEwbTdsczlKQnhJOUtjL3ROdGkxajgwVyt5WmZ1eDhNRjZUNCt3a3VNODlheTBxYjArNUR6ZEF4NGdKQkNLWE5LSEpLTkNTOEFPUjRlenZ2Y3FkMWhtOVlhMStHUVNTYm04cDR2QUVZemJCQUlPdmx0bVVqN2dQUFlDYU94QjhhbGtBSDZJWExIR2lXeFhQVEpFaz0iLCJNSUlCK1RDQ0FWdWdBd0lCQWdJRVpZR2xSakFLQmdncWhrak9QUVFEQkRBUE1RMHdDd1lEVlFRRERBUnliMjkwTUNBWERUSXpNVEl4T1RFME1UUXpNRm9ZRHpJeE1qTXhNakU1TVRReE5ETXdXakFYTVJVd0V3WURWUVFEREF4cGJuUmxjbTFsWkdsaGRHVXdnWnN3RUFZSEtvWkl6ajBDQVFZRks0RUVBQ01EZ1lZQUJBR0xQSHdmTG9IWTNZVmRoY1dkdzZIUTBsWFYvUDA2M0x6Uzhsd0h2ZjRZTTU3dGNWUkJxN3JUWUJoeVYxdDBnSnZOSFUyOHNXSDhxWXk5ZFcxcHJlc0dVd0RqWk5WMkxoZ1lHUzIrOWpTQ0JSN0FtbDQwSWJxdEhSQUhzNEJlbEVMN2pudnlGaEhSWG1UQ3FTMzcvSTVtY0dOdEhBOXkxQnEybVl2dUtmUDl4RzU0OEtOWU1GWXdHZ1lEVlIwUkFRSC9CQkF3RG9JTWFXNTBaWEp0WldScFlYUmxNQm9HQTFVZEVnRUIvd1FRTUE2Q0RHbHVkR1Z5YldWa2FXRjBaVEFNQmdOVkhSTUJBZjhFQWpBQU1BNEdBMVVkRHdFQi93UUVBd0lCQmpBS0JnZ3Foa2pPUFFRREJBT0Jpd0F3Z1ljQ1FYMDdWYXZZMjN2cG5sYUF2Z01MeC8vUHplWFg1dlNOeTdMTjlVVWdrNGFWRWM0VE0rTG1DNVJzSFJPVkE5LzljaXZUNm1SWWM3MngwQjJpclR4cDZIME5Ba0lCVERYZFduM3J5MkhzWHZHS1FDQWN5TEEvS09GN2pUcXJwYlZhY09ac1dCRWZZT1NBY1JPVjR5WVZnQ05PZW1RbndwSGZXbjVGYW5GWmNMME1FWkdnOC9ZPSJdLCJ0eXAiOiJvYXV0aC1hdXRoei1yZXErand0IiwiYWxnIjoiRVM1MTIifQ.eyJhdWQiOiJodHRwczovL3NlbGYtaXNzdWVkLm1lL3YyIiwicmVzcG9uc2VfdHlwZSI6InZwX3Rva2VuIiwiZXhwZWN0ZWRfb3JpZ2lucyI6WyJodHRwczovL3dhbGxldC5leGFtcGxlLmNvbSJdLCJzdGF0ZSI6IjZJM1VqVFBEMVpwdk1qb1c2c2FpbTV0NnhqeWw0T1ZVZ2tVSVJrZ2tXa1VJVEx4MjhRaDFWd0VVUEV1LTVDa19URzZZMFdhTldtYThBUEZJY2xFQ25RIiwiZGNxbF9xdWVyeSI6eyJjcmVkZW50aWFscyI6W3siaWQiOiJwaWQiLCJmb3JtYXQiOiJtc29fbWRvYyIsIm1ldGEiOnsiZG9jdHlwZV92YWx1ZSI6ImV1LmV1cm9wYS5lYy5ldWRpLnBpZC4xIn0sImNsYWltcyI6W3sicGF0aCI6WyJldS5ldXJvcGEuZWMuZXVkaS5waWQuMSIsImZhbWlseV9uYW1lIl19LHsicGF0aCI6WyJldS5ldXJvcGEuZWMuZXVkaS5waWQuMSIsImdpdmVuX25hbWUiXX1dfV19LCJpYXQiOjE3ODIxOTkzMDAsIm5vbmNlIjoiODhjNjE1YTItYjdjYS00MzI5LWI2NzMtM2Y0YzQxNDZhZDMzIiwiY2xpZW50X2lkIjoieDUwOV9oYXNoOmk3alppU3FhNEdYTmgxTHpCd0QybFZ0S0ljSWhwaW5SUVJvOEJIU1ZNeDAiLCJjbGllbnRfbWV0YWRhdGEiOnsidnBfZm9ybWF0c19zdXBwb3J0ZWQiOnsiZGMrc2Qtand0Ijp7InNkLWp3dF9hbGdfdmFsdWVzIjpbIkVTMjU2Il0sImtiLWp3dF9hbGdfdmFsdWVzIjpbIkVTMjU2Il19LCJtc29fbWRvYyI6eyJpc3N1ZXJhdXRoX2FsZ192YWx1ZXMiOlstNywtMzUsLTM2XSwiZGV2aWNlYXV0aF9hbGdfdmFsdWVzIjpbLTcsLTM1LC0zNl19fX0sInJlc3BvbnNlX21vZGUiOiJkY19hcGkuand0In0.AIxinT9dPjK98VBVSpgqgDrED86Z6hw6eiriN3DgdG8NGgZUNboYSVEa_lK_gy-NMz9im2CLC666iLMuJ35uo7xhACbKalwXQkeWUAEydamyMiAVKBhMl4evErY6rDOCKpZKzw3AB9ihKdJxuJjPqY7Um7h-yRZU1D8oMEHCRZFRInDI",
           "transaction_id": "7eFQsqH9m_PBRiB_IZnhYGyghaI8JmsKIb6VnWKB1fJAKE5B1VWtr__N2aPMYJ5-HWydSv7luD8UArvJwNp16w"
-        }
-      },
-      "TransactionByTransactionDCApiUnsigned": {
-        "description": "Transaction initialized over DC API. The authorization request is returned as an unsigned JSON object.",
-        "value": {
-          "request": {
-            "response_type": "vp_token",
-            "response_mode": "dc_api.jwt",
-            "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
-            "client_metadata": {
-              "vp_formats_supported": {
-                "dc+sd-jwt": {
-                  "sd-jwt_alg_values": [
-                    "ES256"
-                  ],
-                  "kb-jwt_alg_values": [
-                    "ES256"
-                  ]
-                },
-                "mso_mdoc": {
-                  "issuerauth_alg_values": [
-                    -7,
-                    -35,
-                    -36
-                  ],
-                  "deviceauth_alg_values": [
-                    -7,
-                    -35,
-                    -36
-                  ]
-                }
-              },
-              "encrypted_response_enc_values_supported": [
-                "A128GCM",
-                "A256GCM"
-              ]
-            },
-            "dcql_query": {
-              "credentials": [
-                {
-                  "id": "pid",
-                  "format": "mso_mdoc",
-                  "meta": {
-                    "doctype_value": "eu.europa.ec.eudi.pid.1"
-                  },
-                  "claims": [
-                    {
-                      "path": [
-                        "eu.europa.ec.eudi.pid.1",
-                        "family_name"
-                      ]
-                    },
-                    {
-                      "path": [
-                        "eu.europa.ec.eudi.pid.1",
-                        "given_name"
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          },
-          "transaction_id": "AtaAYiBzGzxx_pmUgPugJpwFocbxBjQaQkFzqJVeFQfwhYfkdUJFU-ZOm4Fm8FELlUkwGLsnbkydXehn3WrIXg"
         }
       }
     },

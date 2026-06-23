@@ -421,8 +421,6 @@ class InitTransactionLive(
         storePresentation(updatedPresentation)
         logTransactionInitialized(updatedPresentation, request, profile.toTO())
 
-        val verifierInfo = VerifierInfoTO(null, null, null)
-
         return DCApiTransactionResponseSignedRequest(
             checkNotNull(request.request) {
                 "Signed DC API response requires request or request_uri"
@@ -772,64 +770,6 @@ private val Profile.validator: ProfileValidator
             Profile.OpenId4VP -> ProfileValidator.OpenId4VP
             Profile.HAIP -> ProfileValidator.HAIP
         }
-
-@Serializable
-data class ClientMetadataTO(
-    @SerialName(RFC8414.JWKS)
-    val jwks: List<String>? = null,
-    @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED)
-    @Required
-    val vpFormatsSupported: VpFormatsSupported,
-    @SerialName(OpenId4VPSpec.ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED)
-    @Required
-    val encryptedResponseEncValueSupported: List<String>,
-)
-
-private fun ResponseEncryptionOption.toDto(): List<String> = this.encryptionMethods.map { it.toString() }
-
-@Serializable
-data class VerifierInfoTO(
-    @SerialName(OpenId4VPSpec.VERIFIER_INFO_FORMAT) val format: String?,
-    @SerialName(OpenId4VPSpec.VERIFIER_INFO_DATA) val data: String?,
-    @SerialName(OpenId4VPSpec.VERIFIER_INFO_CREDENTIAL_IDS) val credentialIds: List<String>?,
-)
-
-@Serializable
-data class InitDCApiTransactionResponseTO(
-    @SerialName(RFC6749.CLIENT_ID) val clientId: ClientId? = null,
-    @Required @SerialName(RFC6749.RESPONSE_TYPE) val responseType: String,
-    @Required @SerialName(RFC6749.RESPONSE_MODE) val responseMode: String,
-    @Required @SerialName(OpenId4VPSpec.NONCE) val nonce: String,
-    @Required @SerialName(OpenId4VPSpec.CLIENT_METADATA) val clientMetadata: ClientMetadataTO,
-    @SerialName(RFC9101.REQUEST) val request: String? = null,
-    @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
-    @Required @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL,
-    @Transient @SerialName(OpenId4VPSpec.VERIFIER_INFO) val verifierInfo: VerifierInfoTO? = null,
-    @SerialName(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS) val expectedOrigins: List<String>? = null,
-    @Transient val transactionId: String = "",
-) {
-    companion object {
-        fun unsigned(
-            nonce: String,
-            dcqlQuery: DCQL,
-            transactionData: List<JsonObject>?,
-            clientMetadata: ClientMetadataTO,
-            verifierInfo: VerifierInfoTO,
-        ): InitDCApiTransactionResponseTO =
-            InitDCApiTransactionResponseTO(
-                clientId = null,
-                responseType = OpenId4VPSpec.VP_TOKEN,
-                responseMode = OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT,
-                nonce = nonce,
-                clientMetadata = clientMetadata,
-                request = null,
-                transactionData = transactionData,
-                dcqlQuery = dcqlQuery,
-                verifierInfo = verifierInfo,
-                expectedOrigins = null,
-            )
-    }
-}
 
 @Serializable
 data class InitDCApiTransactionTO(
