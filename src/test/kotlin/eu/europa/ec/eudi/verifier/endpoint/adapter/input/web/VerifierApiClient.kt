@@ -18,11 +18,13 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi.Companion.TRANSACTION_ID_HEADER
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitDCApiTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.Output
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -36,6 +38,43 @@ object VerifierApiClient {
     private val log: Logger = LoggerFactory.getLogger(VerifierApiClient::class.java)
 
     fun loadInitTransactionTO(testResource: String): InitTransactionTO = Json.decodeFromString(TestUtils.loadResource(testResource))
+
+    fun loadInitDCApiTransactionTO(testResource: String): InitDCApiTransactionTO =
+        Json.decodeFromString(TestUtils.loadResource(testResource))
+
+    /**
+     * Initializes a Digital Credentials API (DC API) Transaction.
+     *
+     * Posts an [InitDCApiTransactionTO] to [VerifierApi.INIT_TRANSACTION_PATH_DC_API] and returns
+     * the raw response body parsed as a [JsonObject] together with the value of the
+     * [TRANSACTION_ID_HEADER] response header.
+     *
+     * The response body is returned as a generic [JsonObject] (instead of being deserialized to the
+     * sealed `DCApiTransactionResponse`), so that tests can assert on the exact wire format of either
+     * an unsigned request (where `request` is a JSON object) or a signed request (where `request` is a JWT string).
+     */
+    fun initDCApiTransaction(
+        client: WebTestClient,
+        initDCApiTransactionTO: InitDCApiTransactionTO,
+    ): Pair<JsonObject, String?> {
+        val result =
+            client
+                .post()
+                .uri(VerifierApi.INIT_TRANSACTION_PATH_DC_API)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .bodyValue(initDCApiTransactionTO)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody<String>()
+                .returnResult()
+
+        val transactionId = result.responseHeaders.getFirst(TRANSACTION_ID_HEADER)
+        val body = Json.parseToJsonElement(checkNotNull(result.responseBody)) as JsonObject
+        log.info("DC API init response body:\n$body")
+        return body to transactionId
+    }
 
     fun initTransaction(
         client: WebTestClient,
