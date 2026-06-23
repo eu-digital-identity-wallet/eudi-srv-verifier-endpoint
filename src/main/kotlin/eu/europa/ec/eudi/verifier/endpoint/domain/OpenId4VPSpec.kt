@@ -95,7 +95,7 @@ object OpenId4VPSpec {
     const val OPENID4VP_HANDOVER_IDENTIFIER = "OpenID4VPHandover"
     const val OPENID4VP_DCAPI_HANDOVER_IDENTIFIER = "OpenID4VPDCAPIHandover"
 
-    const val RESPONSE_MODE_DCAPI = "dc_api.jwt"
+    const val RESPONSE_MODE_DCAPI_JWT = "dc_api.jwt"
     const val DCAPI_EXPECTED_ORIGINS = "expected_origins"
     const val DCAPI_REQUEST_TYPE_SIGNED = "signed"
     const val DCAPI_REQUEST_TYPE_UNSIGNED = "unsigned"

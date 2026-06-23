@@ -78,8 +78,8 @@ enum class ResponseModeTO {
     @SerialName(OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT)
     DirectPostJwt,
 
-    @SerialName(OpenId4VPSpec.RESPONSE_MODE_DCAPI)
-    DCApi,
+    @SerialName(OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT)
+    DCApiJwt,
 }
 
 /**
@@ -527,7 +527,7 @@ class InitTransactionLive(
             when (initTransaction.responseMode) {
                 ResponseModeTO.DirectPost -> ResponseModeOption.DirectPost
                 ResponseModeTO.DirectPostJwt -> ResponseModeOption.DirectPostJwt
-                ResponseModeTO.DCApi -> ResponseModeOption.DCApiJwt
+                ResponseModeTO.DCApiJwt -> ResponseModeOption.DCApiJwt
                 null -> verifierConfig.responseModeOption
             }
 
@@ -845,7 +845,7 @@ data class InitDCApiTransactionResponseTO(
             InitDCApiTransactionResponseTO(
                 clientId = null,
                 responseType = OpenId4VPSpec.VP_TOKEN,
-                responseMode = OpenId4VPSpec.RESPONSE_MODE_DCAPI,
+                responseMode = OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT,
                 nonce = nonce,
                 clientMetadata = clientMetadata,
                 request = null,

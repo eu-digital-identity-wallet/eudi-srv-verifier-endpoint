@@ -86,7 +86,13 @@ class CreateJarNimbus(
                     type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
                 }.build()
         val clientMetaData = verifierConfig.clientMetaData
-        val expectedOrigins = if (requestObject.responseMode == OpenId4VPSpec.RESPONSE_MODE_DCAPI) requestObject.expectedOrigins else null
+        val expectedOrigins =
+            if (requestObject.responseMode ==
+                OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT
+            )
+                requestObject.expectedOrigins
+            else
+                null
 
         val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode), requestObject, walletNonce, expectedOrigins)
         return SignedJWT(header, claimSet).apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }

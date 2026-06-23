@@ -28,8 +28,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
@@ -77,9 +75,9 @@ internal class WalletResponseDCApiTest {
         expectedNonce: String,
     ) {
         assertEquals(
-            OpenId4VPSpec.RESPONSE_MODE_DCAPI,
+            OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT,
             request[RFC6749.RESPONSE_MODE]?.jsonPrimitive?.contentOrNull,
-            "response_mode must be '${OpenId4VPSpec.RESPONSE_MODE_DCAPI}'",
+            "response_mode must be '${OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT}'",
         )
         assertEquals(
             OpenId4VPSpec.VP_TOKEN,

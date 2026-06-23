@@ -393,7 +393,7 @@ private fun ResponseModeOption.name(): String =
     when (this) {
         ResponseModeOption.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
         ResponseModeOption.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
-        ResponseModeOption.DCApiJwt -> OpenId4VPSpec.RESPONSE_MODE_DCAPI
+        ResponseModeOption.DCApiJwt -> OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT
     }
 
 private fun <T> commonGround(
