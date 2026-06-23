@@ -368,7 +368,7 @@ class InitTransactionLive(
 
         // if response mode is direct post jwt then generate ephemeral key
         val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
-        val responseMode = ResponseMode.DCApi(responseEncryptionKey)
+        val responseMode = ResponseMode.DCApiJwt(responseEncryptionKey)
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO)
         val issuerChain = issuerChain(initTransactionTO)
 
@@ -543,7 +543,7 @@ class InitTransactionLive(
 
             ResponseModeOption.DCApiJwt -> {
                 val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
-                ResponseMode.DCApi(responseEncryptionKey)
+                ResponseMode.DCApiJwt(responseEncryptionKey)
             }
         }
     }
@@ -759,7 +759,7 @@ private fun interface ProfileValidator {
 
                 when (channel) {
                     is Channel.OverDcApi -> {
-                        ensure(presentation.responseMode is ResponseMode.DCApi) {
+                        ensure(presentation.responseMode is ResponseMode.DCApiJwt) {
                             ValidationError.HaipNotSupported.ResponseModeDcAPiMustBeUsed
                         }
                         ensure(jarMode is EmbedOption.ByValue) {

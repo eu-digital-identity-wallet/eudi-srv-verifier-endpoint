@@ -88,7 +88,7 @@ sealed interface ResponseMode {
         }
     }
 
-    data class DCApi(
+    data class DCApiJwt(
         val ephemeralResponseEncryptionKey: JWK,
     ) : ResponseMode {
         init {
@@ -102,7 +102,7 @@ val ResponseMode.option: ResponseModeOption
         when (this) {
             ResponseMode.DirectPost -> ResponseModeOption.DirectPost
             is ResponseMode.DirectPostJwt -> ResponseModeOption.DirectPostJwt
-            is ResponseMode.DCApi -> ResponseModeOption.DCApiJwt
+            is ResponseMode.DCApiJwt -> ResponseModeOption.DCApiJwt
         }
 
 data class ResponseEncryptionOption(

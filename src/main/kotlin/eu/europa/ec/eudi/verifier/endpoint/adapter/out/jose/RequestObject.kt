@@ -64,10 +64,10 @@ internal fun requestObjectFromDomain(
             when (presentation.responseMode) {
                 ResponseMode.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
                 is ResponseMode.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
-                is ResponseMode.DCApi -> OpenId4VPSpec.RESPONSE_MODE_DCAPI
+                is ResponseMode.DCApiJwt -> OpenId4VPSpec.RESPONSE_MODE_DCAPI
             },
         responseUri =
-            if (presentation.responseMode is ResponseMode.DCApi)
+            if (presentation.responseMode is ResponseMode.DCApiJwt)
                 null
             else
                 verifierConfig.responseUriBuilder(

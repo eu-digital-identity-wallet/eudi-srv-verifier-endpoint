@@ -57,7 +57,7 @@ sealed interface HandoverInfo {
                     when (val responseMode = presentation.responseMode) {
                         ResponseMode.DirectPost -> null
                         is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
-                        is ResponseMode.DCApi -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
+                        is ResponseMode.DCApiJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
                     },
                 responseUri = config.responseUriBuilder(presentation.requestId),
             )

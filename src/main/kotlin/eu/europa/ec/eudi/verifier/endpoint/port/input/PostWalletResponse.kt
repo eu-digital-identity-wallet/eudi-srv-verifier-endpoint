@@ -361,7 +361,7 @@ class PostWalletResponseLive(
                 }
             }
 
-            is ResponseMode.DCApi -> {
+            is ResponseMode.DCApiJwt -> {
                 when (walletResponse) {
                     is AuthorisationResponse.DCApiJwt -> {
                         verifyEncryptedResponse(
@@ -464,7 +464,7 @@ private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
         when (responseMode) {
             ResponseMode.DirectPost -> null
             is ResponseMode.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey
-            is ResponseMode.DCApi -> responseMode.ephemeralResponseEncryptionKey
+            is ResponseMode.DCApiJwt -> responseMode.ephemeralResponseEncryptionKey
         }
 
 private fun Logger.debug(
