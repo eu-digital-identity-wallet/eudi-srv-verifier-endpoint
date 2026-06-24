@@ -272,6 +272,14 @@ internal class VerifierApi(
                     ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByValueInDcApi -> {
                         "HaipNotSupported.AuthorizationRequestMustBeProvidedByValueinDcApi"
                     }
+
+                    ValidationError.ETSI119472Part2.ProfileCanNotBeUsedWithNonDcApiChannel -> {
+                        "ETSI119472Part2.ProfileCanNotBeUsedWithNonDcApiChannel"
+                    }
+
+                    ValidationError.ETSI119472Part2.ResponseModeDirectPostJwtMustBeUsed -> {
+                        "ETSI119472Part2.ResponseModeDirectPostJwtMustBeUsed"
+                    }
                 }
             return badRequest().json().bodyValueAndAwait(mapOf("error" to error))
         }

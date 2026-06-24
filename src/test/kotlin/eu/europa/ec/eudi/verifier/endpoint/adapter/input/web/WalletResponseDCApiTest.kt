@@ -20,7 +20,6 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.RFC6749
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
-import eu.europa.ec.eudi.verifier.endpoint.port.input.ProfileTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
@@ -95,36 +94,13 @@ internal class WalletResponseDCApiTest {
     }
 
     @Test
-    fun `openid4vp - signed dc_api request is initialized`(): Unit =
-        runBlocking {
-            val initTransaction =
-                VerifierApiClient
-                    .loadInitDCApiTransactionTO("09-dcApi-dcql.json")
-                    .copy(profile = ProfileTO.OpenId4VP)
-
-            val (body, transactionId) = VerifierApiClient.initDCApiTransaction(client, initTransaction)
-            assertNotNull(transactionId, "Transaction-Id header is missing")
-            assertEquals(transactionId, body["transaction_id"]?.jsonPrimitive?.contentOrNull)
-
-            // for a signed request, the 'request' is a Request Object (JWT)
-            val requestJwt = assertNotNull(body["request"]?.jsonPrimitive?.contentOrNull, "request is not a JWT string")
-            val (_, claims) = TestUtils.parseJWTIntoClaims(requestJwt)
-            assertDCApiRequest(claims, initTransaction.nonce)
-
-            // a signed DC API request must contain the expected_origins claim
-            val expectedOrigins = assertNotNull(claims[OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS], "expected_origins is missing")
-            assertTrue(expectedOrigins.toString().contains("https://verifier.example.com"))
-        }
-
-    @Test
-    fun `haip - signed dc_api request is initialized`(): Unit =
+    fun `signed dc_api request is initialized`(): Unit =
         runBlocking {
             assertIs<VerifierId.X509Hash>(config.verifierId)
 
             val initTransaction =
                 VerifierApiClient
                     .loadInitDCApiTransactionTO("09-dcApi-dcql.json")
-                    .copy(profile = ProfileTO.HAIP)
 
             val (body, transactionId) = VerifierApiClient.initDCApiTransaction(client, initTransaction)
             assertNotNull(transactionId, "Transaction-Id header is missing")

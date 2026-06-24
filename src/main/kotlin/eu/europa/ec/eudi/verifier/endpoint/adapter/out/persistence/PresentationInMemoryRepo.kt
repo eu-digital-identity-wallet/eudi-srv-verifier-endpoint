@@ -129,5 +129,6 @@ private fun log(e: PresentationEvent) {
         is PresentationEvent.WalletResponsePosted -> info("Wallet posted response")
         is PresentationEvent.AttestationStatusCheckSuccessful -> info("Attestation status check successful")
         is PresentationEvent.AttestationStatusCheckFailed -> warn("Attestation status check failed")
+        is PresentationEvent.DcApiTransactionInitialized -> info("DC API transaction initialized")
     }
 }

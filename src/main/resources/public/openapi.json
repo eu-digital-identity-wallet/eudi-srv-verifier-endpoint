@@ -824,17 +824,6 @@
             },
             "minItems": 1
           },
-          "profile": {
-            "allOf": [
-              {
-                "description": "Profile according to which this Presentation must be done. Extra restrictions are enforced based on the selected Profile.",
-                "default": "openid4vp"
-              },
-              {
-                "$ref": "#/components/schemas/Profile"
-              }
-            ]
-          },
           "issuer_chain": {
             "allOf": [
               {
@@ -2195,7 +2184,6 @@
             ]
           },
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
-          "profile": "openid4vp",
           "expected_origins": "https://wallet.example.com"
         }
       },

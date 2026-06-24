@@ -141,6 +141,11 @@ sealed interface Profile {
      * [High Assurance Interoperability Profile](https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0.html)
      */
     data object HAIP : Profile
+
+    /**
+     * [ETSI119472Part2 Profile](https://www.etsi.org/deliver/etsi_ts/119400_119499/11947202/01.01.01_60/ts_11947202v010101p.pdf)
+     */
+    data object ETSI119472Part2 : Profile
 }
 
 sealed interface Channel {

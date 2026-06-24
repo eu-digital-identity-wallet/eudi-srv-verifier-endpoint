@@ -33,6 +33,13 @@ sealed interface PresentationEvent {
         val profile: ProfileTO,
     ) : PresentationEvent
 
+    data class DcApiTransactionInitialized(
+        override val transactionId: TransactionId,
+        override val timestamp: Instant,
+        val response: Jwt,
+        val profile: ProfileTO,
+    ) : PresentationEvent
+
     data class RequestObjectRetrieved(
         override val transactionId: TransactionId,
         override val timestamp: Instant,

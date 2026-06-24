@@ -110,6 +110,12 @@ enum class ProfileTO {
      */
     @SerialName("haip")
     HAIP,
+
+    /**
+     * Initialize a Transaction per ETSI-119-472-2. Extra constraints enforced.
+     */
+    @SerialName("ETSI119472Part2")
+    ETSI119472Part2,
 }
 
 @Serializable
@@ -177,6 +183,12 @@ sealed interface ValidationError {
         data object AuthorizationRequestMustBeProvidedByReference : HaipNotSupported
 
         data object AuthorizationRequestMustBeProvidedByValueInDcApi : HaipNotSupported
+    }
+
+    sealed interface ETSI119472Part2 : ValidationError {
+        data object ProfileCanNotBeUsedWithNonDcApiChannel : ETSI119472Part2
+
+        data object ResponseModeDirectPostJwtMustBeUsed : ETSI119472Part2
     }
 }
 
@@ -374,8 +386,6 @@ class InitTransactionLive(
 
     context(_: Raise<ValidationError>)
     override suspend fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponse {
-//        val initTransactionTO = initDCApiTransactionTO.toInitTransactionTO()
-
         // validate input
         val (nonce, type) =
             transactionToDomain(
@@ -393,7 +403,7 @@ class InitTransactionLive(
         val getWalletResponseMethod = getWalletResponseMethod(null)
         val issuerChain = issuerChain(initDCApiTransactionTO.issuerChain)
 
-        val profile = initDCApiTransactionTO.profileOrDefault.toProfile()
+        val profile = Profile.ETSI119472Part2
 
         val expectedOrigins = URI.create(initDCApiTransactionTO.expectedOrigins)
 
@@ -426,22 +436,17 @@ class InitTransactionLive(
             validate(verifierConfig, requestedPresentation, jarMode)
         }
 
-        val (updatedPresentation, request) =
-            createRequestByValue(
+        val (updatedPresentation, jwt) =
+            createJarAndUpdatePresentation(
                 requestedPresentation,
-                with(verifierConfig) {
-                    authorizationRequestUri(null, null)
-                },
             )
 
         storePresentation(updatedPresentation)
-        logTransactionInitialized(updatedPresentation, request, profile.toTO())
+        logDCApiTransactionInitialized(updatedPresentation, jwt)
 
         return DCApiTransactionResponse(
-            checkNotNull(request.request) {
-                "Signed DC API response requires request"
-            },
-            request.transactionId,
+            jwt,
+            updatedPresentation.id.value,
         )
     }
 
@@ -460,7 +465,14 @@ class InitTransactionLive(
     ): Pair<Presentation, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> =
         when (requestJarOption) {
             is EmbedOption.ByValue -> {
-                createRequestByValue(requestedPresentation, authorizationRequestUri)
+                val (requestObjectRetrieved, jwt) = createJarAndUpdatePresentation(requestedPresentation)
+                requestObjectRetrieved to
+                    InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
+                        requestedPresentation.id.value,
+                        verifierConfig.verifierId.clientId,
+                        jwt,
+                        authorizationRequestUri.resolve(verifierConfig.verifierId, jwt).toURI(),
+                    )
             }
 
             is EmbedOption.ByReference -> {
@@ -488,10 +500,9 @@ class InitTransactionLive(
             }
         }
 
-    private suspend fun createRequestByValue(
+    private suspend fun createJarAndUpdatePresentation(
         requestedPresentation: Presentation.Requested,
-        authorizationRequestUri: UnresolvedAuthorizationRequestUri,
-    ): Pair<Presentation.RequestObjectRetrieved, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> {
+    ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
         val jwt =
             createJar(
                 requestedPresentation,
@@ -500,13 +511,7 @@ class InitTransactionLive(
             )
 
         val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock)
-        return requestObjectRetrieved to
-            InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
-                requestedPresentation.id.value,
-                verifierConfig.verifierId.clientId,
-                jwt,
-                authorizationRequestUri.resolve(verifierConfig.verifierId, jwt).toURI(),
-            )
+        return requestObjectRetrieved to jwt
     }
 
     context(_: Raise<ValidationError>)
@@ -569,7 +574,26 @@ class InitTransactionLive(
         profile: ProfileTO,
     ) {
         val event =
-            PresentationEvent.TransactionInitialized(presentation.id, presentation.initiatedAt, request, profile)
+            PresentationEvent.TransactionInitialized(
+                presentation.id,
+                presentation.initiatedAt,
+                request,
+                profile,
+            )
+        publishPresentationEvent(event)
+    }
+
+    private suspend fun logDCApiTransactionInitialized(
+        presentation: Presentation,
+        request: Jwt,
+    ) {
+        val event =
+            PresentationEvent.DcApiTransactionInitialized(
+                presentation.id,
+                presentation.initiatedAt,
+                request,
+                ProfileTO.ETSI119472Part2,
+            )
         publishPresentationEvent(event)
     }
 
@@ -770,6 +794,17 @@ private fun interface ProfileValidator {
                     }
                 }
             }
+
+        val ETSI119472Part2 =
+            ProfileValidator { config, presentation, jarMode ->
+                HAIP.validate(config, presentation, jarMode)
+                ensure(presentation.channel is Channel.OverDcApi) {
+                    ValidationError.ETSI119472Part2.ProfileCanNotBeUsedWithNonDcApiChannel
+                }
+                ensure(presentation.channel.responseMode is ResponseMode.OverDcApi.DCApiJwt) {
+                    ValidationError.ETSI119472Part2.ResponseModeDirectPostJwtMustBeUsed
+                }
+            }
     }
 }
 
@@ -777,12 +812,14 @@ private fun ProfileTO.toProfile(): Profile =
     when (this) {
         ProfileTO.OpenId4VP -> Profile.OpenId4VP
         ProfileTO.HAIP -> Profile.HAIP
+        ProfileTO.ETSI119472Part2 -> Profile.ETSI119472Part2
     }
 
 private fun Profile.toTO(): ProfileTO =
     when (this) {
         Profile.OpenId4VP -> ProfileTO.OpenId4VP
         Profile.HAIP -> ProfileTO.HAIP
+        Profile.ETSI119472Part2 -> ProfileTO.ETSI119472Part2
     }
 
 private val Profile.validator: ProfileValidator
@@ -790,6 +827,7 @@ private val Profile.validator: ProfileValidator
         when (this) {
             Profile.OpenId4VP -> ProfileValidator.OpenId4VP
             Profile.HAIP -> ProfileValidator.HAIP
+            Profile.ETSI119472Part2 -> ProfileValidator.ETSI119472Part2
         }
 
 @Serializable
@@ -797,13 +835,9 @@ data class InitDCApiTransactionTO(
     @Required @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL,
     @Required @SerialName(OpenId4VPSpec.NONCE) val nonce: String,
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
-    @SerialName("profile") val profile: ProfileTO = ProfileTO.OpenId4VP,
     @SerialName("issuer_chain") val issuerChain: String? = null,
     @SerialName(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS) val expectedOrigins: String,
 )
-
-private val InitDCApiTransactionTO.profileOrDefault: ProfileTO
-    get() = profile
 
 @Serializable
 data class DCApiTransactionResponse(

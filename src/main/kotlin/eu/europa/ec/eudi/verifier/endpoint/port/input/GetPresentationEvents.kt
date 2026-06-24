@@ -123,6 +123,11 @@ private fun toTransferObject(event: PresentationEvent) =
                 put("status_reference", event.statusReference.json())
                 put("cause", event.cause)
             }
+
+            is PresentationEvent.DcApiTransactionInitialized -> {
+                put("response", event.response.json())
+                put("profile", event.profile.json())
+            }
         }
     }
 
@@ -137,6 +142,7 @@ private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
     val (eventName, actor) =
         when (e) {
             is PresentationEvent.TransactionInitialized -> "Transaction initialized" to Actor.Verifier
+            is PresentationEvent.DcApiTransactionInitialized -> "DC Api Transaction initialized" to Actor.Verifier
             is PresentationEvent.RequestObjectRetrieved -> "Request object retrieved" to Actor.Wallet
             is PresentationEvent.FailedToRetrieveRequestObject -> "FailedToRetrieve request" to Actor.Wallet
             is PresentationEvent.WalletResponsePosted -> "Wallet response posted" to Actor.Wallet
