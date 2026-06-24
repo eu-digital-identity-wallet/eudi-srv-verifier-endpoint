@@ -100,23 +100,16 @@ enum class EmbedModeTO {
 @Serializable
 enum class ProfileTO {
     /**
-     * Initialize a Transaction per OpenId4VP. No constraints enforced.
+     * Initialize a Transaction per OpenId4VP. No constraints are enforced.
      */
     @SerialName("openid4vp")
     OpenId4VP,
 
     /**
-     * Initialize a Transaction per HAIP. Extra constraints enforced.
+     * Initialize a Transaction per HAIP. Extra constraints are enforced.
      */
     @SerialName("haip")
     HAIP,
-
-    /**
-     * Initialize a Transaction per ETSI-119-472-2. Extra constraints enforced.
-     */
-    @Transient
-    @SerialName("ETSI119472Part2")
-    ETSI119472Part2,
 }
 
 @Serializable
@@ -379,7 +372,7 @@ class InitTransactionLive(
             }
 
         storePresentation(updatedPresentation)
-        logTransactionInitialized(updatedPresentation, request, profile.toTO())
+        logTransactionInitialized(updatedPresentation, request, profile)
 
         return response
     }
@@ -573,7 +566,7 @@ class InitTransactionLive(
     private suspend fun logTransactionInitialized(
         presentation: Presentation,
         request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
-        profile: ProfileTO,
+        profile: Profile,
     ) {
         val event =
             PresentationEvent.TransactionInitialized(
@@ -594,7 +587,7 @@ class InitTransactionLive(
                 presentation.id,
                 presentation.initiatedAt,
                 request,
-                ProfileTO.ETSI119472Part2,
+                Profile.ETSI119472Part2,
             )
         publishPresentationEvent(event)
     }
@@ -811,13 +804,6 @@ private fun ProfileTO.toProfile(): Profile =
     when (this) {
         ProfileTO.OpenId4VP -> Profile.OpenId4VP
         ProfileTO.HAIP -> Profile.HAIP
-        ProfileTO.ETSI119472Part2 -> Profile.ETSI119472Part2
-    }
-
-private fun Profile.toTO(): ProfileTO =
-    when (this) {
-        Profile.OpenId4VP -> ProfileTO.OpenId4VP
-        Profile.HAIP, Profile.ETSI119472Part2 -> ProfileTO.HAIP
     }
 
 private val Profile.validator: ProfileValidator

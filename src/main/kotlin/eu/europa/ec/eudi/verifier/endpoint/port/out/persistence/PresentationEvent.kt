@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.persistence
 
 import eu.europa.ec.eudi.statium.StatusReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
+import eu.europa.ec.eudi.verifier.endpoint.domain.Profile
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.json.JsonObject
@@ -30,14 +31,14 @@ sealed interface PresentationEvent {
         override val transactionId: TransactionId,
         override val timestamp: Instant,
         val response: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
-        val profile: ProfileTO,
+        val profile: Profile,
     ) : PresentationEvent
 
     data class DcApiTransactionInitialized(
         override val transactionId: TransactionId,
         override val timestamp: Instant,
         val response: Jwt,
-        val profile: ProfileTO,
+        val profile: Profile,
     ) : PresentationEvent
 
     data class RequestObjectRetrieved(

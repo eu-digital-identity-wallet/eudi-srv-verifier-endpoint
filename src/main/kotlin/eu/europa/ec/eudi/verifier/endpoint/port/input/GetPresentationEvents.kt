@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.NonEmptyList
 import arrow.core.max
+import eu.europa.ec.eudi.verifier.endpoint.domain.Profile
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationEvents
@@ -202,6 +203,13 @@ private fun WalletResponseValidationError.asText(): String =
         WalletResponseValidationError.HAIPValidationError.SdJwtVcMustUseTokenStatusList -> {
             "SD-JWT VC must use Token Status List as revocation mechanism"
         }
+    }
+
+private fun Profile.json(): String =
+    when (this) {
+        Profile.OpenId4VP -> "openid4vp"
+        Profile.HAIP -> "haip"
+        Profile.ETSI119472Part2 -> "etsi119472part2"
     }
 
 private inline fun <reified A> A.json() = Json.encodeToJsonElement(this)
