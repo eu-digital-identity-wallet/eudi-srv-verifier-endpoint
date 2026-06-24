@@ -665,7 +665,7 @@
         ],
         "nullable": false
       },
-      "ExpectedOrigins": {
+      "ExpectedOrigin": {
         "type": "string",
         "nullable": false
       },
@@ -834,13 +834,13 @@
               }
             ]
           },
-          "expected_origins": {
+          "expected_origin": {
             "allOf": [
               {
-                "description": "Origins expected to be used by the wallet when presenting over DC API. Required when 'request_type' is 'signed'."
+                "description": "Origin expected to be used by the wallet when presenting over DC API."
               },
               {
-                "$ref": "#/components/schemas/ExpectedOrigins"
+                "$ref": "#/components/schemas/ExpectedOrigin"
               }
             ]
           }
@@ -2184,7 +2184,7 @@
             ]
           },
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
-          "expected_origins": "https://wallet.example.com"
+          "expected_origin": "https://wallet.example.com"
         }
       },
       "TransactionDCApiSigned": {

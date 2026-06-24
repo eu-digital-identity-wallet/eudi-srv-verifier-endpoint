@@ -114,7 +114,7 @@ internal class VerifierApi(
 
     private suspend fun handleInitDCApiTransaction(request: ServerRequest): ServerResponse =
         effect {
-            val input = request.awaitBody<InitDCApiTransactionTO>()
+            val input = request.awaitBody<InitDcApiTransactionTO>()
 
             logger.info("Handling InitDCApiTransaction nonce=${input.nonce} ... ")
             initTransaction(input)
@@ -213,7 +213,7 @@ internal class VerifierApi(
                         "InvalidIssuerChain"
                     }
 
-                    ValidationError.MissingExpectedOrigins -> {
+                    ValidationError.MissingExpectedOrigin -> {
                         "MissingExpectedOrigins"
                     }
 
@@ -277,7 +277,7 @@ internal class VerifierApi(
                         "ETSI119472Part2.ProfileCanNotBeUsedWithNonDcApiChannel"
                     }
 
-                    ValidationError.ETSI119472Part2.ResponseModeDirectPostJwtMustBeUsed -> {
+                    ValidationError.ETSI119472Part2.ResponseModeDCApiJwtMustBeUsed -> {
                         "ETSI119472Part2.ResponseModeDirectPostJwtMustBeUsed"
                     }
                 }

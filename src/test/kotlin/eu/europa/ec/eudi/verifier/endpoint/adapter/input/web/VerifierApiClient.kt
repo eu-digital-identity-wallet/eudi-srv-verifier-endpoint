@@ -18,7 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi.Companion.TRANSACTION_ID_HEADER
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
-import eu.europa.ec.eudi.verifier.endpoint.port.input.InitDCApiTransactionTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitDcApiTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.Output
@@ -39,13 +39,13 @@ object VerifierApiClient {
 
     fun loadInitTransactionTO(testResource: String): InitTransactionTO = Json.decodeFromString(TestUtils.loadResource(testResource))
 
-    fun loadInitDCApiTransactionTO(testResource: String): InitDCApiTransactionTO =
+    fun loadInitDCApiTransactionTO(testResource: String): InitDcApiTransactionTO =
         Json.decodeFromString(TestUtils.loadResource(testResource))
 
     /**
      * Initializes a Digital Credentials API (DC API) Transaction.
      *
-     * Posts an [InitDCApiTransactionTO] to [VerifierApi.INIT_TRANSACTION_PATH_DC_API] and returns
+     * Posts an [InitDcApiTransactionTO] to [VerifierApi.INIT_TRANSACTION_PATH_DC_API] and returns
      * the raw response body parsed as a [JsonObject] together with the value of the
      * [TRANSACTION_ID_HEADER] response header.
      *
@@ -55,7 +55,7 @@ object VerifierApiClient {
      */
     fun initDCApiTransaction(
         client: WebTestClient,
-        initDCApiTransactionTO: InitDCApiTransactionTO,
+        initDCApiTransactionTO: InitDcApiTransactionTO,
     ): Pair<JsonObject, String?> {
         val result =
             client

@@ -74,7 +74,7 @@ enum class RequestUriMethod {
 enum class ResponseModeOption {
     DirectPost,
     DirectPostJwt,
-    DCApiJwt,
+    DcApiJwt,
     DcApi,
 }
 
@@ -92,7 +92,7 @@ sealed interface ResponseMode {
     }
 
     sealed interface OverDcApi : ResponseMode {
-        data class DCApiJwt(
+        data class DcApiJwt(
             val ephemeralResponseEncryptionKey: JWK,
         ) : OverDcApi {
             init {
@@ -107,9 +107,9 @@ sealed interface ResponseMode {
 val ResponseMode.option: ResponseModeOption
     get() =
         when (this) {
-            is ResponseMode.OverDcApi.DCApiJwt -> ResponseModeOption.DCApiJwt
+            is ResponseMode.OverDcApi.DcApiJwt -> ResponseModeOption.DcApiJwt
             ResponseMode.OverDcApi.DcApi -> ResponseModeOption.DcApi
-            ResponseMode.OverHttp.DirectPost -> ResponseModeOption.DirectPost
+            is ResponseMode.OverHttp.DirectPost -> ResponseModeOption.DirectPost
             is ResponseMode.OverHttp.DirectPostJwt -> ResponseModeOption.DirectPostJwt
         }
 

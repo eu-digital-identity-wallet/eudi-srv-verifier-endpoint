@@ -79,7 +79,7 @@ enum class ResponseModeTO {
     DirectPostJwt,
 
     @SerialName(OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT)
-    DCApiJwt,
+    DcApiJwt,
 }
 
 /**
@@ -114,6 +114,7 @@ enum class ProfileTO {
     /**
      * Initialize a Transaction per ETSI-119-472-2. Extra constraints enforced.
      */
+    @Transient
     @SerialName("ETSI119472Part2")
     ETSI119472Part2,
 }
@@ -159,7 +160,7 @@ sealed interface ValidationError {
 
     data object InvalidAuthorizationRequestScheme : ValidationError
 
-    data object MissingExpectedOrigins : ValidationError
+    data object MissingExpectedOrigin : ValidationError
 
     data object InvalidResponseMode : ValidationError
 
@@ -188,7 +189,7 @@ sealed interface ValidationError {
     sealed interface ETSI119472Part2 : ValidationError {
         data object ProfileCanNotBeUsedWithNonDcApiChannel : ETSI119472Part2
 
-        data object ResponseModeDirectPostJwtMustBeUsed : ETSI119472Part2
+        data object ResponseModeDCApiJwtMustBeUsed : ETSI119472Part2
     }
 }
 
@@ -279,7 +280,7 @@ interface InitTransaction {
     suspend operator fun invoke(initTransactionTO: InitTransactionTO): InitTransactionResponse
 
     context(_: Raise<ValidationError>)
-    suspend operator fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponse
+    suspend operator fun invoke(initDCApiTransactionTO: InitDcApiTransactionTO): InitDcApiTransactionResponseTO
 }
 
 /**
@@ -312,14 +313,14 @@ class InitTransactionLive(
             )
 
         // if response mode is direct post jwt then generate ephemeral key
-        val responseMode = responseMode(initTransactionTO.responseMode)
+        val responseMode = responseMode(initTransactionTO.responseMode, RequestUriMethod.PostOrGet)
 
-        require(responseMode is ResponseMode.OverHttp) {
-            raise(ValidationError.InvalidResponseMode)
-        }
+        check(responseMode is ResponseMode.OverHttp)
+
         val channel =
             Channel.OverHttp(
                 responseMode = responseMode,
+                requestUriMethod = RequestUriMethod.PostOrGet,
             )
 
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO.redirectUriTemplate)
@@ -337,7 +338,6 @@ class InitTransactionLive(
                 requestId = generateRequestId(),
                 nonce = nonce,
                 getWalletResponseMethod = getWalletResponseMethod,
-                requestUriMethod = RequestUriMethod.PostOrGet,
                 issuerChain = issuerChain,
                 profile = profile,
                 channel = channel,
@@ -385,7 +385,7 @@ class InitTransactionLive(
     }
 
     context(_: Raise<ValidationError>)
-    override suspend fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponse {
+    override suspend fun invoke(initDCApiTransactionTO: InitDcApiTransactionTO): InitDcApiTransactionResponseTO {
         // validate input
         val (nonce, type) =
             transactionToDomain(
@@ -397,7 +397,7 @@ class InitTransactionLive(
             )
 
         // if response mode is direct post jwt then generate ephemeral key
-        val responseMode = responseMode(ResponseModeTO.DCApiJwt)
+        val responseMode = responseMode(ResponseModeTO.DcApiJwt)
         require(responseMode is ResponseMode.OverDcApi)
 
         val getWalletResponseMethod = getWalletResponseMethod(null)
@@ -423,7 +423,6 @@ class InitTransactionLive(
                 requestId = generateRequestId(),
                 nonce = nonce,
                 getWalletResponseMethod = getWalletResponseMethod,
-                requestUriMethod = null,
                 issuerChain = issuerChain,
                 profile = profile,
                 channel = channel,
@@ -444,7 +443,7 @@ class InitTransactionLive(
         storePresentation(updatedPresentation)
         logDCApiTransactionInitialized(updatedPresentation, jwt)
 
-        return DCApiTransactionResponse(
+        return InitDcApiTransactionResponseTO(
             jwt,
             updatedPresentation.id.value,
         )
@@ -481,20 +480,19 @@ class InitTransactionLive(
                 }
 
                 val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId)
-
-                check(requestedPresentation.requestUriMethod != null)
+                check(requestedPresentation.channel is Channel.OverHttp) {}
 
                 requestedPresentation to
                     InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
                         requestedPresentation.id.value,
                         verifierConfig.verifierId.clientId,
                         requestUri,
-                        requestedPresentation.requestUriMethod.toTO(),
+                        requestedPresentation.channel.requestUriMethod.toTO(),
                         authorizationRequestUri
                             .resolve(
                                 verifierConfig.verifierId,
                                 Uri.parse(requestUri.toString()),
-                                requestedPresentation.requestUriMethod,
+                                requestedPresentation.channel.requestUriMethod,
                             ).toURI(),
                     )
             }
@@ -527,12 +525,15 @@ class InitTransactionLive(
     /**
      * Gets the [ResponseMode] for the provided [InitTransactionTO].
      */
-    private suspend fun responseMode(responseMode: ResponseModeTO?): ResponseMode {
+    private suspend fun responseMode(
+        responseMode: ResponseModeTO?,
+        requestUriMethod: RequestUriMethod? = null,
+    ): ResponseMode {
         val responseModeOption =
             when (responseMode) {
                 ResponseModeTO.DirectPost -> ResponseModeOption.DirectPost
                 ResponseModeTO.DirectPostJwt -> ResponseModeOption.DirectPostJwt
-                ResponseModeTO.DCApiJwt -> ResponseModeOption.DCApiJwt
+                ResponseModeTO.DcApiJwt -> ResponseModeOption.DcApiJwt
                 null -> verifierConfig.responseModeOption
             }
 
@@ -542,13 +543,14 @@ class InitTransactionLive(
             }
 
             ResponseModeOption.DirectPostJwt -> {
+                requireNotNull(requestUriMethod)
                 val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
                 ResponseMode.OverHttp.DirectPostJwt(responseEncryptionKey)
             }
 
-            ResponseModeOption.DCApiJwt -> {
+            ResponseModeOption.DcApiJwt -> {
                 val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
-                ResponseMode.OverDcApi.DCApiJwt(responseEncryptionKey)
+                ResponseMode.OverDcApi.DcApiJwt(responseEncryptionKey)
             }
 
             ResponseModeOption.DcApi -> {
@@ -776,9 +778,6 @@ private fun interface ProfileValidator {
                 }
                 when (presentation.channel) {
                     is Channel.OverDcApi -> {
-                        ensure(presentation.channel.responseMode is ResponseMode.OverDcApi.DCApiJwt) {
-                            ValidationError.HaipNotSupported.ResponseModeDcApiJwtMustBeUsed
-                        }
                         ensure(jarMode is EmbedOption.ByValue) {
                             ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference
                         }
@@ -801,8 +800,8 @@ private fun interface ProfileValidator {
                 ensure(presentation.channel is Channel.OverDcApi) {
                     ValidationError.ETSI119472Part2.ProfileCanNotBeUsedWithNonDcApiChannel
                 }
-                ensure(presentation.channel.responseMode is ResponseMode.OverDcApi.DCApiJwt) {
-                    ValidationError.ETSI119472Part2.ResponseModeDirectPostJwtMustBeUsed
+                ensure(presentation.channel.responseMode is ResponseMode.OverDcApi.DcApiJwt) {
+                    ValidationError.ETSI119472Part2.ResponseModeDCApiJwtMustBeUsed
                 }
             }
     }
@@ -818,8 +817,7 @@ private fun ProfileTO.toProfile(): Profile =
 private fun Profile.toTO(): ProfileTO =
     when (this) {
         Profile.OpenId4VP -> ProfileTO.OpenId4VP
-        Profile.HAIP -> ProfileTO.HAIP
-        Profile.ETSI119472Part2 -> ProfileTO.ETSI119472Part2
+        Profile.HAIP, Profile.ETSI119472Part2 -> ProfileTO.HAIP
     }
 
 private val Profile.validator: ProfileValidator
@@ -831,16 +829,16 @@ private val Profile.validator: ProfileValidator
         }
 
 @Serializable
-data class InitDCApiTransactionTO(
+data class InitDcApiTransactionTO(
     @Required @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL,
     @Required @SerialName(OpenId4VPSpec.NONCE) val nonce: String,
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
     @SerialName("issuer_chain") val issuerChain: String? = null,
-    @SerialName(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS) val expectedOrigins: String,
+    @SerialName("expected_origin") val expectedOrigins: String,
 )
 
 @Serializable
-data class DCApiTransactionResponse(
+data class InitDcApiTransactionResponseTO(
     @Required
     @SerialName("request")
     val request: String,

@@ -174,24 +174,24 @@ class RetrieveRequestObjectLive(
 
         when (method) {
             is RetrieveRequestObjectMethod.Get -> {
-                checkNotNull(presentation.requestUriMethod)
+                checkNotNull(presentation.channel.requestUriMethod)
 
                 ensure(
-                    presentation.requestUriMethod == RequestUriMethod.PostOrGet ||
-                        presentation.requestUriMethod == RequestUriMethod.Get,
+                    presentation.channel.requestUriMethod == RequestUriMethod.PostOrGet ||
+                        presentation.channel.requestUriMethod == RequestUriMethod.Get,
                 ) {
-                    RetrieveRequestObjectError.InvalidRequestUriMethod(presentation.requestUriMethod)
+                    RetrieveRequestObjectError.InvalidRequestUriMethod(presentation.channel.requestUriMethod)
                 }
             }
 
             is RetrieveRequestObjectMethod.Post -> {
-                checkNotNull(presentation.requestUriMethod)
+                checkNotNull(presentation.channel.requestUriMethod)
 
                 ensure(
-                    presentation.requestUriMethod == RequestUriMethod.PostOrGet ||
-                        presentation.requestUriMethod == RequestUriMethod.Post,
+                    presentation.channel.requestUriMethod == RequestUriMethod.PostOrGet ||
+                        presentation.channel.requestUriMethod == RequestUriMethod.Post,
                 ) {
-                    RetrieveRequestObjectError.InvalidRequestUriMethod(presentation.requestUriMethod)
+                    RetrieveRequestObjectError.InvalidRequestUriMethod(presentation.channel.requestUriMethod)
                 }
             }
         }
@@ -409,7 +409,7 @@ private fun ResponseModeOption.name(): String =
     when (this) {
         ResponseModeOption.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
         ResponseModeOption.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
-        ResponseModeOption.DCApiJwt -> error("DC API request objects are not retrieved through RetrieveRequestObject")
+        ResponseModeOption.DcApiJwt -> error("DC API request objects are not retrieved through RetrieveRequestObject")
         ResponseModeOption.DcApi -> error("DC API request objects are not retrieved through RetrieveRequestObject")
     }
 

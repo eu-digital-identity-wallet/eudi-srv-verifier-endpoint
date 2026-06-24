@@ -20,5 +20,5 @@
     ]
   },
   "nonce": "e25344b3-c078-46d2-a31b-49afcc62cf4d",
-  "expected_origins": "https://verifier.example.com"
+  "expected_origin": "https://verifier.example.com"
 }

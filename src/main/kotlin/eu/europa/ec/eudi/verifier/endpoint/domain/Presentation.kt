@@ -153,6 +153,7 @@ sealed interface Channel {
 
     data class OverHttp(
         override val responseMode: ResponseMode.OverHttp,
+        val requestUriMethod: RequestUriMethod,
     ) : Channel
 
     data class OverDcApi(
@@ -177,39 +178,12 @@ sealed interface Presentation {
         val query: DCQL,
         val transactionData: NonEmptyList<TransactionData>?,
         val requestId: RequestId,
-        val requestUriMethod: RequestUriMethod?,
         val nonce: Nonce,
         val getWalletResponseMethod: GetWalletResponseMethod,
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
         val channel: Channel,
-    ) : Presentation {
-        init {
-            when (channel.responseMode) {
-                is ResponseMode.OverDcApi.DCApiJwt -> {
-                    require(
-                        requestUriMethod == null,
-                    ) { "Request URI method is not supported for DCApi JWT" }
-                }
-
-                ResponseMode.OverDcApi.DcApi -> {
-                    require(requestUriMethod == null) { "Request URI method is not supported for DcApi" }
-                }
-
-                ResponseMode.OverHttp.DirectPost -> {
-                    require(
-                        requestUriMethod != null,
-                    ) { "Request URI method must be present for DirectPost" }
-                }
-
-                is ResponseMode.OverHttp.DirectPostJwt -> {
-                    require(
-                        requestUriMethod != null,
-                    ) { "Request URI method must be present for DirectPostJwt" }
-                }
-            }
-        }
-    }
+    ) : Presentation
 
     /**
      * A presentation process for which the wallet has obtained the request object.

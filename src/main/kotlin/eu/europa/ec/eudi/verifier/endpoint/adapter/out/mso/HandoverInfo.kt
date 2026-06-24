@@ -17,7 +17,6 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import com.nimbusds.jose.jwk.JWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import java.net.URI
 import java.net.URL
 
 sealed interface HandoverInfo {
@@ -58,7 +57,7 @@ sealed interface HandoverInfo {
                         nonce = presentation.nonce,
                         ephemeralEncryptionKey =
                             when (val responseMode = presentation.channel.responseMode) {
-                                is ResponseMode.OverDcApi.DCApiJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
+                                is ResponseMode.OverDcApi.DcApiJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
                                 ResponseMode.OverDcApi.DcApi -> null
                             },
                     )

@@ -166,7 +166,7 @@ class CreateJarNimbus(
             val ephemeralResponseEncryptionKey =
                 when (responseMode) {
                     is ResponseMode.OverHttp.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey
-                    is ResponseMode.OverDcApi.DCApiJwt -> responseMode.ephemeralResponseEncryptionKey
+                    is ResponseMode.OverDcApi.DcApiJwt -> responseMode.ephemeralResponseEncryptionKey
                     else -> null
                 }
 
