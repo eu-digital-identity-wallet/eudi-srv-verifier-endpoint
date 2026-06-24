@@ -422,7 +422,10 @@ class InitTransactionTest {
         input: InitTransactionTO,
         expectedError: ValidationError,
     ) = either {
-        input.toDomain(
+        transactionToDomain(
+            input.dcqlQuery,
+            input.nonce,
+            input.transactionData,
             verifierConfig.transactionDataHashAlgorithm,
             verifierConfig.clientMetaData.vpFormatsSupported,
         )
@@ -434,11 +437,4 @@ class InitTransactionTest {
     private suspend fun loadPresentationById(id: TransactionId) = TestContext.loadPresentationById(id)
 
     private fun dcqlQuery() = VerifierApiClient.loadInitTransactionTO("00-dcql.json").dcqlQuery!!
-
-    private val Channel.responseMode: ResponseMode
-        get() =
-            when (this) {
-                is Channel.OverHttp -> responseMode
-                is Channel.OverDcApi -> responseMode
-            }
 }

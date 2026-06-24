@@ -174,6 +174,8 @@ class RetrieveRequestObjectLive(
 
         when (method) {
             is RetrieveRequestObjectMethod.Get -> {
+                checkNotNull(presentation.requestUriMethod)
+
                 ensure(
                     presentation.requestUriMethod == RequestUriMethod.PostOrGet ||
                         presentation.requestUriMethod == RequestUriMethod.Get,
@@ -183,6 +185,8 @@ class RetrieveRequestObjectLive(
             }
 
             is RetrieveRequestObjectMethod.Post -> {
+                checkNotNull(presentation.requestUriMethod)
+
                 ensure(
                     presentation.requestUriMethod == RequestUriMethod.PostOrGet ||
                         presentation.requestUriMethod == RequestUriMethod.Post,

@@ -291,13 +291,16 @@ class InitTransactionLive(
     override suspend fun invoke(initTransactionTO: InitTransactionTO): InitTransactionResponse {
         // validate input
         val (nonce, type) =
-            initTransactionTO.toDomain(
+            transactionToDomain(
+                initTransactionTO.dcqlQuery,
+                initTransactionTO.nonce,
+                initTransactionTO.transactionData,
                 verifierConfig.transactionDataHashAlgorithm,
                 verifierConfig.clientMetaData.vpFormatsSupported,
             )
 
         // if response mode is direct post jwt then generate ephemeral key
-        val responseMode = responseMode(initTransactionTO)
+        val responseMode = responseMode(initTransactionTO.responseMode)
 
         require(responseMode is ResponseMode.OverHttp) {
             raise(ValidationError.InvalidResponseMode)
@@ -307,8 +310,8 @@ class InitTransactionLive(
                 responseMode = responseMode,
             )
 
-        val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO)
-        val issuerChain = issuerChain(initTransactionTO)
+        val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO.redirectUriTemplate)
+        val issuerChain = issuerChain(initTransactionTO.issuerChain)
 
         val profile = initTransactionTO.profileOrDefault.toProfile()
 
@@ -341,7 +344,10 @@ class InitTransactionLive(
                 requestedPresentation,
                 jarMode,
                 with(verifierConfig) {
-                    authorizationRequestUri(initTransactionTO)
+                    authorizationRequestUri(
+                        initTransactionTO.authorizationRequestUri,
+                        initTransactionTO.authorizationRequestScheme,
+                    )
                 },
             )
 
@@ -368,21 +374,24 @@ class InitTransactionLive(
 
     context(_: Raise<ValidationError>)
     override suspend fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponse {
-        val initTransactionTO = initDCApiTransactionTO.toInitTransactionTO()
+//        val initTransactionTO = initDCApiTransactionTO.toInitTransactionTO()
 
         // validate input
         val (nonce, type) =
-            initTransactionTO.toDomain(
+            transactionToDomain(
+                initDCApiTransactionTO.dcqlQuery,
+                initDCApiTransactionTO.nonce,
+                initDCApiTransactionTO.transactionData,
                 verifierConfig.transactionDataHashAlgorithm,
                 verifierConfig.clientMetaData.vpFormatsSupported,
             )
 
         // if response mode is direct post jwt then generate ephemeral key
-        val responseMode = responseMode(initTransactionTO)
+        val responseMode = responseMode(ResponseModeTO.DCApiJwt)
         require(responseMode is ResponseMode.OverDcApi)
 
-        val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO)
-        val issuerChain = issuerChain(initTransactionTO)
+        val getWalletResponseMethod = getWalletResponseMethod(null)
+        val issuerChain = issuerChain(initDCApiTransactionTO.issuerChain)
 
         val profile = initDCApiTransactionTO.profileOrDefault.toProfile()
 
@@ -404,7 +413,7 @@ class InitTransactionLive(
                 requestId = generateRequestId(),
                 nonce = nonce,
                 getWalletResponseMethod = getWalletResponseMethod,
-                requestUriMethod = requestUriMethod(initTransactionTO),
+                requestUriMethod = null,
                 issuerChain = issuerChain,
                 profile = profile,
                 channel = channel,
@@ -417,13 +426,11 @@ class InitTransactionLive(
             validate(verifierConfig, requestedPresentation, jarMode)
         }
 
-        // create the request, which may update the presentation
         val (updatedPresentation, request) =
-            createRequest(
+            createRequestByValue(
                 requestedPresentation,
-                jarMode,
                 with(verifierConfig) {
-                    authorizationRequestUri(initTransactionTO)
+                    authorizationRequestUri(null, null)
                 },
             )
 
@@ -453,21 +460,7 @@ class InitTransactionLive(
     ): Pair<Presentation, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> =
         when (requestJarOption) {
             is EmbedOption.ByValue -> {
-                val jwt =
-                    createJar(
-                        requestedPresentation,
-                        null,
-                        EncryptionRequirement.NotRequired,
-                    )
-
-                val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock)
-                requestObjectRetrieved to
-                    InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
-                        requestedPresentation.id.value,
-                        verifierConfig.verifierId.clientId,
-                        jwt,
-                        authorizationRequestUri.resolve(verifierConfig.verifierId, jwt).toURI(),
-                    )
+                createRequestByValue(requestedPresentation, authorizationRequestUri)
             }
 
             is EmbedOption.ByReference -> {
@@ -476,6 +469,9 @@ class InitTransactionLive(
                 }
 
                 val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId)
+
+                check(requestedPresentation.requestUriMethod != null)
+
                 requestedPresentation to
                     InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
                         requestedPresentation.id.value,
@@ -492,9 +488,30 @@ class InitTransactionLive(
             }
         }
 
+    private suspend fun createRequestByValue(
+        requestedPresentation: Presentation.Requested,
+        authorizationRequestUri: UnresolvedAuthorizationRequestUri,
+    ): Pair<Presentation.RequestObjectRetrieved, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> {
+        val jwt =
+            createJar(
+                requestedPresentation,
+                null,
+                EncryptionRequirement.NotRequired,
+            )
+
+        val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock)
+        return requestObjectRetrieved to
+            InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
+                requestedPresentation.id.value,
+                verifierConfig.verifierId.clientId,
+                jwt,
+                authorizationRequestUri.resolve(verifierConfig.verifierId, jwt).toURI(),
+            )
+    }
+
     context(_: Raise<ValidationError>)
-    private fun getWalletResponseMethod(initTransactionTO: InitTransactionTO): GetWalletResponseMethod =
-        initTransactionTO.redirectUriTemplate
+    private fun getWalletResponseMethod(redirectUriTemplate: String?): GetWalletResponseMethod =
+        redirectUriTemplate
             ?.let { template ->
                 with(createQueryWalletResponseRedirectUri) {
                     ensure(template.validTemplate()) { ValidationError.InvalidWalletResponseTemplate }
@@ -505,9 +522,9 @@ class InitTransactionLive(
     /**
      * Gets the [ResponseMode] for the provided [InitTransactionTO].
      */
-    private suspend fun responseMode(initTransaction: InitTransactionTO): ResponseMode {
+    private suspend fun responseMode(responseMode: ResponseModeTO?): ResponseMode {
         val responseModeOption =
-            when (initTransaction.responseMode) {
+            when (responseMode) {
                 ResponseModeTO.DirectPost -> ResponseModeOption.DirectPost
                 ResponseModeTO.DirectPostJwt -> ResponseModeOption.DirectPostJwt
                 ResponseModeTO.DCApiJwt -> ResponseModeOption.DCApiJwt
@@ -546,18 +563,6 @@ class InitTransactionLive(
             null -> verifierConfig.requestJarOption
         }
 
-    /**
-     * Gets the JAR [RequestUriMethod] for the provided [InitTransactionTO].
-     * If none has been provided, falls back to [VerifierConfig.requestUriMethod].
-     */
-    private fun requestUriMethod(initTransaction: InitTransactionTO): RequestUriMethod =
-        when (initTransaction.requestUriMethod) {
-            RequestUriMethodTO.Get -> RequestUriMethod.Get
-            RequestUriMethodTO.Post -> RequestUriMethod.Post
-            RequestUriMethodTO.PostOrGet -> RequestUriMethod.PostOrGet
-            null -> verifierConfig.requestUriMethod
-        }
-
     private suspend fun logTransactionInitialized(
         presentation: Presentation,
         request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
@@ -569,34 +574,37 @@ class InitTransactionLive(
     }
 
     context(_: Raise<ValidationError.InvalidIssuerChain>)
-    private fun issuerChain(initTransaction: InitTransactionTO): NonEmptyList<X509Certificate>? =
+    private fun issuerChain(issuerChain: String?): NonEmptyList<X509Certificate>? =
         catch(
-            block = { initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it) } },
+            block = { issuerChain?.let { parsePemEncodedX509CertificateChain(it) } },
             catch = { raise(ValidationError.InvalidIssuerChain) },
         )
 }
 
 /**
- * Gets the [UnresolvedAuthorizationRequestUri] for the provided [InitTransactionTO].
+ * Gets the [UnresolvedAuthorizationRequestUri] for the provided [authorizationRequestUri] and [authorizationRequestScheme].
  * If none has been provided, falls back to [VerifierConfig.authorizationRequestUri].
  *
- * This method considers both [InitTransactionTO.authorizationRequestUri] and [InitTransactionTO.authorizationRequestScheme].
+ * This method considers both [authorizationRequestUri] and [authorizationRequestScheme].
  */
 context(_: Raise<ValidationError>, verifierConfig: VerifierConfig)
-private fun authorizationRequestUri(initTransaction: InitTransactionTO): UnresolvedAuthorizationRequestUri =
+private fun authorizationRequestUri(
+    authorizationRequestUri: String?,
+    authorizationRequestScheme: String?,
+): UnresolvedAuthorizationRequestUri =
     when {
-        null != initTransaction.authorizationRequestUri && null != initTransaction.authorizationRequestScheme -> {
+        null != authorizationRequestUri && null != authorizationRequestScheme -> {
             raise(ValidationError.ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme)
         }
 
-        null != initTransaction.authorizationRequestUri -> {
-            UnresolvedAuthorizationRequestUri.fromUri(initTransaction.authorizationRequestUri).getOrElse {
+        null != authorizationRequestUri -> {
+            UnresolvedAuthorizationRequestUri.fromUri(authorizationRequestUri).getOrElse {
                 raise(ValidationError.InvalidAuthorizationRequestUri)
             }
         }
 
-        null != initTransaction.authorizationRequestScheme -> {
-            UnresolvedAuthorizationRequestUri.fromScheme(initTransaction.authorizationRequestScheme).getOrElse {
+        null != authorizationRequestScheme -> {
+            UnresolvedAuthorizationRequestUri.fromScheme(authorizationRequestScheme).getOrElse {
                 raise(ValidationError.InvalidAuthorizationRequestScheme)
             }
         }
@@ -607,7 +615,10 @@ private fun authorizationRequestUri(initTransaction: InitTransactionTO): Unresol
     }
 
 context(_: Raise<ValidationError>)
-internal fun InitTransactionTO.toDomain(
+internal fun transactionToDomain(
+    dcqlQuery: DCQL?,
+    nonce: String?,
+    transactionData: List<JsonObject>?,
     transactionDataHashAlgorithm: HashAlgorithm,
     vpFormatsSupported: VpFormatsSupported,
 ): Pair<Nonce, VpTokenRequest> {
@@ -793,22 +804,6 @@ data class InitDCApiTransactionTO(
 
 private val InitDCApiTransactionTO.profileOrDefault: ProfileTO
     get() = profile
-
-internal fun InitDCApiTransactionTO.toInitTransactionTO(): InitTransactionTO =
-    InitTransactionTO(
-        dcqlQuery = dcqlQuery,
-        nonce = nonce,
-        responseMode = ResponseModeTO.DCApiJwt,
-        jarMode = EmbedModeTO.ByValue,
-        requestUriMethod = RequestUriMethodTO.Get,
-        redirectUriTemplate = null,
-        transactionData = transactionData,
-        issuerChain = issuerChain,
-        authorizationRequestScheme = null,
-        authorizationRequestUri = null,
-        profile = profile,
-        output = Output.Json,
-    )
 
 @Serializable
 data class DCApiTransactionResponse(
