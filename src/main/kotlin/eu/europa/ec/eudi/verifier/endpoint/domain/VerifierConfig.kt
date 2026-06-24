@@ -75,6 +75,7 @@ enum class ResponseModeOption {
     DirectPost,
     DirectPostJwt,
     DCApiJwt,
+    DcApi,
 }
 
 sealed interface ResponseMode {
@@ -98,6 +99,8 @@ sealed interface ResponseMode {
                 require(ephemeralResponseEncryptionKey.isPrivate)
             }
         }
+
+        data object DcApi : OverDcApi
     }
 }
 
@@ -105,6 +108,7 @@ val ResponseMode.option: ResponseModeOption
     get() =
         when (this) {
             is ResponseMode.OverDcApi.DCApiJwt -> ResponseModeOption.DCApiJwt
+            ResponseMode.OverDcApi.DcApi -> ResponseModeOption.DcApi
             ResponseMode.OverHttp.DirectPost -> ResponseModeOption.DirectPost
             is ResponseMode.OverHttp.DirectPostJwt -> ResponseModeOption.DirectPostJwt
         }

@@ -94,6 +94,7 @@ class WalletApi(
                         is RetrieveRequestObjectError.InvalidWalletMetadata,
                         is RetrieveRequestObjectError.UnparsableWalletMetadata,
                         is RetrieveRequestObjectError.UnsupportedWalletMetadata,
+                        is RetrieveRequestObjectError.InvalidChannel,
                         -> HttpStatus.BAD_REQUEST
                     }
                 status(status).buildAndAwait()

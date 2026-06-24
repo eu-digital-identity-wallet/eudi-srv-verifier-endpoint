@@ -229,6 +229,10 @@ internal class VerifierApi(
                         "InvalidAuthorizationRequestScheme"
                     }
 
+                    ValidationError.InvalidResponseMode -> {
+                        "InvalidResponseMode"
+                    }
+
                     ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported -> {
                         "HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported"
                     }

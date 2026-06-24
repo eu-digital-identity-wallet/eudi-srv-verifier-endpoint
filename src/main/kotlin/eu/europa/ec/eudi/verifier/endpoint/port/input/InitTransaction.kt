@@ -155,6 +155,8 @@ sealed interface ValidationError {
 
     data object MissingExpectedOrigins : ValidationError
 
+    data object InvalidResponseMode : ValidationError
+
     sealed interface HaipNotSupported : ValidationError {
         data object SdJwtVcOrMsoMdocMustBeSupported : HaipNotSupported
 
@@ -265,7 +267,7 @@ interface InitTransaction {
     suspend operator fun invoke(initTransactionTO: InitTransactionTO): InitTransactionResponse
 
     context(_: Raise<ValidationError>)
-    suspend operator fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponseSignedRequest
+    suspend operator fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponse
 }
 
 /**
@@ -297,7 +299,9 @@ class InitTransactionLive(
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO)
 
-        require(responseMode is ResponseMode.OverHttp)
+        require(responseMode is ResponseMode.OverHttp) {
+            raise(ValidationError.InvalidResponseMode)
+        }
         val channel =
             Channel.OverHttp(
                 responseMode = responseMode,
@@ -318,7 +322,7 @@ class InitTransactionLive(
                 requestId = generateRequestId(),
                 nonce = nonce,
                 getWalletResponseMethod = getWalletResponseMethod,
-                requestUriMethod = requestUriMethod(initTransactionTO),
+                requestUriMethod = RequestUriMethod.PostOrGet,
                 issuerChain = issuerChain,
                 profile = profile,
                 channel = channel,
@@ -336,7 +340,9 @@ class InitTransactionLive(
             createRequest(
                 requestedPresentation,
                 jarMode,
-                authorizationRequestUri(initTransactionTO, verifierConfig),
+                with(verifierConfig) {
+                    authorizationRequestUri(initTransactionTO)
+                },
             )
 
         val response =
@@ -361,7 +367,7 @@ class InitTransactionLive(
     }
 
     context(_: Raise<ValidationError>)
-    override suspend fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponseSignedRequest {
+    override suspend fun invoke(initDCApiTransactionTO: InitDCApiTransactionTO): DCApiTransactionResponse {
         val initTransactionTO = initDCApiTransactionTO.toInitTransactionTO()
 
         // validate input
@@ -372,14 +378,15 @@ class InitTransactionLive(
             )
 
         // if response mode is direct post jwt then generate ephemeral key
-        val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
-        val responseMode = ResponseMode.OverDcApi.DCApiJwt(responseEncryptionKey)
+        val responseMode = responseMode(initTransactionTO)
+        require(responseMode is ResponseMode.OverDcApi)
+
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO)
         val issuerChain = issuerChain(initTransactionTO)
 
         val profile = initDCApiTransactionTO.profileOrDefault.toProfile()
 
-        val expectedOrigins = nonEmptyListOf(URI.create(initDCApiTransactionTO.expectedOrigins))
+        val expectedOrigins = URI.create(initDCApiTransactionTO.expectedOrigins)
 
         val channel =
             Channel.OverDcApi(
@@ -415,15 +422,17 @@ class InitTransactionLive(
             createRequest(
                 requestedPresentation,
                 jarMode,
-                authorizationRequestUri(initTransactionTO, verifierConfig),
+                with(verifierConfig) {
+                    authorizationRequestUri(initTransactionTO)
+                },
             )
 
         storePresentation(updatedPresentation)
         logTransactionInitialized(updatedPresentation, request, profile.toTO())
 
-        return DCApiTransactionResponseSignedRequest(
+        return DCApiTransactionResponse(
             checkNotNull(request.request) {
-                "Signed DC API response requires request or request_uri"
+                "Signed DC API response requires request"
             },
             request.transactionId,
         )
@@ -462,7 +471,7 @@ class InitTransactionLive(
             }
 
             is EmbedOption.ByReference -> {
-                require(requestedPresentation.channel !is Channel.OverDcApi) {
+                check(requestedPresentation.channel !is Channel.OverDcApi) {
                     "Unsupported request jar option for DC api: $requestJarOption"
                 }
 
@@ -519,6 +528,10 @@ class InitTransactionLive(
                 val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
                 ResponseMode.OverDcApi.DCApiJwt(responseEncryptionKey)
             }
+
+            ResponseModeOption.DcApi -> {
+                ResponseMode.OverDcApi.DcApi
+            }
         }
     }
 
@@ -569,11 +582,8 @@ class InitTransactionLive(
  *
  * This method considers both [InitTransactionTO.authorizationRequestUri] and [InitTransactionTO.authorizationRequestScheme].
  */
-context(_: Raise<ValidationError>)
-private fun authorizationRequestUri(
-    initTransaction: InitTransactionTO,
-    verifierConfig: VerifierConfig,
-): UnresolvedAuthorizationRequestUri =
+context(_: Raise<ValidationError>, verifierConfig: VerifierConfig)
+private fun authorizationRequestUri(initTransaction: InitTransactionTO): UnresolvedAuthorizationRequestUri =
     when {
         null != initTransaction.authorizationRequestUri && null != initTransaction.authorizationRequestScheme -> {
             raise(ValidationError.ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme)
@@ -784,7 +794,6 @@ data class InitDCApiTransactionTO(
 private val InitDCApiTransactionTO.profileOrDefault: ProfileTO
     get() = profile
 
-context(_: Raise<ValidationError>)
 internal fun InitDCApiTransactionTO.toInitTransactionTO(): InitTransactionTO =
     InitTransactionTO(
         dcqlQuery = dcqlQuery,
@@ -802,9 +811,11 @@ internal fun InitDCApiTransactionTO.toInitTransactionTO(): InitTransactionTO =
     )
 
 @Serializable
-data class DCApiTransactionResponseSignedRequest(
+data class DCApiTransactionResponse(
+    @Required
     @SerialName("request")
     val request: String,
+    @Required
     @SerialName("transaction_id")
     val transactionId: String,
 )

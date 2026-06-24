@@ -144,13 +144,15 @@ sealed interface Profile {
 }
 
 sealed interface Channel {
+    val responseMode: ResponseMode
+
     data class OverHttp(
-        val responseMode: ResponseMode.OverHttp,
+        override val responseMode: ResponseMode.OverHttp,
     ) : Channel
 
     data class OverDcApi(
-        val responseMode: ResponseMode.OverDcApi,
-        val expectedOrigins: NonEmptyList<URI>,
+        override val responseMode: ResponseMode.OverDcApi,
+        val expectedOrigins: URI,
     ) : Channel
 }
 

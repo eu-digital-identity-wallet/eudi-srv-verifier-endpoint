@@ -66,9 +66,15 @@ sealed interface AuthorisationResponse {
     data class DCApiJwt(
         val encryptedResponse: Jwt,
     ) : AuthorisationResponse
+
+    data class DcApi(
+        val response: AuthorisationResponseTO,
+    ) : AuthorisationResponse
 }
 
 private fun AuthorisationResponse.DirectPost.isErrorResponse(): Boolean = null != response.error
+
+private fun AuthorisationResponse.DcApi.isErrorResponse(): Boolean = null != response.error
 
 sealed interface WalletResponseValidationError {
     data object PresentationNotFound : WalletResponseValidationError
@@ -351,12 +357,12 @@ class PostWalletResponseLive(
                                 )
                             }
 
-                            is AuthorisationResponse.DCApiJwt -> {
+                            else -> {
                                 raise(
                                     UnexpectedResponseMode(
                                         presentation.requestId,
                                         expected = ResponseModeOption.DirectPostJwt,
-                                        actual = ResponseModeOption.DCApiJwt,
+                                        actual = walletResponse.responseModeOption,
                                     ),
                                 )
                             }
@@ -377,6 +383,17 @@ class PostWalletResponseLive(
                                 )
                             }
 
+                            is AuthorisationResponse.DcApi -> {
+                                ensure(walletResponse.isErrorResponse()) {
+                                    UnexpectedResponseMode(
+                                        presentation.requestId,
+                                        expected = ResponseModeOption.DCApiJwt,
+                                        actual = ResponseModeOption.DcApi,
+                                    )
+                                }
+                                walletResponse.response
+                            }
+
                             else -> {
                                 raise(
                                     UnexpectedResponseMode(
@@ -387,6 +404,17 @@ class PostWalletResponseLive(
                                 )
                             }
                         }
+                    }
+
+                    ResponseMode.OverDcApi.DcApi -> {
+                        ensure(walletResponse is AuthorisationResponse.DcApi) {
+                            UnexpectedResponseMode(
+                                presentation.requestId,
+                                expected = ResponseModeOption.DirectPost,
+                                actual = walletResponse.responseModeOption,
+                            )
+                        }
+                        walletResponse.response
                     }
                 }
             }
@@ -457,6 +485,7 @@ private val AuthorisationResponse.responseModeOption: ResponseModeOption
             is AuthorisationResponse.DirectPost -> ResponseModeOption.DirectPost
             is AuthorisationResponse.DirectPostJwt -> ResponseModeOption.DirectPostJwt
             is AuthorisationResponse.DCApiJwt -> ResponseModeOption.DCApiJwt
+            is AuthorisationResponse.DcApi -> ResponseModeOption.DcApi
         }
 private val AuthorisationResponse.encryptedResponseOrNull: Jwt?
     get() =
@@ -464,6 +493,7 @@ private val AuthorisationResponse.encryptedResponseOrNull: Jwt?
             is AuthorisationResponse.DirectPost -> null
             is AuthorisationResponse.DirectPostJwt -> encryptedResponse
             is AuthorisationResponse.DCApiJwt -> encryptedResponse
+            is AuthorisationResponse.DcApi -> null
         }
 
 private val AuthorisationResponse.vpTokenOrNull: JsonObject?
@@ -472,6 +502,7 @@ private val AuthorisationResponse.vpTokenOrNull: JsonObject?
             is AuthorisationResponse.DirectPost -> response.vpToken
             is AuthorisationResponse.DirectPostJwt -> null
             is AuthorisationResponse.DCApiJwt -> null
+            is AuthorisationResponse.DcApi -> response.vpToken
         }
 
 private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
@@ -486,6 +517,7 @@ private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
 
             is Channel.OverDcApi -> {
                 when (val responseMode = channel.responseMode) {
+                    ResponseMode.OverDcApi.DcApi -> null
                     is ResponseMode.OverDcApi.DCApiJwt -> responseMode.ephemeralResponseEncryptionKey
                 }
             }

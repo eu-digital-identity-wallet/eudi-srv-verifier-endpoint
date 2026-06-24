@@ -55,11 +55,7 @@ class CreateJarNimbus(
     ): Jwt =
         withContext(Dispatchers.Default) {
             val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-            val responseMode =
-                when (presentation.channel) {
-                    is Channel.OverDcApi -> presentation.channel.responseMode
-                    is Channel.OverHttp -> presentation.channel.responseMode
-                }
+            val responseMode = presentation.channel.responseMode
             val signedJar = sign(responseMode, requestObject, walletNonce)
             when (walletJarEncryptionRequirement) {
                 EncryptionRequirement.NotRequired -> signedJar.serialize()
@@ -157,13 +153,7 @@ class CreateJarNimbus(
             optionalClaim(OpenId4VPSpec.DCQL_QUERY, r.dcqlQuery?.toJackson())
             optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, r.transactionData?.toJackson())
             optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)
-            optionalClaim(
-                OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS,
-                r.expectedOrigins
-                    ?.toList()
-                    ?.map { it.toString() }
-                    ?.toJackson(),
-            )
+            optionalClaim(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS, r.expectedOrigins?.toExternalForm())
             build()
         }
     }
@@ -173,8 +163,15 @@ class CreateJarNimbus(
         responseMode: ResponseMode,
     ): OIDCClientMetadata =
         OIDCClientMetadata().apply {
-            if (responseMode is ResponseMode.OverHttp.DirectPostJwt) {
-                jwkSet = JWKSet(listOf(responseMode.ephemeralResponseEncryptionKey)).toPublicJWKSet()
+            val ephemeralResponseEncryptionKey =
+                when (responseMode) {
+                    is ResponseMode.OverHttp.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey
+                    is ResponseMode.OverDcApi.DCApiJwt -> responseMode.ephemeralResponseEncryptionKey
+                    else -> null
+                }
+
+            ephemeralResponseEncryptionKey?.let { encryptionKey ->
+                jwkSet = JWKSet(listOf(encryptionKey)).toPublicJWKSet()
                 setCustomField(
                     OpenId4VPSpec.ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED,
                     c.responseEncryptionOption.encryptionMethods
