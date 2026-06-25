@@ -82,8 +82,6 @@ sealed interface RetrieveRequestObjectError {
         val message: String,
         val cause: Throwable? = null,
     ) : RetrieveRequestObjectError
-
-    data object InvalidChannel : RetrieveRequestObjectError
 }
 
 /**
@@ -150,9 +148,7 @@ class RetrieveRequestObjectLive(
             RetrieveRequestObjectError.InvalidState(Presentation.Requested::class, presentation::class)
         }
 
-        ensure(presentation.channel is Channel.OverHttp) {
-            RetrieveRequestObjectError.InvalidChannel
-        }
+        check(presentation.channel is Channel.OverHttp)
 
         suspend fun updatePresentationAndCreateJar(
             encryptionRequirement: EncryptionRequirement,
@@ -174,8 +170,6 @@ class RetrieveRequestObjectLive(
 
         when (method) {
             is RetrieveRequestObjectMethod.Get -> {
-                checkNotNull(presentation.channel.requestUriMethod)
-
                 ensure(
                     presentation.channel.requestUriMethod == RequestUriMethod.PostOrGet ||
                         presentation.channel.requestUriMethod == RequestUriMethod.Get,
@@ -185,8 +179,6 @@ class RetrieveRequestObjectLive(
             }
 
             is RetrieveRequestObjectMethod.Post -> {
-                checkNotNull(presentation.channel.requestUriMethod)
-
                 ensure(
                     presentation.channel.requestUriMethod == RequestUriMethod.PostOrGet ||
                         presentation.channel.requestUriMethod == RequestUriMethod.Post,
@@ -307,9 +299,7 @@ private class WalletMetadataValidator(
         metadata: WalletMetadataTO,
         presentation: Presentation.Requested,
     ) {
-        ensure(presentation.channel is Channel.OverHttp) {
-            RetrieveRequestObjectError.InvalidChannel
-        }
+        check(presentation.channel is Channel.OverHttp)
 
         val responseMode =
             presentation.channel.responseMode.option
@@ -410,7 +400,6 @@ private fun ResponseModeOption.name(): String =
         ResponseModeOption.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
         ResponseModeOption.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
         ResponseModeOption.DcApiJwt -> error("DC API request objects are not retrieved through RetrieveRequestObject")
-        ResponseModeOption.DcApi -> error("DC API request objects are not retrieved through RetrieveRequestObject")
     }
 
 private fun <T> commonGround(
@@ -508,9 +497,5 @@ private fun causeOf(error: RetrieveRequestObjectError): String? =
 
         is RetrieveRequestObjectError.InvalidWalletMetadata -> {
             "Wallet metadata is not valid, reason: ${error.message}, ${error.cause?.message ?: "n/a"}"
-        }
-
-        RetrieveRequestObjectError.InvalidChannel -> {
-            "Request Object retrieval is not supported for DC API presentations"
         }
     }

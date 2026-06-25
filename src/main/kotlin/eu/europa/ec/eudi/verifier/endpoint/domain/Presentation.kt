@@ -143,7 +143,7 @@ sealed interface Profile {
     data object HAIP : Profile
 
     /**
-     * [ETSI119472Part2 Profile](https://www.etsi.org/deliver/etsi_ts/119400_119499/11947202/01.01.01_60/ts_11947202v010101p.pdf)
+     * [ETSI119472Part2 Profile](https://cdn.standards.iteh.ai/samples/etsi/etsi-ts-119-472-2-v1-2-1-2026-03-/779cc7937e774583a475b9b2381c65bf/etsi-ts-119-472-2-v1-2-1-2026-03-.pdf)
      */
     data object ETSI119472Part2 : Profile
 }
@@ -154,11 +154,12 @@ sealed interface Channel {
     data class OverHttp(
         override val responseMode: ResponseMode.OverHttp,
         val requestUriMethod: RequestUriMethod,
+        val getWalletResponseMethod: GetWalletResponseMethod,
     ) : Channel
 
     data class OverDcApi(
         override val responseMode: ResponseMode.OverDcApi,
-        val expectedOrigins: URI,
+        val expectedOrigin: URI,
     ) : Channel
 }
 
@@ -179,7 +180,6 @@ sealed interface Presentation {
         val transactionData: NonEmptyList<TransactionData>?,
         val requestId: RequestId,
         val nonce: Nonce,
-        val getWalletResponseMethod: GetWalletResponseMethod,
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
         val channel: Channel,
@@ -199,7 +199,6 @@ sealed interface Presentation {
         val requestId: RequestId,
         val requestObjectRetrievedAt: Instant,
         val nonce: Nonce,
-        val getWalletResponseMethod: GetWalletResponseMethod,
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
         val channel: Channel,
@@ -221,7 +220,6 @@ sealed interface Presentation {
                     requested.requestId,
                     at,
                     requested.nonce,
-                    requested.getWalletResponseMethod,
                     requested.issuerChain,
                     requested.profile,
                     requested.channel,

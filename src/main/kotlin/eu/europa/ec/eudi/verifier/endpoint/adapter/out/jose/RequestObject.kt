@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import arrow.core.NonEmptyList
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import java.net.URL
 import kotlin.time.Instant
@@ -32,14 +31,7 @@ internal data class RequestObject(
     val state: String,
     val issuedAt: Instant,
     val transactionData: List<String>? = null,
-    val expectedOrigins: URL? = null,
-    val verifierInfo: VerifierInfo? = null,
-)
-
-internal data class VerifierInfo(
-    val format: String,
-    val data: String,
-    val credentialIds: NonEmptyList<String>?,
+    val expectedOrigin: URL? = null,
 )
 
 internal fun requestObjectFromDomain(
@@ -52,10 +44,10 @@ internal fun requestObjectFromDomain(
     val aud = listOf("https://self-issued.me/v2")
     val transactionData = presentation.transactionData?.map { it.base64Url }
 
-    val (responseMode, requestId, expectedOrigins) =
+    val (responseMode, requestId, expectedOrigin) =
         when (val channel = presentation.channel) {
             is Channel.OverDcApi -> {
-                Triple(OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT, null, channel.expectedOrigins.toURL())
+                Triple(OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT, null, channel.expectedOrigin.toURL())
             }
 
             is Channel.OverHttp -> {
@@ -93,7 +85,6 @@ internal fun requestObjectFromDomain(
             },
         issuedAt = clock.now(),
         transactionData = transactionData,
-        expectedOrigins = expectedOrigins,
-        verifierInfo = null,
+        expectedOrigin = expectedOrigin,
     )
 }

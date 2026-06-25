@@ -214,7 +214,7 @@ internal class VerifierApi(
                     }
 
                     ValidationError.MissingExpectedOrigin -> {
-                        "MissingExpectedOrigins"
+                        "MissingExpectedOrigin"
                     }
 
                     ValidationError.ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme -> {
@@ -227,10 +227,6 @@ internal class VerifierApi(
 
                     ValidationError.InvalidAuthorizationRequestScheme -> {
                         "InvalidAuthorizationRequestScheme"
-                    }
-
-                    ValidationError.InvalidResponseMode -> {
-                        "InvalidResponseMode"
                     }
 
                     ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported -> {
@@ -265,20 +261,8 @@ internal class VerifierApi(
                         "HaipNotSupported.AuthorizationRequestMustBeProvidedByReference"
                     }
 
-                    ValidationError.HaipNotSupported.ResponseModeDcApiJwtMustBeUsed -> {
-                        "HaipNotSupported.ResponseModeDcApiJwtMustBeUsed"
-                    }
-
-                    ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByValueInDcApi -> {
-                        "HaipNotSupported.AuthorizationRequestMustBeProvidedByValueinDcApi"
-                    }
-
-                    ValidationError.ETSI119472Part2.ProfileCanNotBeUsedWithNonDcApiChannel -> {
-                        "ETSI119472Part2.ProfileCanNotBeUsedWithNonDcApiChannel"
-                    }
-
-                    ValidationError.ETSI119472Part2.ResponseModeDCApiJwtMustBeUsed -> {
-                        "ETSI119472Part2.ResponseModeDirectPostJwtMustBeUsed"
+                    ValidationError.ETSI119472Part2.ResponseModeDcApiJwtMustBeUsed -> {
+                        "ETSI119472Part2.ResponseModeDcApiJwtMustBeUsed"
                     }
                 }
             return badRequest().json().bodyValueAndAwait(mapOf("error" to error))
