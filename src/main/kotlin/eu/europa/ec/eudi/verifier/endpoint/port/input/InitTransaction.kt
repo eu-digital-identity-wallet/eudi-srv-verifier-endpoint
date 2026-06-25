@@ -291,14 +291,12 @@ class InitTransactionLive(
     override suspend fun invoke(initTransactionTO: InitTransactionTO): InitTransactionResponse {
         // validate input
         val (nonce, type) =
-            with(verifierConfig.transactionDataHashAlgorithm) {
-                with(verifierConfig.clientMetaData.vpFormatsSupported) {
-                    validate(
-                        initTransactionTO.dcqlQuery,
-                        initTransactionTO.nonce,
-                        initTransactionTO.transactionData,
-                    )
-                }
+            context(verifierConfig.transactionDataHashAlgorithm, verifierConfig.clientMetaData.vpFormatsSupported) {
+                validate(
+                    initTransactionTO.dcqlQuery,
+                    initTransactionTO.nonce,
+                    initTransactionTO.transactionData,
+                )
             }
 
         // if response mode is direct post jwt then generate ephemeral key
@@ -379,14 +377,12 @@ class InitTransactionLive(
 
         // validate input
         val (nonce, type) =
-            with(verifierConfig.transactionDataHashAlgorithm) {
-                with(verifierConfig.clientMetaData.vpFormatsSupported) {
-                    validate(
-                        initDCApiTransactionTO.dcqlQuery,
-                        initDCApiTransactionTO.nonce,
-                        initDCApiTransactionTO.transactionData,
-                    )
-                }
+            context(verifierConfig.transactionDataHashAlgorithm, verifierConfig.clientMetaData.vpFormatsSupported) {
+                validate(
+                    initDCApiTransactionTO.dcqlQuery,
+                    initDCApiTransactionTO.nonce,
+                    initDCApiTransactionTO.transactionData,
+                )
             }
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(ResponseModeTO.DcApiJwt)
