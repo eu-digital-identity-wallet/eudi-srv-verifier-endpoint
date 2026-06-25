@@ -196,14 +196,14 @@
           "verifier api"
         ],
         "description": "Initialize a new Transaction over DC Api",
-        "operationId": "InitializeDCApiTransaction",
+        "operationId": "InitializeDcApiTransaction",
         "requestBody": {
           "description": "The details of the new Transaction to initialize over DC Api.",
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InitTransactionDCApi"
+                "$ref": "#/components/schemas/InitTransactionDcApi"
               },
               "examples": {
                 "InitSignedTransactionByValueOverDcApi": {
@@ -224,11 +224,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InitTransactionDCApi"
+                  "$ref": "#/components/schemas/InitTransactionDcApi"
                 },
                 "examples": {
-                  "TransactionDCApiSigned": {
-                    "$ref": "#/components/examples/TransactionDCApiSigned"
+                  "TransactionDcApiSigned": {
+                    "$ref": "#/components/examples/TransactionDcApiSigned"
                   }
                 }
               }
@@ -791,7 +791,7 @@
         ],
         "additionalProperties": false
       },
-      "InitTransactionDCApi": {
+      "InitTransactionDcApi": {
         "type": "object",
         "nullable": false,
         "properties": {
@@ -1115,7 +1115,7 @@
           "InvalidTransactionData",
           "UnsupportedFormat",
           "InvalidIssuerChain",
-          "MissingExpectedOrigins",
+          "MissingExpectedOrigin",
           "ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme",
           "InvalidAuthorizationRequestUri",
           "InvalidAuthorizationRequestScheme",
@@ -1127,8 +1127,7 @@
           "HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported",
           "HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed",
           "HaipNotSupported.AuthorizationRequestMustBeProvidedByReference",
-          "HaipNotSupported.ResponseModeDcApiJwtMustBeUsed",
-          "HaipNotSupported.AuthorizationRequestMustBeProvidedByValueinDcApi"
+          "ETSI119472Part2.ResponseModeDcApiJwtMustBeUsed"
         ]
       },
       "InitTransactionError": {
@@ -2187,10 +2186,10 @@
           "expected_origin": "https://wallet.example.com"
         }
       },
-      "TransactionDCApiSigned": {
+      "TransactionDcApiSigned": {
         "description": "Transaction initialized over DC API. The authorization request is returned as a signed JWT.",
         "value": {
-          "request": "eyJ4NWMiOlsiTUlJQjV6Q0NBVXFnQXdJQkFnSUVaWUtlVnpBS0JnZ3Foa2pPUFFRREJEQVhNUlV3RXdZRFZRUUREQXhwYm5SbGNtMWxaR2xoZEdVd0lCY05Nak14TWpJd01EYzFOekV4V2hnUE1qRXlNekV5TWpBd056VTNNVEZhTUJNeEVUQVBCZ05WQkFNTUNIWmxjbWxtYVdWeU1JR2JNQkFHQnlxR1NNNDlBZ0VHQlN1QkJBQWpBNEdHQUFRQTlhRGhQY1ZBaDRrUC9GQTNTUnFua3pPbnVVblhzSzJEOVB3YkxiaVhBNm44UWlFUE1FcjB5Z0s1OUlnaE5HaVZhVnlNVk9QZFBMM1VMMnR5MU81Si9RVUFTY1VNcUo1eTZxZG54Y3dxQzN0MFZsWkYrYk04V3VCQ1pxN0NWdGNNTFNRY0ptRlh2cFU2QUtoWjNOOUl0NkFzb2FmNmNnMEFoR285SDJmWW8rbERBcWVqUXpCQk1DRUdBMVVkRVFFQi93UVhNQldDQ1d4dlkyRnNhRzl6ZElJSWRtVnlhV1pwWlhJd0RBWURWUjBUQVFIL0JBSXdBREFPQmdOVkhROEJBZjhFQkFNQ0I0QXdDZ1lJS29aSXpqMEVBd1FEZ1lvQU1JR0dBa0UzTmVBejlGOCtEbVROV1pYdHRZbDZ5Y2FtQ3FLWlEwbTdsczlKQnhJOUtjL3ROdGkxajgwVyt5WmZ1eDhNRjZUNCt3a3VNODlheTBxYjArNUR6ZEF4NGdKQkNLWE5LSEpLTkNTOEFPUjRlenZ2Y3FkMWhtOVlhMStHUVNTYm04cDR2QUVZemJCQUlPdmx0bVVqN2dQUFlDYU94QjhhbGtBSDZJWExIR2lXeFhQVEpFaz0iLCJNSUlCK1RDQ0FWdWdBd0lCQWdJRVpZR2xSakFLQmdncWhrak9QUVFEQkRBUE1RMHdDd1lEVlFRRERBUnliMjkwTUNBWERUSXpNVEl4T1RFME1UUXpNRm9ZRHpJeE1qTXhNakU1TVRReE5ETXdXakFYTVJVd0V3WURWUVFEREF4cGJuUmxjbTFsWkdsaGRHVXdnWnN3RUFZSEtvWkl6ajBDQVFZRks0RUVBQ01EZ1lZQUJBR0xQSHdmTG9IWTNZVmRoY1dkdzZIUTBsWFYvUDA2M0x6Uzhsd0h2ZjRZTTU3dGNWUkJxN3JUWUJoeVYxdDBnSnZOSFUyOHNXSDhxWXk5ZFcxcHJlc0dVd0RqWk5WMkxoZ1lHUzIrOWpTQ0JSN0FtbDQwSWJxdEhSQUhzNEJlbEVMN2pudnlGaEhSWG1UQ3FTMzcvSTVtY0dOdEhBOXkxQnEybVl2dUtmUDl4RzU0OEtOWU1GWXdHZ1lEVlIwUkFRSC9CQkF3RG9JTWFXNTBaWEp0WldScFlYUmxNQm9HQTFVZEVnRUIvd1FRTUE2Q0RHbHVkR1Z5YldWa2FXRjBaVEFNQmdOVkhSTUJBZjhFQWpBQU1BNEdBMVVkRHdFQi93UUVBd0lCQmpBS0JnZ3Foa2pPUFFRREJBT0Jpd0F3Z1ljQ1FYMDdWYXZZMjN2cG5sYUF2Z01MeC8vUHplWFg1dlNOeTdMTjlVVWdrNGFWRWM0VE0rTG1DNVJzSFJPVkE5LzljaXZUNm1SWWM3MngwQjJpclR4cDZIME5Ba0lCVERYZFduM3J5MkhzWHZHS1FDQWN5TEEvS09GN2pUcXJwYlZhY09ac1dCRWZZT1NBY1JPVjR5WVZnQ05PZW1RbndwSGZXbjVGYW5GWmNMME1FWkdnOC9ZPSJdLCJ0eXAiOiJvYXV0aC1hdXRoei1yZXErand0IiwiYWxnIjoiRVM1MTIifQ.eyJhdWQiOiJodHRwczovL3NlbGYtaXNzdWVkLm1lL3YyIiwicmVzcG9uc2VfdHlwZSI6InZwX3Rva2VuIiwiZXhwZWN0ZWRfb3JpZ2lucyI6WyJodHRwczovL3dhbGxldC5leGFtcGxlLmNvbSJdLCJzdGF0ZSI6IjZJM1VqVFBEMVpwdk1qb1c2c2FpbTV0NnhqeWw0T1ZVZ2tVSVJrZ2tXa1VJVEx4MjhRaDFWd0VVUEV1LTVDa19URzZZMFdhTldtYThBUEZJY2xFQ25RIiwiZGNxbF9xdWVyeSI6eyJjcmVkZW50aWFscyI6W3siaWQiOiJwaWQiLCJmb3JtYXQiOiJtc29fbWRvYyIsIm1ldGEiOnsiZG9jdHlwZV92YWx1ZSI6ImV1LmV1cm9wYS5lYy5ldWRpLnBpZC4xIn0sImNsYWltcyI6W3sicGF0aCI6WyJldS5ldXJvcGEuZWMuZXVkaS5waWQuMSIsImZhbWlseV9uYW1lIl19LHsicGF0aCI6WyJldS5ldXJvcGEuZWMuZXVkaS5waWQuMSIsImdpdmVuX25hbWUiXX1dfV19LCJpYXQiOjE3ODIxOTkzMDAsIm5vbmNlIjoiODhjNjE1YTItYjdjYS00MzI5LWI2NzMtM2Y0YzQxNDZhZDMzIiwiY2xpZW50X2lkIjoieDUwOV9oYXNoOmk3alppU3FhNEdYTmgxTHpCd0QybFZ0S0ljSWhwaW5SUVJvOEJIU1ZNeDAiLCJjbGllbnRfbWV0YWRhdGEiOnsidnBfZm9ybWF0c19zdXBwb3J0ZWQiOnsiZGMrc2Qtand0Ijp7InNkLWp3dF9hbGdfdmFsdWVzIjpbIkVTMjU2Il0sImtiLWp3dF9hbGdfdmFsdWVzIjpbIkVTMjU2Il19LCJtc29fbWRvYyI6eyJpc3N1ZXJhdXRoX2FsZ192YWx1ZXMiOlstNywtMzUsLTM2XSwiZGV2aWNlYXV0aF9hbGdfdmFsdWVzIjpbLTcsLTM1LC0zNl19fX0sInJlc3BvbnNlX21vZGUiOiJkY19hcGkuand0In0.AIxinT9dPjK98VBVSpgqgDrED86Z6hw6eiriN3DgdG8NGgZUNboYSVEa_lK_gy-NMz9im2CLC666iLMuJ35uo7xhACbKalwXQkeWUAEydamyMiAVKBhMl4evErY6rDOCKpZKzw3AB9ihKdJxuJjPqY7Um7h-yRZU1D8oMEHCRZFRInDI",
+          "request": "eyJ4NWMiOlsiTUlJQjV6Q0NBVXFnQXdJQkFnSUVaWUtlVnpBS0JnZ3Foa2pPUFFRREJEQVhNUlV3RXdZRFZRUUREQXhwYm5SbGNtMWxaR2xoZEdVd0lCY05Nak14TWpJd01EYzFOekV4V2hnUE1qRXlNekV5TWpBd056VTNNVEZhTUJNeEVUQVBCZ05WQkFNTUNIWmxjbWxtYVdWeU1JR2JNQkFHQnlxR1NNNDlBZ0VHQlN1QkJBQWpBNEdHQUFRQTlhRGhQY1ZBaDRrUC9GQTNTUnFua3pPbnVVblhzSzJEOVB3YkxiaVhBNm44UWlFUE1FcjB5Z0s1OUlnaE5HaVZhVnlNVk9QZFBMM1VMMnR5MU81Si9RVUFTY1VNcUo1eTZxZG54Y3dxQzN0MFZsWkYrYk04V3VCQ1pxN0NWdGNNTFNRY0ptRlh2cFU2QUtoWjNOOUl0NkFzb2FmNmNnMEFoR285SDJmWW8rbERBcWVqUXpCQk1DRUdBMVVkRVFFQi93UVhNQldDQ1d4dlkyRnNhRzl6ZElJSWRtVnlhV1pwWlhJd0RBWURWUjBUQVFIL0JBSXdBREFPQmdOVkhROEJBZjhFQkFNQ0I0QXdDZ1lJS29aSXpqMEVBd1FEZ1lvQU1JR0dBa0UzTmVBejlGOCtEbVROV1pYdHRZbDZ5Y2FtQ3FLWlEwbTdsczlKQnhJOUtjL3ROdGkxajgwVyt5WmZ1eDhNRjZUNCt3a3VNODlheTBxYjArNUR6ZEF4NGdKQkNLWE5LSEpLTkNTOEFPUjRlenZ2Y3FkMWhtOVlhMStHUVNTYm04cDR2QUVZemJCQUlPdmx0bVVqN2dQUFlDYU94QjhhbGtBSDZJWExIR2lXeFhQVEpFaz0iLCJNSUlCK1RDQ0FWdWdBd0lCQWdJRVpZR2xSakFLQmdncWhrak9QUVFEQkRBUE1RMHdDd1lEVlFRRERBUnliMjkwTUNBWERUSXpNVEl4T1RFME1UUXpNRm9ZRHpJeE1qTXhNakU1TVRReE5ETXdXakFYTVJVd0V3WURWUVFEREF4cGJuUmxjbTFsWkdsaGRHVXdnWnN3RUFZSEtvWkl6ajBDQVFZRks0RUVBQ01EZ1lZQUJBR0xQSHdmTG9IWTNZVmRoY1dkdzZIUTBsWFYvUDA2M0x6Uzhsd0h2ZjRZTTU3dGNWUkJxN3JUWUJoeVYxdDBnSnZOSFUyOHNXSDhxWXk5ZFcxcHJlc0dVd0RqWk5WMkxoZ1lHUzIrOWpTQ0JSN0FtbDQwSWJxdEhSQUhzNEJlbEVMN2pudnlGaEhSWG1UQ3FTMzcvSTVtY0dOdEhBOXkxQnEybVl2dUtmUDl4RzU0OEtOWU1GWXdHZ1lEVlIwUkFRSC9CQkF3RG9JTWFXNTBaWEp0WldScFlYUmxNQm9HQTFVZEVnRUIvd1FRTUE2Q0RHbHVkR1Z5YldWa2FXRjBaVEFNQmdOVkhSTUJBZjhFQWpBQU1BNEdBMVVkRHdFQi93UUVBd0lCQmpBS0JnZ3Foa2pPUFFRREJBT0Jpd0F3Z1ljQ1FYMDdWYXZZMjN2cG5sYUF2Z01MeC8vUHplWFg1dlNOeTdMTjlVVWdrNGFWRWM0VE0rTG1DNVJzSFJPVkE5LzljaXZUNm1SWWM3MngwQjJpclR4cDZIME5Ba0lCVERYZFduM3J5MkhzWHZHS1FDQWN5TEEvS09GN2pUcXJwYlZhY09ac1dCRWZZT1NBY1JPVjR5WVZnQ05PZW1RbndwSGZXbjVGYW5GWmNMME1FWkdnOC9ZPSJdLCJ0eXAiOiJvYXV0aC1hdXRoei1yZXErand0IiwiYWxnIjoiRVM1MTIifQ.eyJhdWQiOiJodHRwczovL3NlbGYtaXNzdWVkLm1lL3YyIiwicmVzcG9uc2VfdHlwZSI6InZwX3Rva2VuIiwiZXhwZWN0ZWRfb3JpZ2lucyI6WyJodHRwczovL3dhbGxldC5leGFtcGxlLmNvbSJdLCJkY3FsX3F1ZXJ5Ijp7ImNyZWRlbnRpYWxzIjpbeyJpZCI6InBpZCIsImZvcm1hdCI6Im1zb19tZG9jIiwibWV0YSI6eyJkb2N0eXBlX3ZhbHVlIjoiZXUuZXVyb3BhLmVjLmV1ZGkucGlkLjEifSwiY2xhaW1zIjpbeyJwYXRoIjpbImV1LmV1cm9wYS5lYy5ldWRpLnBpZC4xIiwiZmFtaWx5X25hbWUiXX0seyJwYXRoIjpbImV1LmV1cm9wYS5lYy5ldWRpLnBpZC4xIiwiZ2l2ZW5fbmFtZSJdfV19XX0sImlhdCI6MTc4MjM4NzU1Niwibm9uY2UiOiI4OGM2MTVhMi1iN2NhLTQzMjktYjY3My0zZjRjNDE0NmFkMzMiLCJjbGllbnRfaWQiOiJ4NTA5X2hhc2g6aTdqWmlTcWE0R1hOaDFMekJ3RDJsVnRLSWNJaHBpblJRUm84QkhTVk14MCIsImNsaWVudF9tZXRhZGF0YSI6eyJqd2tzIjp7ImtleXMiOlt7Imt0eSI6IkVDIiwidXNlIjoiZW5jIiwiY3J2IjoiUC0yNTYiLCJraWQiOiI3ZDUzZGJlMS1lYTU0LTRmNzctODE2YS1jNTI0YzA2YjlkNjciLCJ4IjoiZDVSNF9rWVljTnJ6cVBGc1MtcUJkcXItMzFPekpjSHFrczNrRTh4UDdVQSIsInkiOiJGZVJEREtPZkNKdEExSld3ZldEUll5M0VNTXo1N2NWWXlTUUkyS2p5YXNzIiwiYWxnIjoiRUNESC1FUyJ9XX0sInZwX2Zvcm1hdHNfc3VwcG9ydGVkIjp7ImRjK3NkLWp3dCI6eyJzZC1qd3RfYWxnX3ZhbHVlcyI6WyJFUzI1NiJdLCJrYi1qd3RfYWxnX3ZhbHVlcyI6WyJFUzI1NiJdfSwibXNvX21kb2MiOnsiaXNzdWVyYXV0aF9hbGdfdmFsdWVzIjpbLTcsLTM1LC0zNl0sImRldmljZWF1dGhfYWxnX3ZhbHVlcyI6Wy03LC0zNSwtMzZdfX0sImVuY3J5cHRlZF9yZXNwb25zZV9lbmNfdmFsdWVzX3N1cHBvcnRlZCI6WyJBMTI4R0NNIiwiQTI1NkdDTSJdfSwicmVzcG9uc2VfbW9kZSI6ImRjX2FwaS5qd3QifQ.AHkp_ee9Fqn-s_L5uS8VKowe7yEKSyc7FSNJanZMCAh1Fsd5twn8CGRGUkR_IRro_dYcdyRrlebC9E9kQMH-d3i6AUMxjpjlnmx4iJFMWIB6nRM0a5hrMZT80pg7ifn4td2OUtA-spAiq9cxDrsPj2myzTFy_AeI58iOs0xwv57UjUG9",
           "transaction_id": "7eFQsqH9m_PBRiB_IZnhYGyghaI8JmsKIb6VnWKB1fJAKE5B1VWtr__N2aPMYJ5-HWydSv7luD8UArvJwNp16w"
         }
       }

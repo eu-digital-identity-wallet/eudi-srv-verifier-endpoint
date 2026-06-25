@@ -71,7 +71,7 @@ sealed interface HandoverInfo {
                                 ResponseMode.OverHttp.DirectPost -> null
                                 is ResponseMode.OverHttp.DirectPostJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
                             },
-                        responseUri = config.responseUriBuilder(presentation.requestId),
+                        responseUri = config.responseUriBuilder(presentation.channel.requestId),
                     )
                 }
             }

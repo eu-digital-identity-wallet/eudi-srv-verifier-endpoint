@@ -126,11 +126,14 @@ class CreateJarNimbus(
         val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
         val clientId = ClientID(r.verifierId.clientId)
         val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
-        val state = State(r.state)
+        val state = r.state?.let { State(r.state) }
+        val expectedOrigins = listOfNotNull(r.expectedOrigin?.toExternalForm()).takeIf { it.isNotEmpty() }
 
         val authorizationRequestClaims =
             with(AuthorizationRequest.Builder(responseType, clientId)) {
-                state(state)
+                if (state != null) {
+                    state(state)
+                }
                 if (scope.isNotEmpty()) {
                     scope(scope)
                 }
@@ -153,7 +156,7 @@ class CreateJarNimbus(
             optionalClaim(OpenId4VPSpec.DCQL_QUERY, r.dcqlQuery?.toJackson())
             optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, r.transactionData?.toJackson())
             optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)
-            optionalClaim(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS, r.expectedOrigin?.toExternalForm())
+            optionalClaim(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS, expectedOrigins?.toJackson())
             build()
         }
     }

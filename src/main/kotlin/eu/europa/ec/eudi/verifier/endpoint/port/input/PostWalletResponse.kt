@@ -74,7 +74,7 @@ sealed interface WalletResponseValidationError {
     data object PresentationNotFound : WalletResponseValidationError
 
     data class UnexpectedResponseMode(
-        val requestId: RequestId,
+        val requestId: RequestId?,
         val expected: ResponseModeOption,
         val actual: ResponseModeOption,
     ) : WalletResponseValidationError
@@ -331,7 +331,7 @@ class PostWalletResponseLive(
                     ResponseMode.OverHttp.DirectPost -> {
                         ensure(walletResponse is AuthorisationResponse.DirectPost) {
                             UnexpectedResponseMode(
-                                presentation.requestId,
+                                presentation.channel.requestId,
                                 expected = ResponseModeOption.DirectPost,
                                 actual = walletResponse.responseModeOption,
                             )
@@ -344,7 +344,7 @@ class PostWalletResponseLive(
                             is AuthorisationResponse.DirectPost -> {
                                 ensure(walletResponse.isErrorResponse()) {
                                     UnexpectedResponseMode(
-                                        presentation.requestId,
+                                        presentation.channel.requestId,
                                         expected = ResponseModeOption.DirectPostJwt,
                                         actual = ResponseModeOption.DirectPost,
                                     )
@@ -363,7 +363,7 @@ class PostWalletResponseLive(
                             else -> {
                                 raise(
                                     UnexpectedResponseMode(
-                                        presentation.requestId,
+                                        presentation.channel.requestId,
                                         expected = ResponseModeOption.DirectPostJwt,
                                         actual = walletResponse.responseModeOption,
                                     ),
@@ -389,7 +389,7 @@ class PostWalletResponseLive(
                             else -> {
                                 raise(
                                     UnexpectedResponseMode(
-                                        presentation.requestId,
+                                        null,
                                         expected = ResponseModeOption.DcApiJwt,
                                         actual = walletResponse.responseModeOption,
                                     ),
@@ -407,7 +407,6 @@ class PostWalletResponseLive(
         responseObject: AuthorisationResponseTO,
     ): Submitted {
         // Verify response `state` is RequestId
-        ensure(presentation.requestId.value == responseObject.state) { IncorrectState }
 
         // add the wallet response to the presentation
         val walletResponse =
@@ -424,6 +423,7 @@ class PostWalletResponseLive(
                 }
 
                 is Channel.OverHttp -> {
+                    ensure(presentation.channel.requestId.value == responseObject.state) { IncorrectState }
                     when (channel.getWalletResponseMethod) {
                         GetWalletResponseMethod.Poll -> null
                         is GetWalletResponseMethod.Redirect -> generateResponseCode()

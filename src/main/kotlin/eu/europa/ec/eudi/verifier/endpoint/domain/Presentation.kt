@@ -155,6 +155,7 @@ sealed interface Channel {
         override val responseMode: ResponseMode.OverHttp,
         val requestUriMethod: RequestUriMethod,
         val getWalletResponseMethod: GetWalletResponseMethod,
+        val requestId: RequestId,
     ) : Channel
 
     data class OverDcApi(
@@ -169,6 +170,7 @@ sealed interface Channel {
 sealed interface Presentation {
     val id: TransactionId
     val initiatedAt: Instant
+    val channel: Channel
 
     /**
      * A presentation process that has been just requested
@@ -176,13 +178,12 @@ sealed interface Presentation {
     class Requested(
         override val id: TransactionId,
         override val initiatedAt: Instant,
+        override val channel: Channel,
         val query: DCQL,
         val transactionData: NonEmptyList<TransactionData>?,
-        val requestId: RequestId,
         val nonce: Nonce,
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
-        val channel: Channel,
     ) : Presentation
 
     /**
@@ -194,14 +195,13 @@ sealed interface Presentation {
     class RequestObjectRetrieved private constructor(
         override val id: TransactionId,
         override val initiatedAt: Instant,
+        override val channel: Channel,
         val query: DCQL,
         val transactionData: NonEmptyList<TransactionData>?,
-        val requestId: RequestId,
         val requestObjectRetrievedAt: Instant,
         val nonce: Nonce,
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
-        val channel: Channel,
     ) : Presentation {
         init {
             require(initiatedAt <= requestObjectRetrievedAt)
@@ -215,14 +215,13 @@ sealed interface Presentation {
                 RequestObjectRetrieved(
                     requested.id,
                     requested.initiatedAt,
+                    requested.channel,
                     requested.query,
                     requested.transactionData,
-                    requested.requestId,
                     at,
                     requested.nonce,
                     requested.issuerChain,
                     requested.profile,
-                    requested.channel,
                 )
         }
     }
@@ -233,7 +232,7 @@ sealed interface Presentation {
     class Submitted private constructor(
         override val id: TransactionId,
         override val initiatedAt: Instant,
-        val requestId: RequestId,
+        override val channel: Channel,
         var requestObjectRetrievedAt: Instant,
         var submittedAt: Instant,
         val walletResponse: WalletResponse,
@@ -252,7 +251,7 @@ sealed interface Presentation {
                     Submitted(
                         id,
                         initiatedAt,
-                        requestId,
+                        channel,
                         requestObjectRetrievedAt,
                         at,
                         walletResponse,
@@ -266,6 +265,7 @@ sealed interface Presentation {
     class TimedOut private constructor(
         override val id: TransactionId,
         override val initiatedAt: Instant,
+        override val channel: Channel,
         val requestObjectRetrievedAt: Instant? = null,
         val submittedAt: Instant? = null,
         val timedOutAt: Instant,
@@ -277,7 +277,7 @@ sealed interface Presentation {
                 at: Instant,
             ): TimedOut {
                 ensure(presentation.initiatedAt < at) { "Presentation ${presentation.initiatedAt} is before $at" }
-                return TimedOut(presentation.id, presentation.initiatedAt, null, null, at)
+                return TimedOut(presentation.id, presentation.initiatedAt, presentation.channel, null, null, at)
             }
 
             context(_: Raise<String>)
@@ -289,6 +289,7 @@ sealed interface Presentation {
                 return TimedOut(
                     presentation.id,
                     presentation.initiatedAt,
+                    presentation.channel,
                     presentation.requestObjectRetrievedAt,
                     null,
                     at,
@@ -304,6 +305,7 @@ sealed interface Presentation {
                 return TimedOut(
                     presentation.id,
                     presentation.initiatedAt,
+                    presentation.channel,
                     presentation.requestObjectRetrievedAt,
                     presentation.submittedAt,
                     at,

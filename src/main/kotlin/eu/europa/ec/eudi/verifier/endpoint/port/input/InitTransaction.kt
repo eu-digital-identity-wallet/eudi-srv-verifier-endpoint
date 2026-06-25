@@ -309,6 +309,7 @@ class InitTransactionLive(
                 responseMode = responseMode,
                 requestUriMethod = RequestUriMethod.PostOrGet,
                 getWalletResponseMethod = getWalletResponseMethod(initTransactionTO.redirectUriTemplate),
+                requestId = generateRequestId(),
             )
 
         val issuerChain = issuerChain(initTransactionTO.issuerChain)
@@ -322,7 +323,6 @@ class InitTransactionLive(
                 initiatedAt = clock.now(),
                 query = type.query,
                 transactionData = type.transactionData,
-                requestId = generateRequestId(),
                 nonce = nonce,
                 issuerChain = issuerChain,
                 profile = profile,
@@ -405,7 +405,6 @@ class InitTransactionLive(
                 initiatedAt = clock.now(),
                 query = type.query,
                 transactionData = type.transactionData,
-                requestId = generateRequestId(),
                 nonce = nonce,
                 issuerChain = issuerChain,
                 profile = profile,
@@ -457,12 +456,9 @@ class InitTransactionLive(
             }
 
             is EmbedOption.ByReference -> {
-                check(requestedPresentation.channel !is Channel.OverDcApi) {
-                    "Unsupported request jar option for DC api: $requestJarOption"
-                }
+                check(requestedPresentation.channel is Channel.OverHttp)
 
-                val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId)
-                check(requestedPresentation.channel is Channel.OverHttp) {}
+                val requestUri = requestJarOption.buildUrl(requestedPresentation.channel.requestId)
 
                 requestedPresentation to
                     InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
