@@ -213,10 +213,6 @@ internal class VerifierApi(
                         "InvalidIssuerChain"
                     }
 
-                    ValidationError.MissingExpectedOrigin -> {
-                        "MissingExpectedOrigin"
-                    }
-
                     ValidationError.ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme -> {
                         "ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme"
                     }

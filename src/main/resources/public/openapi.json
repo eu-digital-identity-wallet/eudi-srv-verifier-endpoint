@@ -664,8 +664,9 @@
         ],
         "nullable": false
       },
-      "ExpectedOrigin": {
+      "Origin": {
         "type": "string",
+        "format": "url",
         "nullable": false
       },
       "InitTransaction": {
@@ -833,13 +834,13 @@
               }
             ]
           },
-          "expected_origin": {
+          "origin": {
             "allOf": [
               {
                 "description": "Web origin that the DC Api request will be made from."
               },
               {
-                "$ref": "#/components/schemas/ExpectedOrigin"
+                "$ref": "#/components/schemas/Origin"
               }
             ]
           }
@@ -847,7 +848,7 @@
         "required": [
           "dcql_query",
           "nonce",
-          "expected_origins"
+          "origin"
         ],
         "additionalProperties": false
       },
@@ -1145,7 +1146,6 @@
           "InvalidTransactionData",
           "UnsupportedFormat",
           "InvalidIssuerChain",
-          "MissingExpectedOrigin",
           "ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme",
           "InvalidAuthorizationRequestUri",
           "InvalidAuthorizationRequestScheme",
@@ -2212,7 +2212,7 @@
             ]
           },
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
-          "expected_origin": "https://wallet.example.com"
+          "origin": "https://wallet.example.com"
         }
       },
       "DcApiTransactionResponse": {

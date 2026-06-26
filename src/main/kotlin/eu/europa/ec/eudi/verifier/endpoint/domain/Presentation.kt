@@ -160,7 +160,7 @@ sealed interface Channel {
 
     data class OverDcApi(
         override val responseMode: ResponseMode.OverDcApi,
-        val expectedOrigin: Url,
+        val origin: Url,
     ) : Channel
 }
 
@@ -266,8 +266,7 @@ sealed interface Presentation {
         override val id: TransactionId,
         override val initiatedAt: Instant,
         override val channel: Channel,
-        val requestObjectRetrievedAt: Instant? = null,
-        val submittedAt: Instant? = null,
+        val requestObjectRetrievedAt: Instant?,
         val timedOutAt: Instant,
     ) : Presentation {
         companion object {
@@ -277,7 +276,7 @@ sealed interface Presentation {
                 at: Instant,
             ): TimedOut {
                 ensure(presentation.initiatedAt < at) { "Presentation ${presentation.initiatedAt} is before $at" }
-                return TimedOut(presentation.id, presentation.initiatedAt, presentation.channel, null, null, at)
+                return TimedOut(presentation.id, presentation.initiatedAt, presentation.channel, null, at)
             }
 
             context(_: Raise<String>)
@@ -291,23 +290,6 @@ sealed interface Presentation {
                     presentation.initiatedAt,
                     presentation.channel,
                     presentation.requestObjectRetrievedAt,
-                    null,
-                    at,
-                )
-            }
-
-            context(_: Raise<String>)
-            fun timeOut(
-                presentation: Submitted,
-                at: Instant,
-            ): TimedOut {
-                ensure(presentation.initiatedAt < at) { "Presentation ${presentation.initiatedAt} is before $at" }
-                return TimedOut(
-                    presentation.id,
-                    presentation.initiatedAt,
-                    presentation.channel,
-                    presentation.requestObjectRetrievedAt,
-                    presentation.submittedAt,
                     at,
                 )
             }
@@ -340,6 +322,3 @@ fun Presentation.RequestObjectRetrieved.submit(
     walletResponse: WalletResponse,
     responseCode: ResponseCode?,
 ): Presentation.Submitted = Presentation.Submitted.submitted(this, clock.now(), walletResponse, responseCode)
-
-context(_: Raise<String>)
-fun Presentation.Submitted.timedOut(clock: Clock): Presentation.TimedOut = Presentation.TimedOut.timeOut(this, clock.now())

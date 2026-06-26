@@ -23,16 +23,16 @@ import kotlin.time.Instant
 internal data class RequestObject(
     val verifierId: VerifierId,
     val responseType: List<String>,
-    val dcqlQuery: DCQL? = null,
+    val query: DCQL,
     val scope: List<String>,
     val nonce: String,
     val responseMode: String,
     val responseUri: URL?,
-    val aud: List<String>,
+    val audience: List<String>,
     val state: String?,
     val issuedAt: Instant,
     val transactionData: List<String>? = null,
-    val expectedOrigin: Url? = null,
+    val expectedOrigins: List<Url>? = null,
 )
 
 internal fun requestObjectFromDomain(
@@ -49,16 +49,16 @@ internal fun requestObjectFromDomain(
             RequestObject(
                 verifierId = verifierConfig.verifierId,
                 scope = scope,
-                dcqlQuery = presentation.query,
+                query = presentation.query,
                 responseType = responseType,
-                aud = aud,
+                audience = aud,
                 nonce = presentation.nonce.value,
                 state = null,
                 responseMode = OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT,
                 responseUri = null,
                 issuedAt = clock.now(),
                 transactionData = transactionData,
-                expectedOrigin = channel.expectedOrigin,
+                expectedOrigins = listOf(channel.origin),
             )
         }
 
@@ -68,16 +68,16 @@ internal fun requestObjectFromDomain(
                     RequestObject(
                         verifierId = verifierConfig.verifierId,
                         scope = scope,
-                        dcqlQuery = presentation.query,
+                        query = presentation.query,
                         responseType = responseType,
-                        aud = aud,
+                        audience = aud,
                         nonce = presentation.nonce.value,
                         state = presentation.channel.requestId.value,
                         responseMode = OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST,
                         responseUri = verifierConfig.responseUriBuilder(presentation.channel.requestId),
                         issuedAt = clock.now(),
                         transactionData = transactionData,
-                        expectedOrigin = null,
+                        expectedOrigins = null,
                     )
                 }
 
@@ -85,16 +85,16 @@ internal fun requestObjectFromDomain(
                     RequestObject(
                         verifierId = verifierConfig.verifierId,
                         scope = scope,
-                        dcqlQuery = presentation.query,
+                        query = presentation.query,
                         responseType = responseType,
-                        aud = aud,
+                        audience = aud,
                         nonce = presentation.nonce.value,
                         state = presentation.channel.requestId.value,
                         responseMode = OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT,
                         responseUri = verifierConfig.responseUriBuilder(presentation.channel.requestId),
                         issuedAt = clock.now(),
                         transactionData = transactionData,
-                        expectedOrigin = null,
+                        expectedOrigins = null,
                     )
                 }
             }

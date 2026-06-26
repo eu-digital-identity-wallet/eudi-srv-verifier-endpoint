@@ -32,7 +32,6 @@ import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.TestUtils
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.DCQL
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.HashAlgorithm
@@ -72,18 +71,18 @@ class CreateJarNimbusTest {
 
     @Test
     fun `given a request object, it should be signed and decoded`() {
-        val query = Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery
+        val query = checkNotNull(Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery)
         val requestObject =
             RequestObject(
                 verifierId = verifierId,
                 responseType = listOf("vp_token"),
-                dcqlQuery = query,
+                query = query,
                 scope = listOf("openid"),
                 nonce = UUID.randomUUID().toString(),
                 responseMode = "direct_post.jwt",
                 responseUri = URL("https://foo"),
                 state = TestContext.testRequestId.value,
-                aud = emptyList(),
+                audience = emptyList(),
                 issuedAt = TestContext.testClock.now(),
             )
 
@@ -125,7 +124,7 @@ class CreateJarNimbusTest {
         assertEquals(r.verifierId.clientId, c.getStringClaim("client_id"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
         assertEquals(
-            r.dcqlQuery,
+            r.query,
             c
                 .getJSONObjectClaim(OpenId4VPSpec.DCQL_QUERY)
                 .toJsonObject()

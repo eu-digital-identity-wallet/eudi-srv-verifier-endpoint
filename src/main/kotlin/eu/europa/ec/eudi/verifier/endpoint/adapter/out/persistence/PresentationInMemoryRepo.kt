@@ -59,6 +59,7 @@ class PresentationInMemoryRepo(
         LoadIncompletePresentationsOlderThan { at ->
             presentations.values
                 .map { it.presentation }
+                .filter { it !is Presentation.Submitted && it !is Presentation.TimedOut }
                 .toList()
                 .filter { it.isExpired(at) }
         }

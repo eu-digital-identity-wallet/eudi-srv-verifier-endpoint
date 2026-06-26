@@ -156,8 +156,6 @@ sealed interface ValidationError {
 
     data object InvalidAuthorizationRequestScheme : ValidationError
 
-    data object MissingExpectedOrigin : ValidationError
-
     sealed interface HaipNotSupported : ValidationError {
         data object SdJwtVcOrMsoMdocMustBeSupported : HaipNotSupported
 
@@ -298,19 +296,17 @@ class InitTransactionLive(
 
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO.responseMode)
-
         check(responseMode is ResponseMode.OverHttp)
 
         val channel =
             Channel.OverHttp(
                 responseMode = responseMode,
-                requestUriMethod = requestUriMethod(initTransactionTO),
+                requestUriMethod = requestUriMethod(initTransactionTO.requestUriMethod),
                 getWalletResponseMethod = getWalletResponseMethod(initTransactionTO.redirectUriTemplate),
                 requestId = generateRequestId(),
             )
 
         val issuerChain = issuerChain(initTransactionTO.issuerChain)
-
         val profile = initTransactionTO.profileOrDefault.toProfile()
 
         // Initialize presentation
@@ -386,13 +382,12 @@ class InitTransactionLive(
         check(responseMode is ResponseMode.OverDcApi)
 
         val issuerChain = issuerChain(initDcApiTransactionTO.issuerChain)
-
-        val expectedOrigin = initDcApiTransactionTO.expectedOrigin
+        val origin = initDcApiTransactionTO.origin
 
         val channel =
             Channel.OverDcApi(
                 responseMode = responseMode,
-                expectedOrigin = expectedOrigin,
+                origin = origin,
             )
 
         // Initialize presentation
@@ -477,8 +472,8 @@ class InitTransactionLive(
      * Gets the JAR [RequestUriMethod] for the provided [InitTransactionTO].
      * If none has been provided, falls back to [VerifierConfig.requestUriMethod].
      */
-    private fun requestUriMethod(initTransaction: InitTransactionTO): RequestUriMethod =
-        when (initTransaction.requestUriMethod) {
+    private fun requestUriMethod(requestUriMethod: RequestUriMethodTO?): RequestUriMethod =
+        when (requestUriMethod) {
             RequestUriMethodTO.Get -> RequestUriMethod.Get
             RequestUriMethodTO.Post -> RequestUriMethod.Post
             RequestUriMethodTO.PostOrGet -> RequestUriMethod.PostOrGet
@@ -798,7 +793,7 @@ data class InitDcApiTransactionTO(
     @Required @SerialName(OpenId4VPSpec.NONCE) val nonce: String,
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
     @SerialName("issuer_chain") val issuerChain: String? = null,
-    @SerialName("expected_origin") val expectedOrigin: Url,
+    @Required @SerialName("origin") val origin: Url,
 )
 
 @Serializable

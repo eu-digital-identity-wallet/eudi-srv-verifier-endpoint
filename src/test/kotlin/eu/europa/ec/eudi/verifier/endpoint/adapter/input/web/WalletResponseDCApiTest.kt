@@ -24,6 +24,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifia
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.springframework.beans.factory.annotation.Autowired
@@ -67,6 +68,7 @@ internal class WalletResponseDCApiTest {
     private fun assertDCApiRequest(
         request: JsonObject,
         expectedNonce: String,
+        expectedOrigins: List<String>,
     ) {
         assertEquals(
             OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT,
@@ -91,6 +93,11 @@ internal class WalletResponseDCApiTest {
             clientMetadata[OpenId4VPSpec.VP_FORMATS_SUPPORTED]?.jsonObject,
             "vp_formats_supported is missing",
         )
+
+        assertEquals(
+            expectedOrigins,
+            request[OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS]?.jsonArray?.map { it.jsonPrimitive.content },
+        )
     }
 
     @Test
@@ -107,9 +114,6 @@ internal class WalletResponseDCApiTest {
 
             val requestJwt = assertNotNull(body.request, "request is not a JWT string")
             val (_, claims) = TestUtils.parseJWTIntoClaims(requestJwt)
-            assertDCApiRequest(claims, initTransaction.nonce)
-
-            val expectedOrigins = assertNotNull(claims[OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS], "expected_origins is missing")
-            assertTrue(expectedOrigins.toString().contains("https://verifier.example.com"))
+            assertDCApiRequest(claims, initTransaction.nonce, listOf("https://verifier.example.com"))
         }
 }

@@ -54,7 +54,7 @@ sealed interface HandoverInfo {
             when (presentation.channel) {
                 is Channel.OverDcApi -> {
                     OpenID4VPDCAPIHandoverInfo(
-                        origin = presentation.channel.expectedOrigin,
+                        origin = presentation.channel.origin,
                         nonce = presentation.nonce,
                         ephemeralEncryptionKey =
                             when (val responseMode = presentation.channel.responseMode) {

@@ -49,7 +49,7 @@ class TimeoutPresentationsLive(
                 when (presentation) {
                     is Presentation.Requested -> presentation.timedOut(clock)
                     is Presentation.RequestObjectRetrieved -> presentation.timedOut(clock)
-                    is Presentation.Submitted -> presentation.timedOut(clock)
+                    is Presentation.Submitted -> null
                     is Presentation.TimedOut -> null
                 }
             if (timeout != null) {
