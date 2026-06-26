@@ -260,10 +260,6 @@ internal class VerifierApi(
                     ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference -> {
                         "HaipNotSupported.AuthorizationRequestMustBeProvidedByReference"
                     }
-
-                    ValidationError.ETSI119472Part2.ResponseModeDcApiJwtMustBeUsed -> {
-                        "ETSI119472Part2.ResponseModeDcApiJwtMustBeUsed"
-                    }
                 }
             return badRequest().json().bodyValueAndAwait(mapOf("error" to error))
         }

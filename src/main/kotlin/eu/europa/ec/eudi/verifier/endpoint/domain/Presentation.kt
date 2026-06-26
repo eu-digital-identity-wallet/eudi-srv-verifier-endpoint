@@ -18,8 +18,8 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
 import arrow.core.NonEmptyList
 import arrow.core.raise.context.Raise
 import arrow.core.raise.context.ensure
+import com.eygraber.uri.Url
 import kotlinx.serialization.json.JsonObject
-import java.net.URI
 import java.security.cert.X509Certificate
 import kotlin.time.Instant
 
@@ -160,7 +160,7 @@ sealed interface Channel {
 
     data class OverDcApi(
         override val responseMode: ResponseMode.OverDcApi,
-        val expectedOrigin: URI,
+        val expectedOrigin: Url,
     ) : Channel
 }
 

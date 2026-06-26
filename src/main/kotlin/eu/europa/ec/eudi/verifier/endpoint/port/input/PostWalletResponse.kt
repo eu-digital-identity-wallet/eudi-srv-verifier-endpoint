@@ -406,8 +406,6 @@ class PostWalletResponseLive(
         presentation: RequestObjectRetrieved,
         responseObject: AuthorisationResponseTO,
     ): Submitted {
-        // Verify response `state` is RequestId
-
         // add the wallet response to the presentation
         val walletResponse =
             responseObject.toDomain(
@@ -423,6 +421,7 @@ class PostWalletResponseLive(
                 }
 
                 is Channel.OverHttp -> {
+                    // Verify response `state` is RequestId
                     ensure(presentation.channel.requestId.value == responseObject.state) { IncorrectState }
                     when (channel.getWalletResponseMethod) {
                         GetWalletResponseMethod.Poll -> null

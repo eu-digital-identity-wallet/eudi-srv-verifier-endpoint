@@ -127,7 +127,7 @@ class CreateJarNimbus(
         val clientId = ClientID(r.verifierId.clientId)
         val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
         val state = r.state?.let { State(r.state) }
-        val expectedOrigins = listOfNotNull(r.expectedOrigin?.toExternalForm()).takeIf { it.isNotEmpty() }
+        val expectedOrigins = listOfNotNull(r.expectedOrigin).takeIf { it.isNotEmpty() }
 
         val authorizationRequestClaims =
             with(AuthorizationRequest.Builder(responseType, clientId)) {

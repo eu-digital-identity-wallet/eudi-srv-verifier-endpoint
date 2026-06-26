@@ -581,7 +581,7 @@ private fun HandoverInfo.toHandover(
             is HandoverInfo.OpenID4VPDCAPIHandoverInfo -> {
                 val element =
                     listOf(
-                        origin.toExternalForm().toDataElement(),
+                        origin.toString().toDataElement(),
                         nonce.value.toDataElement(),
                         ephemeralEncryptionKey?.computeThumbprint()?.decode()?.toDataElement() ?: NullElement(),
                     )

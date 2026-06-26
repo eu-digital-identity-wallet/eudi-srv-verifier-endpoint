@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import com.eygraber.uri.Url
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import java.net.URL
 import kotlin.time.Instant
@@ -31,7 +32,7 @@ internal data class RequestObject(
     val state: String?,
     val issuedAt: Instant,
     val transactionData: List<String>? = null,
-    val expectedOrigin: URL? = null,
+    val expectedOrigin: Url? = null,
 )
 
 internal fun requestObjectFromDomain(
@@ -57,7 +58,7 @@ internal fun requestObjectFromDomain(
                 responseUri = null,
                 issuedAt = clock.now(),
                 transactionData = transactionData,
-                expectedOrigin = channel.expectedOrigin.toURL(),
+                expectedOrigin = channel.expectedOrigin,
             )
         }
 

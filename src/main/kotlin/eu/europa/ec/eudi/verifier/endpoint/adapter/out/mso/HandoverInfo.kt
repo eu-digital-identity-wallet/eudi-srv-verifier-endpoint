@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
+import com.eygraber.uri.Url
 import com.nimbusds.jose.jwk.JWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import java.net.URL
@@ -34,7 +35,7 @@ sealed interface HandoverInfo {
     }
 
     data class OpenID4VPDCAPIHandoverInfo(
-        val origin: URL,
+        val origin: Url,
         val nonce: Nonce,
         val ephemeralEncryptionKey: JWK?,
     ) : HandoverInfo {
@@ -53,7 +54,7 @@ sealed interface HandoverInfo {
             when (presentation.channel) {
                 is Channel.OverDcApi -> {
                     OpenID4VPDCAPIHandoverInfo(
-                        origin = presentation.channel.expectedOrigin.toURL(),
+                        origin = presentation.channel.expectedOrigin,
                         nonce = presentation.nonce,
                         ephemeralEncryptionKey =
                             when (val responseMode = presentation.channel.responseMode) {

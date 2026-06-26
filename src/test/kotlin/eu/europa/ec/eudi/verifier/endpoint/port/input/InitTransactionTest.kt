@@ -424,14 +424,12 @@ class InitTransactionTest {
         input: InitTransactionTO,
         expectedError: ValidationError,
     ) = either {
-        with(verifierConfig.transactionDataHashAlgorithm) {
-            with(verifierConfig.clientMetaData.vpFormatsSupported) {
-                validate(
-                    input.dcqlQuery,
-                    input.nonce,
-                    input.transactionData,
-                )
-            }
+        context(verifierConfig.transactionDataHashAlgorithm, verifierConfig.clientMetaData.vpFormatsSupported) {
+            validate(
+                input.dcqlQuery,
+                input.nonce,
+                input.transactionData,
+            )
         }
     }.fold(
         ifRight = { fail("Invalid input accepted") },

@@ -105,7 +105,7 @@ internal class WalletResponseDCApiTest {
             val (body, transactionId) = VerifierApiClient.initDCApiTransaction(client, initTransaction)
             assertNotNull(transactionId, "Transaction-Id header is missing")
 
-            val requestJwt = assertNotNull(body["request"]?.jsonPrimitive?.contentOrNull, "request is not a JWT string")
+            val requestJwt = assertNotNull(body.request, "request is not a JWT string")
             val (_, claims) = TestUtils.parseJWTIntoClaims(requestJwt)
             assertDCApiRequest(claims, initTransaction.nonce)
 

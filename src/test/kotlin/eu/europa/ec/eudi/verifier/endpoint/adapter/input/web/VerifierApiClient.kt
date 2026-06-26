@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi.Companion.TRANSACTION_ID_HEADER
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitDcApiTransactionResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitDcApiTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
@@ -56,7 +57,7 @@ object VerifierApiClient {
     fun initDCApiTransaction(
         client: WebTestClient,
         initDCApiTransactionTO: InitDcApiTransactionTO,
-    ): Pair<JsonObject, String?> {
+    ): Pair<InitDcApiTransactionResponseTO, String?> {
         val result =
             client
                 .post()
@@ -67,11 +68,11 @@ object VerifierApiClient {
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody<String>()
+                .expectBody<InitDcApiTransactionResponseTO>()
                 .returnResult()
 
         val transactionId = result.responseHeaders.getFirst(TRANSACTION_ID_HEADER)
-        val body = Json.parseToJsonElement(checkNotNull(result.responseBody)) as JsonObject
+        val body = result.responseBody!!
         log.info("DC API init response body:\n$body")
         return body to transactionId
     }
