@@ -32,6 +32,8 @@ import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.isSelfSigned
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.EncryptionRequirement
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode.OverDcApi.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode.OverHttp.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -317,49 +319,100 @@ class InitTransactionLive(
             }
         }
 
-        // Initialize presentation
-        val requestedPresentation =
-            Presentation.Requested(
-                id = generateTransactionId(),
-                initiatedAt = clock.now(),
-                query = type.query,
-                transactionData = type.transactionData,
-                nonce = nonce,
-                issuerChain = issuerChain,
-                profile = profile,
-                channel = channel,
-            )
-
         // create the request, which may update the presentation
-        val (updatedPresentation, request) =
-            createRequest(
-                requestedPresentation,
-                jarMode,
-                with(verifierConfig) {
-                    authorizationRequestUri(
-                        initTransactionTO.authorizationRequestUri,
-                        initTransactionTO.authorizationRequestScheme,
-                    )
-                },
-            )
+        val unresolvedAuthorizationRequestUri =
+            with(verifierConfig) {
+                authorizationRequestUri(
+                    initTransactionTO.authorizationRequestUri,
+                    initTransactionTO.authorizationRequestScheme,
+                )
+            }
+
+        // Initialize presentation
+        val (presentation, authorizationRequest) =
+            when (jarMode) {
+                is EmbedOption.ByReference -> {
+                    val presentation =
+                        Presentation.Requested(
+                            id = generateTransactionId(),
+                            initiatedAt = clock.now(),
+                            query = type.query,
+                            transactionData = type.transactionData,
+                            nonce = nonce,
+                            issuerChain = issuerChain,
+                            profile = profile,
+                            channel = channel,
+                        )
+
+                    val requestUri = jarMode.buildUrl(presentation.channel.requestId)
+                    val authorizationRequest =
+                        InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
+                            presentation.id.value,
+                            verifierConfig.verifierId.clientId,
+                            requestUri,
+                            presentation.channel.requestUriMethod.toTO(),
+                            unresolvedAuthorizationRequestUri
+                                .resolve(
+                                    verifierConfig.verifierId,
+                                    Uri.parse(requestUri.toString()),
+                                    presentation.channel.requestUriMethod,
+                                ).toURI(),
+                        )
+                    presentation to authorizationRequest
+                }
+
+                EmbedOption.ByValue -> {
+                    val presentation =
+                        Presentation.RequestObjectRetrieved(
+                            id = generateTransactionId(),
+                            initiatedAt = clock.now(),
+                            channel = channel,
+                            query = type.query,
+                            transactionData = type.transactionData,
+                            requestObjectRetrievedAt = clock.now(),
+                            nonce = nonce,
+                            issuerChain = issuerChain,
+                            profile = profile,
+                        )
+
+                    val jar =
+                        createJar(
+                            clock.now(),
+                            presentation.transactionData,
+                            presentation.channel,
+                            presentation.query,
+                            presentation.nonce,
+                            null,
+                            EncryptionRequirement.NotRequired,
+                        )
+                    val authorizationRequest =
+                        InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
+                            presentation.id.value,
+                            verifierConfig.verifierId.clientId,
+                            jar,
+                            unresolvedAuthorizationRequestUri.resolve(verifierConfig.verifierId, jar).toURI(),
+                        )
+                    presentation to authorizationRequest
+                }
+            }
 
         val response =
             when (initTransactionTO.output) {
                 Output.Json -> {
-                    request
+                    authorizationRequest
                 }
 
                 Output.QrCode -> {
                     InitTransactionResponse.QrCode(
-                        generateQrCode(request.authorizationRequestUri, size = (250.pixels by 250.pixels)),
-                        request.transactionId,
-                        request.authorizationRequestUri,
+                        generateQrCode(authorizationRequest.authorizationRequestUri, size = (250.pixels by 250.pixels)),
+                        authorizationRequest.transactionId,
+                        authorizationRequest.authorizationRequestUri,
                     )
                 }
             }
 
-        storePresentation(updatedPresentation)
-        logTransactionInitialized(updatedPresentation, request, profile)
+        storePresentation(presentation)
+        logTransactionInitialized(presentation, authorizationRequest, profile)
 
         return response
     }
@@ -431,59 +484,6 @@ class InitTransactionLive(
             requestedPresentation.id.value,
         )
     }
-
-    /**
-     * Creates a request and depending on the case updates also the [requestedPresentation]
-     *
-     * If the [requestJarOption] or the verifier has been configured to use request parameter then
-     * presentation will be updated to [Presentation.RequestObjectRetrieved].
-     *
-     * Otherwise, [requestedPresentation] will remain as is
-     */
-    private suspend fun createRequest(
-        requestedPresentation: Presentation.Requested,
-        requestJarOption: EmbedOption<RequestId>,
-        authorizationRequestUri: UnresolvedAuthorizationRequestUri,
-    ): Pair<Presentation, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> =
-        when (requestJarOption) {
-            is EmbedOption.ByValue -> {
-                val jwt =
-                    createJar(
-                        clock.now(),
-                        requestedPresentation.transactionData,
-                        requestedPresentation.channel,
-                        requestedPresentation.query,
-                        requestedPresentation.nonce,
-                        null,
-                        EncryptionRequirement.NotRequired,
-                    )
-                val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock)
-                requestObjectRetrieved to
-                    InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
-                        requestedPresentation.id.value,
-                        verifierConfig.verifierId.clientId,
-                        jwt,
-                        authorizationRequestUri.resolve(verifierConfig.verifierId, jwt).toURI(),
-                    )
-            }
-
-            is EmbedOption.ByReference -> {
-                val requestUri = requestJarOption.buildUrl(requestedPresentation.channel.requestId)
-                requestedPresentation to
-                    InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
-                        requestedPresentation.id.value,
-                        verifierConfig.verifierId.clientId,
-                        requestUri,
-                        requestedPresentation.channel.requestUriMethod.toTO(),
-                        authorizationRequestUri
-                            .resolve(
-                                verifierConfig.verifierId,
-                                Uri.parse(requestUri.toString()),
-                                requestedPresentation.channel.requestUriMethod,
-                            ).toURI(),
-                    )
-            }
-        }
 
     /**
      * Gets the JAR [RequestUriMethod] for the provided [InitTransactionTO].
