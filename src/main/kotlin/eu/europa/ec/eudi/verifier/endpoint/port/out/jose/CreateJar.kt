@@ -15,16 +15,20 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.EncryptionRequirement
-import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
-import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
+import arrow.core.NonEmptyList
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import kotlin.time.Instant
 
 /**
  * An out port that signs and encrypts a [Presentation.Requested]
  */
 fun interface CreateJar {
     suspend operator fun invoke(
-        presentation: Presentation.Requested,
+        issuedAt: Instant,
+        transactionData: NonEmptyList<TransactionData>?,
+        channel: Channel,
+        query: DCQL,
+        nonce: Nonce,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,
     ): Jwt

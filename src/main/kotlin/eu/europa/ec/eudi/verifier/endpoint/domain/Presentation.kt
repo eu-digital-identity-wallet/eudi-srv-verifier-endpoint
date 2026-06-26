@@ -178,7 +178,7 @@ sealed interface Presentation {
     class Requested(
         override val id: TransactionId,
         override val initiatedAt: Instant,
-        override val channel: Channel,
+        override val channel: Channel.OverHttp,
         val query: DCQL,
         val transactionData: NonEmptyList<TransactionData>?,
         val nonce: Nonce,
@@ -192,7 +192,7 @@ sealed interface Presentation {
      * as part of the initialization of the process (when using request JAR parameter)
      * or later on (when using request_uri JAR parameter)
      */
-    class RequestObjectRetrieved private constructor(
+    class RequestObjectRetrieved(
         override val id: TransactionId,
         override val initiatedAt: Instant,
         override val channel: Channel,
