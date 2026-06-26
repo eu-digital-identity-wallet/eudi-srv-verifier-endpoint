@@ -382,7 +382,7 @@ class InitTransactionLive(
         }
 
         // Initialize presentation
-        val requestedPresentation =
+        val presentation =
             Presentation.RequestObjectRetrieved(
                 id = generateTransactionId(),
                 initiatedAt = clock.now(),
@@ -395,23 +395,23 @@ class InitTransactionLive(
                 profile = profile,
             )
 
-        val jwt =
+        val jar =
             createJar(
                 clock.now(),
-                requestedPresentation.transactionData,
-                requestedPresentation.channel,
-                requestedPresentation.query,
-                requestedPresentation.nonce,
+                presentation.transactionData,
+                presentation.channel,
+                presentation.query,
+                presentation.nonce,
                 null,
                 EncryptionRequirement.NotRequired,
             )
 
-        storePresentation(requestedPresentation)
-        logTransactionInitialized(requestedPresentation, jwt)
+        storePresentation(presentation)
+        logTransactionInitialized(presentation, jar)
 
         return InitDcApiTransactionResponseTO(
-            jwt,
-            requestedPresentation.id.value,
+            jar,
+            presentation.id.value,
         )
     }
 
