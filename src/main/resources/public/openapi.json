@@ -196,7 +196,7 @@
           "verifier api"
         ],
         "description": "Initialize a new DC Api Transaction ",
-        "operationId": "InitializeDcApiTransaction",
+        "operationId": "initializeDcApiTransaction",
         "requestBody": {
           "description": "The details of the new DC Api Transaction.",
           "required": true,
@@ -206,7 +206,7 @@
                 "$ref": "#/components/schemas/InitDcApiTransaction"
               },
               "examples": {
-                "InitTransactionOverDcApi": {
+                "InitDcApiTransaction": {
                   "$ref": "#/components/examples/InitDcApiTransaction"
                 }
               }
@@ -227,8 +227,8 @@
                   "$ref": "#/components/schemas/InitDcApiTransactionResponse"
                 },
                 "examples": {
-                  "TransactionDcApiSigned": {
-                    "$ref": "#/components/examples/DcApiTransactionResponse"
+                  "InitDcApiTransactionResponse": {
+                    "$ref": "#/components/examples/InitDcApiTransactionResponse"
                   }
                 }
               }
@@ -896,7 +896,7 @@
           "request": {
             "allOf": [
               {
-                "description": "The generated authorization request, serialized as a json object."
+                "description": "The signed authorization request."
               },
               {
                 "$ref": "#/components/schemas/Request"
@@ -928,7 +928,7 @@
           "request": {
             "allOf": [
               {
-                "description": "The generated authorization request, serialized as a json object."
+                "description": "The signed authorization request."
               },
               {
                 "$ref": "#/components/schemas/Request"
@@ -1032,7 +1032,7 @@
           "request": {
             "allOf": [
               {
-                "description": "The generated authorization request, serialized as a json object."
+                "description": "The signed authorization request."
               },
               {
                 "$ref": "#/components/schemas/Request"
@@ -2184,7 +2184,7 @@
         }
       },
       "InitDcApiTransaction": {
-        "description": "Initialize a signed Transaction over DC API, using DCQL. The authorization request is returned as a signed JWT.",
+        "description": "Initialize a Transaction over DC API. A signed authorization request is returned.",
         "value": {
           "dcql_query": {
             "credentials": [
@@ -2215,7 +2215,7 @@
           "origin": "https://wallet.example.com"
         }
       },
-      "DcApiTransactionResponse": {
+      "InitDcApiTransactionResponse": {
         "description": "Transaction initialized over DC API. The authorization request is returned as a signed JWT.",
         "value": {
           "request": "eyJ4NWMiOlsiTUlJQjV6Q0NBVXFnQXdJQkFnSUVaWUtlVnpBS0JnZ3Foa2pPUFFRREJEQVhNUlV3RXdZRFZRUUREQXhwYm5SbGNtMWxaR2xoZEdVd0lCY05Nak14TWpJd01EYzFOekV4V2hnUE1qRXlNekV5TWpBd056VTNNVEZhTUJNeEVUQVBCZ05WQkFNTUNIWmxjbWxtYVdWeU1JR2JNQkFHQnlxR1NNNDlBZ0VHQlN1QkJBQWpBNEdHQUFRQTlhRGhQY1ZBaDRrUC9GQTNTUnFua3pPbnVVblhzSzJEOVB3YkxiaVhBNm44UWlFUE1FcjB5Z0s1OUlnaE5HaVZhVnlNVk9QZFBMM1VMMnR5MU81Si9RVUFTY1VNcUo1eTZxZG54Y3dxQzN0MFZsWkYrYk04V3VCQ1pxN0NWdGNNTFNRY0ptRlh2cFU2QUtoWjNOOUl0NkFzb2FmNmNnMEFoR285SDJmWW8rbERBcWVqUXpCQk1DRUdBMVVkRVFFQi93UVhNQldDQ1d4dlkyRnNhRzl6ZElJSWRtVnlhV1pwWlhJd0RBWURWUjBUQVFIL0JBSXdBREFPQmdOVkhROEJBZjhFQkFNQ0I0QXdDZ1lJS29aSXpqMEVBd1FEZ1lvQU1JR0dBa0UzTmVBejlGOCtEbVROV1pYdHRZbDZ5Y2FtQ3FLWlEwbTdsczlKQnhJOUtjL3ROdGkxajgwVyt5WmZ1eDhNRjZUNCt3a3VNODlheTBxYjArNUR6ZEF4NGdKQkNLWE5LSEpLTkNTOEFPUjRlenZ2Y3FkMWhtOVlhMStHUVNTYm04cDR2QUVZemJCQUlPdmx0bVVqN2dQUFlDYU94QjhhbGtBSDZJWExIR2lXeFhQVEpFaz0iLCJNSUlCK1RDQ0FWdWdBd0lCQWdJRVpZR2xSakFLQmdncWhrak9QUVFEQkRBUE1RMHdDd1lEVlFRRERBUnliMjkwTUNBWERUSXpNVEl4T1RFME1UUXpNRm9ZRHpJeE1qTXhNakU1TVRReE5ETXdXakFYTVJVd0V3WURWUVFEREF4cGJuUmxjbTFsWkdsaGRHVXdnWnN3RUFZSEtvWkl6ajBDQVFZRks0RUVBQ01EZ1lZQUJBR0xQSHdmTG9IWTNZVmRoY1dkdzZIUTBsWFYvUDA2M0x6Uzhsd0h2ZjRZTTU3dGNWUkJxN3JUWUJoeVYxdDBnSnZOSFUyOHNXSDhxWXk5ZFcxcHJlc0dVd0RqWk5WMkxoZ1lHUzIrOWpTQ0JSN0FtbDQwSWJxdEhSQUhzNEJlbEVMN2pudnlGaEhSWG1UQ3FTMzcvSTVtY0dOdEhBOXkxQnEybVl2dUtmUDl4RzU0OEtOWU1GWXdHZ1lEVlIwUkFRSC9CQkF3RG9JTWFXNTBaWEp0WldScFlYUmxNQm9HQTFVZEVnRUIvd1FRTUE2Q0RHbHVkR1Z5YldWa2FXRjBaVEFNQmdOVkhSTUJBZjhFQWpBQU1BNEdBMVVkRHdFQi93UUVBd0lCQmpBS0JnZ3Foa2pPUFFRREJBT0Jpd0F3Z1ljQ1FYMDdWYXZZMjN2cG5sYUF2Z01MeC8vUHplWFg1dlNOeTdMTjlVVWdrNGFWRWM0VE0rTG1DNVJzSFJPVkE5LzljaXZUNm1SWWM3MngwQjJpclR4cDZIME5Ba0lCVERYZFduM3J5MkhzWHZHS1FDQWN5TEEvS09GN2pUcXJwYlZhY09ac1dCRWZZT1NBY1JPVjR5WVZnQ05PZW1RbndwSGZXbjVGYW5GWmNMME1FWkdnOC9ZPSJdLCJ0eXAiOiJvYXV0aC1hdXRoei1yZXErand0IiwiYWxnIjoiRVM1MTIifQ.eyJhdWQiOiJodHRwczovL3NlbGYtaXNzdWVkLm1lL3YyIiwicmVzcG9uc2VfdHlwZSI6InZwX3Rva2VuIiwiZXhwZWN0ZWRfb3JpZ2lucyI6WyJodHRwczovL3dhbGxldC5leGFtcGxlLmNvbSJdLCJkY3FsX3F1ZXJ5Ijp7ImNyZWRlbnRpYWxzIjpbeyJpZCI6InBpZCIsImZvcm1hdCI6Im1zb19tZG9jIiwibWV0YSI6eyJkb2N0eXBlX3ZhbHVlIjoiZXUuZXVyb3BhLmVjLmV1ZGkucGlkLjEifSwiY2xhaW1zIjpbeyJwYXRoIjpbImV1LmV1cm9wYS5lYy5ldWRpLnBpZC4xIiwiZmFtaWx5X25hbWUiXX0seyJwYXRoIjpbImV1LmV1cm9wYS5lYy5ldWRpLnBpZC4xIiwiZ2l2ZW5fbmFtZSJdfV19XX0sImlhdCI6MTc4MjM4NzU1Niwibm9uY2UiOiI4OGM2MTVhMi1iN2NhLTQzMjktYjY3My0zZjRjNDE0NmFkMzMiLCJjbGllbnRfaWQiOiJ4NTA5X2hhc2g6aTdqWmlTcWE0R1hOaDFMekJ3RDJsVnRLSWNJaHBpblJRUm84QkhTVk14MCIsImNsaWVudF9tZXRhZGF0YSI6eyJqd2tzIjp7ImtleXMiOlt7Imt0eSI6IkVDIiwidXNlIjoiZW5jIiwiY3J2IjoiUC0yNTYiLCJraWQiOiI3ZDUzZGJlMS1lYTU0LTRmNzctODE2YS1jNTI0YzA2YjlkNjciLCJ4IjoiZDVSNF9rWVljTnJ6cVBGc1MtcUJkcXItMzFPekpjSHFrczNrRTh4UDdVQSIsInkiOiJGZVJEREtPZkNKdEExSld3ZldEUll5M0VNTXo1N2NWWXlTUUkyS2p5YXNzIiwiYWxnIjoiRUNESC1FUyJ9XX0sInZwX2Zvcm1hdHNfc3VwcG9ydGVkIjp7ImRjK3NkLWp3dCI6eyJzZC1qd3RfYWxnX3ZhbHVlcyI6WyJFUzI1NiJdLCJrYi1qd3RfYWxnX3ZhbHVlcyI6WyJFUzI1NiJdfSwibXNvX21kb2MiOnsiaXNzdWVyYXV0aF9hbGdfdmFsdWVzIjpbLTcsLTM1LC0zNl0sImRldmljZWF1dGhfYWxnX3ZhbHVlcyI6Wy03LC0zNSwtMzZdfX0sImVuY3J5cHRlZF9yZXNwb25zZV9lbmNfdmFsdWVzX3N1cHBvcnRlZCI6WyJBMTI4R0NNIiwiQTI1NkdDTSJdfSwicmVzcG9uc2VfbW9kZSI6ImRjX2FwaS5qd3QifQ.AHkp_ee9Fqn-s_L5uS8VKowe7yEKSyc7FSNJanZMCAh1Fsd5twn8CGRGUkR_IRro_dYcdyRrlebC9E9kQMH-d3i6AUMxjpjlnmx4iJFMWIB6nRM0a5hrMZT80pg7ifn4td2OUtA-spAiq9cxDrsPj2myzTFy_AeI58iOs0xwv57UjUG9",

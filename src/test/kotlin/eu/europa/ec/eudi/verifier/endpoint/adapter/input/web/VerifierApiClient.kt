@@ -47,17 +47,13 @@ object VerifierApiClient {
      * Initializes a Digital Credentials API (DC API) Transaction.
      *
      * Posts an [InitDcApiTransactionTO] to [VerifierApi.INIT_TRANSACTION_PATH_DC_API] and returns
-     * the raw response body parsed as a [JsonObject] together with the value of the
+     * the raw response body parsed as a [InitDcApiTransactionResponseTO] together with the value of the
      * [TRANSACTION_ID_HEADER] response header.
-     *
-     * The response body is returned as a generic [JsonObject] (instead of being deserialized to the
-     * sealed `DCApiTransactionResponse`), so that tests can assert on the exact wire format of either
-     * an unsigned request (where `request` is a JSON object) or a signed request (where `request` is a JWT string).
      */
     fun initDCApiTransaction(
         client: WebTestClient,
         initDCApiTransactionTO: InitDcApiTransactionTO,
-    ): Pair<InitDcApiTransactionResponseTO, String?> {
+    ): Pair<InitDcApiTransactionResponseTO, String> {
         val result =
             client
                 .post()
@@ -71,8 +67,8 @@ object VerifierApiClient {
                 .expectBody<InitDcApiTransactionResponseTO>()
                 .returnResult()
 
-        val transactionId = result.responseHeaders.getFirst(TRANSACTION_ID_HEADER)
-        val body = result.responseBody!!
+        val transactionId = checkNotNull(result.responseHeaders.getFirst(TRANSACTION_ID_HEADER))
+        val body = checkNotNull(result.responseBody)
         log.info("DC API init response body:\n$body")
         return body to transactionId
     }
