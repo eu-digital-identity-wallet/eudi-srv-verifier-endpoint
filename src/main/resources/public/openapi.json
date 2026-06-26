@@ -2160,9 +2160,7 @@
             "docTypes": []
           },
           "pubeaa": {
-            "vcts": [
-              "urn:eudi:ehic:1"
-            ],
+            "vcts": [],
             "docTypes": []
           },
           "eaa": [

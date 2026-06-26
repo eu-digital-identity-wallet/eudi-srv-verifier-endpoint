@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import arrow.core.right
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWEEncrypter
 import com.nimbusds.jose.JWEHeader
@@ -291,7 +290,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
     @Test
     fun `when wallet posts sd-jwt-vc with invalid status list details, post fails`() =
         runTest {
-            val initTransaction = VerifierApiClient.loadInitTransactionTO("07-ehicSdJwtVc-dcql.json")
+            val initTransaction = VerifierApiClient.loadInitTransactionTO("07-mdl-dcql.json")
             val transactionDetails =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
                     VerifierApiClient.initTransaction(
@@ -317,7 +316,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
                     val jwtClaims: JWTClaimsSet =
                         buildJsonObject {
                             put("state", requestId.value)
-                            put("vp_token", Json.decodeFromString(TestUtils.loadResource("07-ehicSdJwtVc-vpToken.json")))
+                            put("vp_token", Json.decodeFromString(TestUtils.loadResource("08-invalidStatusList-vpToken.json")))
                         }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
                     val jweHeader =
@@ -407,7 +406,7 @@ internal class DeviceResponseValidationTest {
     @DirtiesContext
     fun `when wallet responds with a deviceresponse that contains valid deviceauthentication, validations succeeds`() =
         runTest {
-            val initTransaction = VerifierApiClient.loadInitTransactionTO("08-mdl-dcql.json")
+            val initTransaction = VerifierApiClient.loadInitTransactionTO("07-mdl-dcql.json")
             val transactionDetails =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
                     VerifierApiClient.initTransaction(client, initTransaction),
@@ -419,7 +418,7 @@ internal class DeviceResponseValidationTest {
                     val jwtClaims: JWTClaimsSet =
                         buildJsonObject {
                             put("state", Config.requestId.value)
-                            put("vp_token", Json.decodeFromString(TestUtils.loadResource("08-mdl-vpToken.json")))
+                            put("vp_token", Json.decodeFromString(TestUtils.loadResource("07-mdl-vpToken.json")))
                         }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
                     val jweHeader =
@@ -463,7 +462,7 @@ internal class DeviceResponseValidationTest {
     fun `when wallet responds with a deviceresponse that contains invalid deviceauthentication, validations fail`() =
         runTest {
             // Set a different Nonce that what is included in OpenID4VPHandoverInfo, to cause a validation failure
-            val initTransaction = VerifierApiClient.loadInitTransactionTO("08-mdl-dcql.json").copy(nonce = "nonce")
+            val initTransaction = VerifierApiClient.loadInitTransactionTO("07-mdl-dcql.json").copy(nonce = "nonce")
             val transactionDetails =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
                     VerifierApiClient.initTransaction(client, initTransaction),
@@ -475,7 +474,7 @@ internal class DeviceResponseValidationTest {
                     val jwtClaims: JWTClaimsSet =
                         buildJsonObject {
                             put("state", Config.requestId.value)
-                            put("vp_token", Json.decodeFromString(TestUtils.loadResource("08-mdl-vpToken.json")))
+                            put("vp_token", Json.decodeFromString(TestUtils.loadResource("07-mdl-vpToken.json")))
                         }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
                     val jweHeader =
