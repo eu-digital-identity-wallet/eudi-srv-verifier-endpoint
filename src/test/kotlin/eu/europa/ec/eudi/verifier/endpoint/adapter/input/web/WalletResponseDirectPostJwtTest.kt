@@ -290,7 +290,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
     @Test
     fun `when wallet posts sd-jwt-vc with invalid status list details, post fails`() =
         runTest {
-            val initTransaction = VerifierApiClient.loadInitTransactionTO("07-mdl-dcql.json")
+            val initTransaction = VerifierApiClient.loadInitTransactionTO("08-invalidStatusList-dcql.json")
             val transactionDetails =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
                     VerifierApiClient.initTransaction(

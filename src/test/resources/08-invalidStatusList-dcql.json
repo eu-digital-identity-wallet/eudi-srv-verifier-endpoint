@@ -1,0 +1,37 @@
+{
+  "dcql_query": {
+    "credentials": [
+      {
+        "id": "sample_credential",
+        "format": "dc+sd-jwt",
+        "meta": {
+          "vct_values": [
+            "urn:credential:sample"
+          ]
+        },
+        "claims": [
+          {
+            "id": "given_name",
+            "path": [
+              "given_name"
+            ]
+          },
+          {
+            "id": "family_name",
+            "path": [
+              "family_name"
+            ]
+          },
+          {
+            "id": "birthdate",
+            "path": [
+              "birthdate"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "nonce": "706f6c4d-c92d-4472-9dbf-d814c94f90c2",
+  "request_uri_method": "get"
+}
