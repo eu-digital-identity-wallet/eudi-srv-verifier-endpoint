@@ -552,7 +552,7 @@ class InitTransactionLive(
             }
 
             ResponseModeOption.DcApi -> {
-                DcApi
+                error("DcApi response mode is not supported")
             }
 
             ResponseModeOption.DcApiJwt -> {

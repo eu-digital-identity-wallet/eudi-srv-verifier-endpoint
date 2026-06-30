@@ -406,17 +406,6 @@ class PostWalletResponseLive(
 
             is Channel.OverDcApi -> {
                 when (val responseMode = channel.responseMode) {
-                    is ResponseMode.OverDcApi.DcApi -> {
-                        ensure(walletResponse is AuthorisationResponse.DcApi) {
-                            UnexpectedResponseMode(
-                                null,
-                                expected = ResponseModeOption.DcApi,
-                                actual = walletResponse.responseModeOption,
-                            )
-                        }
-                        walletResponse.response
-                    }
-
                     is ResponseMode.OverDcApi.DcApiJwt -> {
                         when (walletResponse) {
                             is AuthorisationResponse.DcApi -> {
@@ -558,7 +547,6 @@ private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
 
             is Channel.OverDcApi -> {
                 when (val responseMode = channel.responseMode) {
-                    ResponseMode.OverDcApi.DcApi -> null
                     is ResponseMode.OverDcApi.DcApiJwt -> responseMode.ephemeralResponseEncryptionKey
                 }
             }
