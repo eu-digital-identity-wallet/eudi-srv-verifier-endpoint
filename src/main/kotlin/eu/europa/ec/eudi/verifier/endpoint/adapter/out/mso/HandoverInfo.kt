@@ -58,6 +58,7 @@ sealed interface HandoverInfo {
                         nonce = presentation.nonce,
                         ephemeralEncryptionKey =
                             when (val responseMode = presentation.channel.responseMode) {
+                                is ResponseMode.OverDcApi.DcApi -> null
                                 is ResponseMode.OverDcApi.DcApiJwt -> responseMode.ephemeralResponseEncryptionKey.toPublicJWK()
                             },
                     )

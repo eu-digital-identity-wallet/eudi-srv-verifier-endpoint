@@ -200,7 +200,7 @@ internal class AppBeans :
         }
 
         registerBean { GenerateResponseCode.Random }
-        registerBean { PostWalletResponseLive(bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean()) }
+        registerBean { PostWalletResponseLive(bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean()) }
         registerBean { GenerateEphemeralEncryptionKeyPairNimbus(bean<VerifierConfig>().clientMetaData.responseEncryptionOption) }
         registerBean { GetWalletResponseLive(bean(), bean(), bean()) }
         registerBean { GetPresentationEventsLive(bean(), bean()) }
@@ -394,6 +394,7 @@ internal class AppBeans :
                 )
             val verifierApi =
                 VerifierApi(
+                    bean(),
                     bean(),
                     bean(),
                     bean(),

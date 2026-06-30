@@ -193,26 +193,29 @@ internal class SdJwtVcValidator(
     suspend fun validate(
         unverified: String,
         nonce: Nonce,
+        expectedAudience: String?,
         transactionId: TransactionId? = null,
-    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.right(), nonce, transactionId)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.right(), nonce, expectedAudience ?: audience.clientId, transactionId)
 
     context(_: Raise<NonEmptyList<SdJwtVcValidationError>>)
     suspend fun validate(
         unverified: JsonObject,
         nonce: Nonce,
+        expectedAudience: String?,
         transactionId: TransactionId? = null,
-    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.left(), nonce, transactionId)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.left(), nonce, expectedAudience ?: audience.clientId, transactionId)
 
     context(_: Raise<NonEmptyList<SdJwtVcValidationError>>)
     private suspend fun validate(
         unverified: Either<JsonObject, String>,
         nonce: Nonce,
+        expectedAudience: String,
         transactionId: TransactionId?,
     ): SdJwtAndKbJwt<SignedJWT> {
         val challenge =
             ChallengePredicate(
                 issuedAt = clock.now(),
-                audience = audience.clientId,
+                audience = expectedAudience,
                 nonce = nonce.value,
                 skew = skew,
             )

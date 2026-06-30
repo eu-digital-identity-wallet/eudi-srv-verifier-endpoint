@@ -307,6 +307,80 @@
         }
       }
     },
+    "/ui/presentations/{transactionId}/dc-api-response": {
+      "post": {
+        "tags": [
+          "verifier api"
+        ],
+        "description": "Submits a DC API Wallet Response for a Transaction.",
+        "operationId": "postDcApiWalletResponse",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TransactionId"
+            },
+            "allowEmptyValue": false,
+            "description": "The unique identifier of the Transaction."
+          }
+        ],
+        "requestBody": {
+          "description": "The Wallet's authorisation response, submitted as form data. Either a 'response' JWE encrypted JWT, or the individual DC API response parameters.",
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "nullable": false,
+                "properties": {
+                  "response": {
+                    "type": "string",
+                    "nullable": false,
+                    "description": "An encrypted JWT (JWE) containing the Wallet's authorisation response."
+                  },
+                  "state": {
+                    "type": "string",
+                    "nullable": false,
+                    "description": "The state value from the authorization request."
+                  },
+                  "vp_token": {
+                    "type": "string",
+                    "nullable": false,
+                    "description": "The VP Token provided by the Wallet, as a JSON string."
+                  },
+                  "error": {
+                    "$ref": "#/components/schemas/Error"
+                  },
+                  "error_description": {
+                    "$ref": "#/components/schemas/ErrorDescription"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ok"
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitTransactionError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
     "/ui/presentations/{transactionId}/events": {
       "get": {
         "tags": [
@@ -429,7 +503,7 @@
         "description": "Validates an SD-JWT Verifiable Credentials.<p>Verifies the provided value: <ol><li>Is an SD-JWT-VC serialized using compact serialization</li><li>Is signed by a trusted Issuer (checked against a configured X5C chain)</li><li>Contains a valid KeyBinding JWT (with this Verifier as the Audience and the provided Nonce value)</ol></p>",
         "operationId": "validateSdJwtVc",
         "requestBody": {
-          "description": "The value to validate as an SD-JWT Verifiable Credential and the expected Nonce of the KeyBinding JWT.",
+          "description": "The value to validate as an SD-JWT Verifiable Credential, the expected Nonce of the KeyBinding JWT, and optionally the expected audience.",
           "required": true,
           "content": {
             "application/x-www-form-urlencoded": {
@@ -1576,6 +1650,10 @@
           },
           "nonce": {
             "$ref": "#/components/schemas/Nonce"
+          },
+          "expected_audience": {
+            "type": "string",
+            "description": "The expected audience for the Key Binding JWT."
           },
           "issuer_chain": {
             "$ref": "#/components/schemas/IssuerChain"

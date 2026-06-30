@@ -17,16 +17,21 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import arrow.core.raise.effect
 import arrow.core.raise.fold
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi.Companion.toJson
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.IMAGE_PNG
+import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import kotlin.jvm.optionals.getOrNull
@@ -35,6 +40,7 @@ internal class VerifierApi(
     private val initTransaction: InitTransaction,
     private val getWalletResponse: GetWalletResponse,
     private val getPresentationEvents: GetPresentationEvents,
+    private val postWalletResponse: PostWalletResponse,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
     val route =
@@ -51,6 +57,11 @@ internal class VerifierApi(
                 INIT_TRANSACTION_PATH_DC_API,
                 contentType(APPLICATION_JSON) and accept(APPLICATION_JSON),
             ) { request -> handleInitDCApiTransaction(request) }
+
+            POST(
+                DC_API_WALLET_RESPONSE_PATH,
+                contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
+            ) { request -> handlePostDCApiWalletResponse(request) }
 
             GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
             GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
@@ -136,6 +147,41 @@ internal class VerifierApi(
             },
         )
 
+    private suspend fun handlePostDCApiWalletResponse(req: ServerRequest): ServerResponse {
+        val transactionId = req.transactionId()
+        return effect {
+            logger.info("Handling PostDCApiWalletResponse for tx ${transactionId.value} ...")
+            val walletResponse = req.awaitFormData().walletResponse()
+            postWalletResponse(PresentationLookup.ByTransactionId(transactionId), walletResponse)
+        }.fold(
+            transform = { ok().buildAndAwait() },
+            recover = { error ->
+                logger.warn("PostDCApiWalletResponse failed for tx ${transactionId.value}: $error")
+                badRequest().json().bodyValueAndAwait(error.toJson())
+            },
+        )
+    }
+
+    private fun MultiValueMap<String, String>.walletResponse(): AuthorisationResponse {
+        fun dcApi(): AuthorisationResponse.DcApi {
+            fun String.toJsonObject(): JsonObject = Json.decodeFromString<JsonObject>(this)
+
+            return AuthorisationResponseTO(
+                state = getFirst("state"),
+                vpToken = getFirst("vp_token")?.toJsonObject(),
+                error = getFirst("error"),
+                errorDescription = getFirst("error_description"),
+            ).run { AuthorisationResponse.DcApi(this) }
+        }
+
+        fun dcApiJwt() =
+            getFirst("response")?.let { jwt ->
+                AuthorisationResponse.DcApiJwt(jwt)
+            }
+
+        return dcApiJwt() ?: dcApi()
+    }
+
     /**
      * Handles a request placed by verifier, input order to obtain
      * the wallet authorization response
@@ -175,6 +221,7 @@ internal class VerifierApi(
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
         const val INIT_TRANSACTION_PATH_V2 = "/ui/presentations/v2"
         const val INIT_TRANSACTION_PATH_DC_API = "/ui/presentations/dc-api"
+        const val DC_API_WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}/dc-api-response"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
         const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
 

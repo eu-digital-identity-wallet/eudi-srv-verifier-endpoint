@@ -83,28 +83,31 @@ internal class ValidateSdJwtVc(
     suspend operator fun invoke(
         unverified: JsonObject,
         nonce: Nonce,
+        expectedAudience: String? = null,
         issuerChain: String?,
-    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.left(), nonce, issuerChain)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.left(), nonce, expectedAudience, issuerChain)
 
     context(_: Raise<NonEmptyList<SdJwtVcValidationErrorDetailsTO>>)
     suspend operator fun invoke(
         unverified: String,
         nonce: Nonce,
+        expectedAudience: String? = null,
         issuerChain: String?,
-    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.right(), nonce, issuerChain)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.right(), nonce, expectedAudience, issuerChain)
 
     context(_: Raise<NonEmptyList<SdJwtVcValidationErrorDetailsTO>>)
     private suspend fun validate(
         unverified: Either<JsonObject, String>,
         nonce: Nonce,
+        expectedAudience: String? = null,
         issuerChain: String?,
     ): SdJwtAndKbJwt<SignedJWT> {
         val sdJwtVcValidator = sdJwtVcValidator(issuerChain)
 
         return withError({ errors -> errors.map { it.toSdJwtVcValidationError() } }) {
             unverified.fold(
-                ifLeft = { sdJwtVcValidator.validate(it, nonce, null) },
-                ifRight = { sdJwtVcValidator.validate(it, nonce, null) },
+                ifLeft = { sdJwtVcValidator.validate(it, nonce, expectedAudience, null) },
+                ifRight = { sdJwtVcValidator.validate(it, nonce, expectedAudience, null) },
             )
         }
     }

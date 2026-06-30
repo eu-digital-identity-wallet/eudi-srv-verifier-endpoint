@@ -551,6 +551,10 @@ class InitTransactionLive(
                 DirectPostJwt(responseEncryptionKey)
             }
 
+            ResponseModeOption.DcApi -> {
+                DcApi
+            }
+
             ResponseModeOption.DcApiJwt -> {
                 val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
                 DcApiJwt(responseEncryptionKey)

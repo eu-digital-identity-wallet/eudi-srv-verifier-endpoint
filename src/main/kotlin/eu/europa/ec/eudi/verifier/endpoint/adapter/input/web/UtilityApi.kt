@@ -91,8 +91,9 @@ internal class UtilityApi(
             val form = request.awaitFormData()
             val unverifiedSdJwtVc = form.unprocessedSdJwtVc()
             val nonce = form.nonce()
+            val expectedAudience = form.expectedAudience()
             val issuerChain = form.issuerChain()
-            validateSdJwtVc(unverifiedSdJwtVc, nonce, issuerChain)
+            validateSdJwtVc(unverifiedSdJwtVc, nonce, expectedAudience, issuerChain)
         }.fold(
             transform = { result ->
                 val (reCreated, _) =
@@ -138,6 +139,8 @@ private fun MultiValueMap<String, String>.nonce(): Nonce {
     val nonce = this["nonce"]?.firstOrNull { it.isNotBlank() }?.let(::Nonce)
     return requireNotNull(nonce) { "nonce must be provided" }
 }
+
+private fun MultiValueMap<String, String>.expectedAudience(): String? = this["expected_audience"]?.firstOrNull { it.isNotBlank() }
 
 private fun MultiValueMap<String, String>.deviceResponse(): String {
     val deviceResponse = this["device_response"]?.firstOrNull { it.isNotBlank() }

@@ -33,6 +33,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationEr
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyEncryptedResponse
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
@@ -63,12 +64,18 @@ sealed interface AuthorisationResponse {
         val encryptedResponse: Jwt,
     ) : AuthorisationResponse
 
+    data class DcApi(
+        val response: AuthorisationResponseTO,
+    ) : AuthorisationResponse
+
     data class DcApiJwt(
         val encryptedResponse: Jwt,
     ) : AuthorisationResponse
 }
 
 private fun AuthorisationResponse.DirectPost.isErrorResponse(): Boolean = null != response.error
+
+private fun AuthorisationResponse.DcApi.isErrorResponse(): Boolean = null != response.error
 
 sealed interface WalletResponseValidationError {
     data object PresentationNotFound : WalletResponseValidationError
@@ -229,6 +236,24 @@ data class WalletResponseAcceptedTO(
 )
 
 /**
+ * Identifies a [Presentation] to be looked up when posting a wallet response.
+ *
+ * Use [ByRequestId] when the caller has a [RequestId] (e.g. WalletApi direct-post flow).
+ * Use [ByTransactionId] when the caller has a [TransactionId] (e.g. VerifierApi DC API flow).
+ */
+sealed interface PresentationLookup {
+    @JvmInline
+    value class ByRequestId(
+        val requestId: RequestId,
+    ) : PresentationLookup
+
+    @JvmInline
+    value class ByTransactionId(
+        val transactionId: TransactionId,
+    ) : PresentationLookup
+}
+
+/**
  * This is use-case 12 of the [Presentation] process.
  *
  * The caller (wallet) may POST the [AuthorisationResponseTO] to the verifier back-end
@@ -236,7 +261,7 @@ data class WalletResponseAcceptedTO(
 fun interface PostWalletResponse {
     context(_: Raise<WalletResponseValidationError>)
     suspend operator fun invoke(
-        requestId: RequestId,
+        lookup: PresentationLookup,
         walletResponse: AuthorisationResponse,
     ): WalletResponseAcceptedTO?
 }
@@ -244,6 +269,7 @@ fun interface PostWalletResponse {
 private val log = LoggerFactory.getLogger(PostWalletResponse::class.java)
 
 class PostWalletResponseLive(
+    private val loadPresentationById: LoadPresentationById,
     private val loadPresentationByRequestId: LoadPresentationByRequestId,
     private val storePresentation: StorePresentation,
     private val verifyEncryptedResponse: VerifyEncryptedResponse,
@@ -256,12 +282,12 @@ class PostWalletResponseLive(
 ) : PostWalletResponse {
     context(_: Raise<WalletResponseValidationError>)
     override suspend operator fun invoke(
-        requestId: RequestId,
+        lookup: PresentationLookup,
         walletResponse: AuthorisationResponse,
     ): WalletResponseAcceptedTO? {
-        log.debug(requestId, walletResponse)
+        log.debug(lookup, walletResponse)
 
-        val presentation = loadPresentation(requestId)
+        val presentation = loadPresentation(lookup)
         ensure(presentation is RequestObjectRetrieved) {
             PresentationNotInExpectedState
         }
@@ -315,8 +341,12 @@ class PostWalletResponseLive(
     }
 
     context(_: Raise<WalletResponseValidationError>)
-    private suspend fun loadPresentation(requestId: RequestId): Presentation {
-        val presentation = loadPresentationByRequestId(requestId)
+    private suspend fun loadPresentation(lookup: PresentationLookup): Presentation {
+        val presentation =
+            when (lookup) {
+                is PresentationLookup.ByRequestId -> loadPresentationByRequestId(lookup.requestId)
+                is PresentationLookup.ByTransactionId -> loadPresentationById(lookup.transactionId)
+            }
         return ensureNotNull(presentation) { PresentationNotFound }
     }
 
@@ -376,8 +406,30 @@ class PostWalletResponseLive(
 
             is Channel.OverDcApi -> {
                 when (val responseMode = channel.responseMode) {
+                    is ResponseMode.OverDcApi.DcApi -> {
+                        ensure(walletResponse is AuthorisationResponse.DcApi) {
+                            UnexpectedResponseMode(
+                                null,
+                                expected = ResponseModeOption.DcApi,
+                                actual = walletResponse.responseModeOption,
+                            )
+                        }
+                        walletResponse.response
+                    }
+
                     is ResponseMode.OverDcApi.DcApiJwt -> {
                         when (walletResponse) {
+                            is AuthorisationResponse.DcApi -> {
+                                ensure(walletResponse.isErrorResponse()) {
+                                    UnexpectedResponseMode(
+                                        null,
+                                        expected = ResponseModeOption.DcApiJwt,
+                                        actual = ResponseModeOption.DcApi,
+                                    )
+                                }
+                                walletResponse.response
+                            }
+
                             is AuthorisationResponse.DcApiJwt -> {
                                 verifyEncryptedResponse(
                                     ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
@@ -473,6 +525,7 @@ private val AuthorisationResponse.responseModeOption: ResponseModeOption
         when (this) {
             is AuthorisationResponse.DirectPost -> ResponseModeOption.DirectPost
             is AuthorisationResponse.DirectPostJwt -> ResponseModeOption.DirectPostJwt
+            is AuthorisationResponse.DcApi -> ResponseModeOption.DcApi
             is AuthorisationResponse.DcApiJwt -> ResponseModeOption.DcApiJwt
         }
 private val AuthorisationResponse.encryptedResponseOrNull: Jwt?
@@ -480,6 +533,7 @@ private val AuthorisationResponse.encryptedResponseOrNull: Jwt?
         when (this) {
             is AuthorisationResponse.DirectPost -> null
             is AuthorisationResponse.DirectPostJwt -> encryptedResponse
+            is AuthorisationResponse.DcApi -> null
             is AuthorisationResponse.DcApiJwt -> encryptedResponse
         }
 
@@ -488,6 +542,7 @@ private val AuthorisationResponse.vpTokenOrNull: JsonObject?
         when (this) {
             is AuthorisationResponse.DirectPost -> response.vpToken
             is AuthorisationResponse.DirectPostJwt -> null
+            is AuthorisationResponse.DcApi -> response.vpToken
             is AuthorisationResponse.DcApiJwt -> null
         }
 
@@ -503,21 +558,35 @@ private val RequestObjectRetrieved.ephemeralResponseEncryptionKeyOrNull: JWK?
 
             is Channel.OverDcApi -> {
                 when (val responseMode = channel.responseMode) {
+                    ResponseMode.OverDcApi.DcApi -> null
                     is ResponseMode.OverDcApi.DcApiJwt -> responseMode.ephemeralResponseEncryptionKey
                 }
             }
         }
 
 private fun Logger.debug(
-    requestId: RequestId,
+    lookup: PresentationLookup,
     walletResponse: AuthorisationResponse,
 ) {
-    debug(
-        "RequestId({}):: Wallet posted response. \nEncrypted response: '{}', \nVP Token: '{}'",
-        requestId.value,
-        walletResponse.encryptedResponseOrNull,
-        walletResponse.vpTokenOrNull,
-    )
+    when (lookup) {
+        is PresentationLookup.ByRequestId -> {
+            debug(
+                "RequestId({}):: Wallet posted response. \nEncrypted response: '{}', \nVP Token: '{}'",
+                lookup.requestId.value,
+                walletResponse.encryptedResponseOrNull,
+                walletResponse.vpTokenOrNull,
+            )
+        }
+
+        is PresentationLookup.ByTransactionId -> {
+            debug(
+                "TransactionId({}):: Wallet posted response. \nEncrypted response: '{}', \nVP Token: '{}'",
+                lookup.transactionId.value,
+                walletResponse.encryptedResponseOrNull,
+                walletResponse.vpTokenOrNull,
+            )
+        }
+    }
 }
 
 private fun Logger.debug(
