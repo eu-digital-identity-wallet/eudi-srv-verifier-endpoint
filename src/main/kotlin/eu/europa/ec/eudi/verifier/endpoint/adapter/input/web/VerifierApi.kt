@@ -221,7 +221,7 @@ internal class VerifierApi(
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
         const val INIT_TRANSACTION_PATH_V2 = "/ui/presentations/v2"
         const val INIT_TRANSACTION_PATH_DC_API = "/ui/presentations/dc-api"
-        const val DC_API_WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}/dc-api-response"
+        const val DC_API_WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}/dc-api"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
         const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
 

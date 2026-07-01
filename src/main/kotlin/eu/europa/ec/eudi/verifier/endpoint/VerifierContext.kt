@@ -261,6 +261,7 @@ internal class AppBeans :
                     } ?: appDefault
                 },
                 bean(),
+                verifierId = bean<VerifierConfig>().verifierId,
             )
         }
         registerBean { ProcessSdJwtVc() }
@@ -506,7 +507,6 @@ private fun SupplierContextDsl<*>.sdJwtVcValidator(
                 isChainTrustedForContext,
                 config.attestationClassifications.toConsultationAttestationClassifications(),
             ),
-        audience = bean<VerifierConfig>().verifierId,
         statusListTokenValidator = beanProvider<StatusListTokenValidator>().ifAvailable,
         typeMetadataPolicy = bean<TypeMetadataPolicy>(),
         clock = bean(),

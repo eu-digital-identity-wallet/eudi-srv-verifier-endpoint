@@ -133,7 +133,6 @@ private val log = LoggerFactory.getLogger(SdJwtVcValidator::class.java)
 
 internal class SdJwtVcValidator(
     private val isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
-    private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
     private val clock: Clock,
     private val skew: Duration,
@@ -193,17 +192,17 @@ internal class SdJwtVcValidator(
     suspend fun validate(
         unverified: String,
         nonce: Nonce,
-        expectedAudience: String?,
+        expectedAudience: String,
         transactionId: TransactionId? = null,
-    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.right(), nonce, expectedAudience ?: audience.clientId, transactionId)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.right(), nonce, expectedAudience, transactionId)
 
     context(_: Raise<NonEmptyList<SdJwtVcValidationError>>)
     suspend fun validate(
         unverified: JsonObject,
         nonce: Nonce,
-        expectedAudience: String?,
+        expectedAudience: String,
         transactionId: TransactionId? = null,
-    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.left(), nonce, expectedAudience ?: audience.clientId, transactionId)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.left(), nonce, expectedAudience, transactionId)
 
     context(_: Raise<NonEmptyList<SdJwtVcValidationError>>)
     private suspend fun validate(

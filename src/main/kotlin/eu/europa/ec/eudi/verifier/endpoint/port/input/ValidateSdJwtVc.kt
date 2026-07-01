@@ -28,6 +28,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
 import kotlinx.serialization.json.*
 import java.security.cert.X509Certificate
@@ -78,6 +79,7 @@ internal fun NonEmptyList<SdJwtVcValidationErrorDetailsTO>.toJson(): JsonArray =
 internal class ValidateSdJwtVc(
     private val sdJwtVcValidatorFactory: (NonEmptyList<X509Certificate>?) -> SdJwtVcValidator,
     private val parsePemEncodedX509Certificates: ParsePemEncodedX509Certificates,
+    private val verifierId: VerifierId,
 ) {
     context(_: Raise<NonEmptyList<SdJwtVcValidationErrorDetailsTO>>)
     suspend operator fun invoke(
@@ -106,8 +108,8 @@ internal class ValidateSdJwtVc(
 
         return withError({ errors -> errors.map { it.toSdJwtVcValidationError() } }) {
             unverified.fold(
-                ifLeft = { sdJwtVcValidator.validate(it, nonce, expectedAudience, null) },
-                ifRight = { sdJwtVcValidator.validate(it, nonce, expectedAudience, null) },
+                ifLeft = { sdJwtVcValidator.validate(it, nonce, expectedAudience ?: verifierId.clientId, null) },
+                ifRight = { sdJwtVcValidator.validate(it, nonce, expectedAudience ?: verifierId.clientId, null) },
             )
         }
     }

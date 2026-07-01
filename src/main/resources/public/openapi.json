@@ -307,7 +307,7 @@
         }
       }
     },
-    "/ui/presentations/{transactionId}/dc-api-response": {
+    "/ui/presentations/{transactionId}/dc-api": {
       "post": {
         "tags": [
           "verifier api"
