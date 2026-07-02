@@ -67,7 +67,7 @@ class CreateJarNimbusTest {
             authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
         )
 
-    private val createJar = CreateJarNimbus(TestContext.testClock, verifierConfig)
+    private val createJar = CreateJarNimbus(verifierConfig)
 
     @Test
     fun `given a request object, it should be signed and decoded`() {

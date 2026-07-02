@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import arrow.core.NonEmptyList
 import com.nimbusds.jose.*
 import com.nimbusds.jose.crypto.ECDHEncrypter
 import com.nimbusds.jose.crypto.RSAEncrypter
@@ -39,23 +40,30 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.time.Instant
 import com.nimbusds.oauth2.sdk.ResponseMode as NimbusResponseMode
 
 /**
  * An implementation of [CreateJar] that uses Nimbus SDK
  */
 class CreateJarNimbus(
-    private val clock: Clock,
     private val verifierConfig: VerifierConfig,
 ) : CreateJar {
     override suspend fun invoke(
-        presentation: Presentation.Requested,
+        issuedAt: Instant,
+        transactionData: NonEmptyList<TransactionData>?,
+        channel: Channel,
+        query: DCQL,
+        nonce: Nonce,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,
     ): Jwt =
         withContext(Dispatchers.Default) {
-            val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-            val responseMode = presentation.channel.responseMode
+            val requestObject =
+                context(verifierConfig) {
+                    requestObjectFromDomain(issuedAt, transactionData, channel, query, nonce)
+                }
+            val responseMode = channel.responseMode
             val signedJar = sign(responseMode, requestObject, walletNonce)
             when (walletJarEncryptionRequirement) {
                 EncryptionRequirement.NotRequired -> signedJar.serialize()

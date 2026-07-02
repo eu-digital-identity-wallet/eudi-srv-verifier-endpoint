@@ -96,7 +96,7 @@ object TestContext {
             generatedTransactionId,
             generateRequestId,
             storePresentation,
-            CreateJarNimbus(testClock, verifierConfig),
+            CreateJarNimbus(verifierConfig),
             verifierConfig,
             testClock,
             generateEphemeralKey,

@@ -104,7 +104,7 @@ internal class AppBeans :
         //
         // JOSE
         //
-        registerBean { CreateJarNimbus(bean(), bean<VerifierConfig>()) }
+        registerBean { CreateJarNimbus(bean()) }
         registerBean { VerifyEncryptedResponseWithNimbus(bean<VerifierConfig>().clientMetaData.responseEncryptionOption) }
 
         //

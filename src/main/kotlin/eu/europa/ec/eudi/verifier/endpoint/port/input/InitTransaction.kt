@@ -32,6 +32,8 @@ import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.isSelfSigned
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.EncryptionRequirement
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode.OverDcApi.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode.OverHttp.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -308,57 +310,39 @@ class InitTransactionLive(
 
         val issuerChain = issuerChain(initTransactionTO.issuerChain)
         val profile = initTransactionTO.profileOrDefault.toProfile()
-
-        // Initialize presentation
-        val requestedPresentation =
-            Presentation.Requested(
-                id = generateTransactionId(),
-                initiatedAt = clock.now(),
-                query = type.query,
-                transactionData = type.transactionData,
-                nonce = nonce,
-                issuerChain = issuerChain,
-                profile = profile,
-                channel = channel,
-            )
-
         val jarMode = jarMode(initTransactionTO)
 
         // validate according to the selected profile
         with(profile.validator) {
-            validate(verifierConfig, requestedPresentation, jarMode)
+            context(verifierConfig) {
+                validate(channel, jarMode)
+            }
         }
 
         // create the request, which may update the presentation
-        val (updatedPresentation, request) =
-            createRequest(
-                requestedPresentation,
-                jarMode,
-                with(verifierConfig) {
-                    authorizationRequestUri(
-                        initTransactionTO.authorizationRequestUri,
-                        initTransactionTO.authorizationRequestScheme,
-                    )
-                },
-            )
-
-        val response =
-            when (initTransactionTO.output) {
-                Output.Json -> {
-                    request
-                }
-
-                Output.QrCode -> {
-                    InitTransactionResponse.QrCode(
-                        generateQrCode(request.authorizationRequestUri, size = (250.pixels by 250.pixels)),
-                        request.transactionId,
-                        request.authorizationRequestUri,
-                    )
-                }
+        val unresolvedAuthorizationRequestUri =
+            with(verifierConfig) {
+                authorizationRequestUri(
+                    initTransactionTO.authorizationRequestUri,
+                    initTransactionTO.authorizationRequestScheme,
+                )
             }
 
-        storePresentation(updatedPresentation)
-        logTransactionInitialized(updatedPresentation, request, profile)
+        // Initialize presentation
+        val (presentation, authorizationRequest) =
+            createPresentationAndAuthorizationRequest(
+                jarMode,
+                type,
+                nonce,
+                issuerChain,
+                profile,
+                channel,
+                unresolvedAuthorizationRequestUri,
+            )
+        val response = initTransactionTO.output.createResponse(authorizationRequest)
+
+        storePresentation(presentation)
+        logTransactionInitialized(presentation, authorizationRequest, profile)
 
         return response
     }
@@ -390,81 +374,136 @@ class InitTransactionLive(
                 origin = origin,
             )
 
-        // Initialize presentation
-        val requestedPresentation =
-            Presentation.Requested(
-                id = generateTransactionId(),
-                initiatedAt = clock.now(),
-                query = type.query,
-                transactionData = type.transactionData,
-                nonce = nonce,
-                issuerChain = issuerChain,
-                profile = profile,
-                channel = channel,
-            )
-
         // validate according to the selected profile
         with(profile.validator) {
-            validate(verifierConfig, requestedPresentation, jarMode)
+            context(verifierConfig) {
+                validate(channel, jarMode)
+            }
         }
 
-        val (updatedPresentation, jwt) =
-            createJarAndUpdatePresentation(
-                requestedPresentation,
+        // Initialize presentation
+        val presentation =
+            Presentation.RequestObjectRetrieved(
+                id = generateTransactionId(),
+                initiatedAt = clock.now(),
+                channel = channel,
+                query = type.query,
+                requestObjectRetrievedAt = clock.now(),
+                nonce = nonce,
+                transactionData = type.transactionData,
+                issuerChain = issuerChain,
+                profile = profile,
             )
 
-        storePresentation(updatedPresentation)
-        logTransactionInitialized(updatedPresentation, jwt)
+        val jar =
+            createJar(
+                clock.now(),
+                presentation.transactionData,
+                presentation.channel,
+                presentation.query,
+                presentation.nonce,
+                null,
+                EncryptionRequirement.NotRequired,
+            )
+
+        storePresentation(presentation)
+        logTransactionInitialized(presentation, jar)
 
         return InitDcApiTransactionResponseTO(
-            jwt,
-            updatedPresentation.id.value,
+            jar,
+            presentation.id.value,
         )
     }
 
-    /**
-     * Creates a request and depending on the case updates also the [requestedPresentation]
-     *
-     * If the [requestJarOption] or the verifier has been configured to use request parameter then
-     * presentation will be updated to [Presentation.RequestObjectRetrieved].
-     *
-     * Otherwise, [requestedPresentation] will remain as is
-     */
-    private suspend fun createRequest(
-        requestedPresentation: Presentation.Requested,
-        requestJarOption: EmbedOption<RequestId>,
-        authorizationRequestUri: UnresolvedAuthorizationRequestUri,
+    private suspend fun createPresentationAndAuthorizationRequest(
+        jarMode: EmbedOption<RequestId>,
+        type: VpTokenRequest,
+        nonce: Nonce,
+        issuerChain: NonEmptyList<X509Certificate>?,
+        profile: Profile,
+        channel: Channel.OverHttp,
+        unresolvedAuthorizationRequestUri: UnresolvedAuthorizationRequestUri,
     ): Pair<Presentation, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> =
-        when (requestJarOption) {
-            is EmbedOption.ByValue -> {
-                val (requestObjectRetrieved, jwt) = createJarAndUpdatePresentation(requestedPresentation)
-                requestObjectRetrieved to
-                    InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
-                        requestedPresentation.id.value,
-                        verifierConfig.verifierId.clientId,
-                        jwt,
-                        authorizationRequestUri.resolve(verifierConfig.verifierId, jwt).toURI(),
-                    )
-            }
-
+        when (jarMode) {
             is EmbedOption.ByReference -> {
-                check(requestedPresentation.channel is Channel.OverHttp)
+                val presentation =
+                    Presentation.Requested(
+                        id = generateTransactionId(),
+                        initiatedAt = clock.now(),
+                        query = type.query,
+                        transactionData = type.transactionData,
+                        nonce = nonce,
+                        issuerChain = issuerChain,
+                        profile = profile,
+                        channel = channel,
+                    )
 
-                val requestUri = requestJarOption.buildUrl(requestedPresentation.channel.requestId)
-
-                requestedPresentation to
+                val requestUri = jarMode.buildUrl(presentation.channel.requestId)
+                val authorizationRequest =
                     InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
-                        requestedPresentation.id.value,
+                        presentation.id.value,
                         verifierConfig.verifierId.clientId,
                         requestUri,
-                        requestedPresentation.channel.requestUriMethod.toTO(),
-                        authorizationRequestUri
+                        presentation.channel.requestUriMethod.toTO(),
+                        unresolvedAuthorizationRequestUri
                             .resolve(
                                 verifierConfig.verifierId,
                                 Uri.parse(requestUri.toString()),
-                                requestedPresentation.channel.requestUriMethod,
+                                presentation.channel.requestUriMethod,
                             ).toURI(),
                     )
+                presentation to authorizationRequest
+            }
+
+            EmbedOption.ByValue -> {
+                val presentation =
+                    Presentation.RequestObjectRetrieved(
+                        id = generateTransactionId(),
+                        initiatedAt = clock.now(),
+                        channel = channel,
+                        query = type.query,
+                        transactionData = type.transactionData,
+                        requestObjectRetrievedAt = clock.now(),
+                        nonce = nonce,
+                        issuerChain = issuerChain,
+                        profile = profile,
+                    )
+
+                val jar =
+                    createJar(
+                        clock.now(),
+                        presentation.transactionData,
+                        presentation.channel,
+                        presentation.query,
+                        presentation.nonce,
+                        null,
+                        EncryptionRequirement.NotRequired,
+                    )
+                val authorizationRequest =
+                    InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
+                        presentation.id.value,
+                        verifierConfig.verifierId.clientId,
+                        jar,
+                        unresolvedAuthorizationRequestUri.resolve(verifierConfig.verifierId, jar).toURI(),
+                    )
+                presentation to authorizationRequest
+            }
+        }
+
+    private suspend fun Output.createResponse(
+        authorizationRequest: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
+    ): InitTransactionResponse =
+        when (this) {
+            Output.Json -> {
+                authorizationRequest
+            }
+
+            Output.QrCode -> {
+                InitTransactionResponse.QrCode(
+                    generateQrCode(authorizationRequest.authorizationRequestUri, size = (250.pixels by 250.pixels)),
+                    authorizationRequest.transactionId,
+                    authorizationRequest.authorizationRequestUri,
+                )
             }
         }
 
@@ -479,20 +518,6 @@ class InitTransactionLive(
             RequestUriMethodTO.PostOrGet -> RequestUriMethod.PostOrGet
             null -> verifierConfig.requestUriMethod
         }
-
-    private suspend fun createJarAndUpdatePresentation(
-        requestedPresentation: Presentation.Requested,
-    ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
-        val jwt =
-            createJar(
-                requestedPresentation,
-                null,
-                EncryptionRequirement.NotRequired,
-            )
-
-        val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock)
-        return requestObjectRetrieved to jwt
-    }
 
     context(_: Raise<ValidationError>)
     private fun getWalletResponseMethod(redirectUriTemplate: String?): GetWalletResponseMethod =
@@ -687,17 +712,17 @@ private fun <T : Any, U : T> Collection<T>.containsAny(
 ): Boolean = first in this || rest.any { it in this }
 
 private fun interface ProfileValidator {
-    context(_: Raise<ValidationError>)
+    context(_: Raise<ValidationError>, config: VerifierConfig)
     suspend fun validate(
-        config: VerifierConfig,
-        presentation: Presentation.Requested,
+        channel: Channel,
         jarMode: EmbedOption<RequestId>,
     )
 
     companion object {
-        val OpenId4VP = ProfileValidator { _, _, _ -> }
+        val OpenId4VP = ProfileValidator { _, _ -> }
         val HAIP =
-            ProfileValidator { config, presentation, jarMode ->
+            ProfileValidator { channel, jarMode ->
+                val config = contextOf<VerifierConfig>()
                 with(config.clientMetaData.vpFormatsSupported) {
                     ensure(null != sdJwtVc || null != msoMdoc) {
                         ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported
@@ -748,7 +773,7 @@ private fun interface ProfileValidator {
                 ) {
                     ValidationError.HaipNotSupported.SelfSignedCertificateMustNotBeUsed
                 }
-                when (presentation.channel) {
+                when (channel) {
                     is Channel.OverDcApi -> {
                         ensure(jarMode is EmbedOption.ByValue) {
                             ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference
@@ -756,7 +781,7 @@ private fun interface ProfileValidator {
                     }
 
                     is Channel.OverHttp -> {
-                        ensure(presentation.channel.responseMode is DirectPostJwt) {
+                        ensure(channel.responseMode is DirectPostJwt) {
                             ValidationError.HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed
                         }
                         ensure(jarMode is EmbedOption.ByReference) {
@@ -767,8 +792,8 @@ private fun interface ProfileValidator {
             }
 
         val ETSI119472Part2 =
-            ProfileValidator { config, presentation, jarMode ->
-                HAIP.validate(config, presentation, jarMode)
+            ProfileValidator { channel, jarMode ->
+                HAIP.validate(channel, jarMode)
             }
     }
 }

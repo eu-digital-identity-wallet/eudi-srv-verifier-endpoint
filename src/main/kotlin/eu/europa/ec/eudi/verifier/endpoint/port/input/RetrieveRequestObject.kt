@@ -148,13 +148,19 @@ class RetrieveRequestObjectLive(
             RetrieveRequestObjectError.InvalidState(Presentation.Requested::class, presentation::class)
         }
 
-        check(presentation.channel is Channel.OverHttp)
-
         suspend fun updatePresentationAndCreateJar(
             encryptionRequirement: EncryptionRequirement,
         ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
             val jar =
-                createJar(presentation, method.walletNonceOrNull, encryptionRequirement)
+                createJar(
+                    clock.now(),
+                    presentation.transactionData,
+                    presentation.channel,
+                    presentation.query,
+                    presentation.nonce,
+                    method.walletNonceOrNull,
+                    encryptionRequirement,
+                )
             val updatedPresentation = presentation.retrieveRequestObject(clock)
             storePresentation(updatedPresentation)
             return updatedPresentation to jar
@@ -299,8 +305,6 @@ private class WalletMetadataValidator(
         metadata: WalletMetadataTO,
         presentation: Presentation.Requested,
     ) {
-        check(presentation.channel is Channel.OverHttp)
-
         val responseMode =
             presentation.channel.responseMode.option
                 .name()
