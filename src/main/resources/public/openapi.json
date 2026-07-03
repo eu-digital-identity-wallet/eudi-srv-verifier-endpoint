@@ -738,6 +738,14 @@
         "format": "url",
         "nullable": false
       },
+      "ExpectedOrigins": {
+        "type": "array",
+        "nullable": false,
+        "items": {
+          "$ref": "#/components/schemas/Origin"
+        },
+        "minItems": 1
+      },
       "InitTransaction": {
         "type": "object",
         "nullable": false,
@@ -910,6 +918,16 @@
               },
               {
                 "$ref": "#/components/schemas/Origin"
+              }
+            ]
+          },
+          "expected_origins": {
+            "allOf": [
+              {
+                "description": "The expected origins that will be used in the Authorization Request."
+              },
+              {
+                "$ref": "#/components/schemas/ExpectedOrigins"
               }
             ]
           }

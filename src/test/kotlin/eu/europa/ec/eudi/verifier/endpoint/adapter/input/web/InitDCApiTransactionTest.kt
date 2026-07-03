@@ -15,11 +15,12 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import arrow.core.NonEmptyList
+import com.eygraber.uri.Url
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.RFC6749
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
@@ -36,10 +37,9 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import kotlin.test.*
 
 /**
- * Tests the initialization of a Transaction over the Digital Credentials API (DC API),
- * for both the OpenId4VP and the HAIP profiles, and for both signed and unsigned requests.
+ * Tests the initialization of a Transaction over the Digital Credentials API (DC API).
  */
-@VerifierApplicationTest([WalletResponseDCApiTest.Config::class])
+@VerifierApplicationTest([InitDCApiTransactionTest.Config::class])
 @TestPropertySource(
     properties = [
         "verifier.clientIdPrefix=x509_hash",
@@ -47,7 +47,7 @@ import kotlin.test.*
         "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
     ],
 )
-internal class WalletResponseDCApiTest {
+internal class InitDCApiTransactionTest {
     @Autowired
     private lateinit var client: WebTestClient
 
@@ -61,6 +61,21 @@ internal class WalletResponseDCApiTest {
         fun validateVerifiablePresentation(): ValidateVerifiablePresentation = ValidateVerifiablePresentation.NoOp
     }
 
+    @Test
+    fun `verifies dc api transaction is successfully initialized`(): Unit =
+        runBlocking {
+            val initTransaction =
+                VerifierApiClient
+                    .loadInitDCApiTransactionTO("09-dcApi-dcql.json")
+
+            val (body, transactionId) = VerifierApiClient.initDCApiTransaction(client, initTransaction)
+            assertNotNull(transactionId, "Transaction-Id header is missing")
+
+            val requestJwt = assertNotNull(body.request, "request is not a JWT string")
+            val (_, claims) = TestUtils.parseJWTIntoClaims(requestJwt)
+            assertDCApiRequest(claims, initTransaction.nonce, checkNotNull(initTransaction.expectedOrigins))
+        }
+
     /**
      * Asserts the common Authorization Request claims/parameters of a DC API request, regardless of
      * whether they were conveyed unsigned (as plain parameters) or signed (as Request Object claims).
@@ -68,7 +83,7 @@ internal class WalletResponseDCApiTest {
     private fun assertDCApiRequest(
         request: JsonObject,
         expectedNonce: String,
-        expectedOrigins: List<String>,
+        expectedOrigins: NonEmptyList<Url>,
     ) {
         assertEquals(
             OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT,
@@ -95,25 +110,8 @@ internal class WalletResponseDCApiTest {
         )
 
         assertEquals(
-            expectedOrigins,
+            expectedOrigins.map { it.toString() },
             request[OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS]?.jsonArray?.map { it.jsonPrimitive.content },
         )
     }
-
-    @Test
-    fun `signed dc_api request is initialized`(): Unit =
-        runBlocking {
-            assertIs<VerifierId.X509Hash>(config.verifierId)
-
-            val initTransaction =
-                VerifierApiClient
-                    .loadInitDCApiTransactionTO("09-dcApi-dcql.json")
-
-            val (body, transactionId) = VerifierApiClient.initDCApiTransaction(client, initTransaction)
-            assertNotNull(transactionId, "Transaction-Id header is missing")
-
-            val requestJwt = assertNotNull(body.request, "request is not a JWT string")
-            val (_, claims) = TestUtils.parseJWTIntoClaims(requestJwt)
-            assertDCApiRequest(claims, initTransaction.nonce, listOf("https://verifier.example.com"))
-        }
 }

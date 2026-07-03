@@ -128,14 +128,14 @@ class CreateJarNimbus(
      */
     private fun asClaimSet(
         clientMetaData: OIDCClientMetadata?,
-        r: RequestObject,
+        requestObject: RequestObject,
         walletNonce: String?,
     ): JWTClaimsSet {
-        val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
-        val clientId = ClientID(r.verifierId.clientId)
-        val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
-        val state = r.state?.let { State(r.state) }
-        val expectedOrigins = r.expectedOrigins?.takeIf { it.isNotEmpty() }
+        val responseType = ResponseType(*requestObject.responseType.map { ResponseType.Value(it) }.toTypedArray())
+        val clientId = ClientID(requestObject.verifierId.clientId)
+        val scope = Scope(*requestObject.scope.map { Scope.Value(it) }.toTypedArray())
+        val state = requestObject.state?.let { State(requestObject.state) }
+        val expectedOrigins = requestObject.expectedOrigins?.takeIf { it.isNotEmpty() }
 
         val authorizationRequestClaims =
             with(AuthorizationRequest.Builder(responseType, clientId)) {
@@ -145,7 +145,7 @@ class CreateJarNimbus(
                 if (scope.isNotEmpty()) {
                     scope(scope)
                 }
-                responseMode(NimbusResponseMode(r.responseMode))
+                responseMode(NimbusResponseMode(requestObject.responseMode))
                 build()
             }.toJWTClaimsSet()
 
@@ -156,13 +156,13 @@ class CreateJarNimbus(
             ) {
                 v?.let { claim(c, it) }
             }
-            issueTime(r.issuedAt.toJavaDate())
-            audience(r.audience)
-            claim(OpenId4VPSpec.NONCE, r.nonce)
+            issueTime(requestObject.issuedAt.toJavaDate())
+            audience(requestObject.audience)
+            claim(OpenId4VPSpec.NONCE, requestObject.nonce)
             optionalClaim(OpenId4VPSpec.CLIENT_METADATA, clientMetaData?.toJSONObject())
-            optionalClaim(OpenId4VPSpec.RESPONSE_URI, r.responseUri?.toExternalForm())
-            claim(OpenId4VPSpec.DCQL_QUERY, r.query.toJackson())
-            optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, r.transactionData?.toJackson())
+            optionalClaim(OpenId4VPSpec.RESPONSE_URI, requestObject.responseUri?.toExternalForm())
+            claim(OpenId4VPSpec.DCQL_QUERY, requestObject.query.toJackson())
+            optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, requestObject.transactionData?.toJackson())
             optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)
             optionalClaim(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS, expectedOrigins?.toJackson())
             build()
