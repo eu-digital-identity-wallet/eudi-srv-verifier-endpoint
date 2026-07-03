@@ -62,7 +62,7 @@ internal fun requestObjectFromDomain(
                 responseUri = null,
                 issuedAt = issuedAt,
                 transactionData = transactionData,
-                expectedOrigins = listOf(channel.origin),
+                expectedOrigins = channel.expectedOrigins,
             )
         }
 

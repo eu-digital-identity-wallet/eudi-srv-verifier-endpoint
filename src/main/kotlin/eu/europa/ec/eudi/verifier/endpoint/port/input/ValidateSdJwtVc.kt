@@ -28,6 +28,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
 import kotlinx.serialization.json.*
 import java.security.cert.X509Certificate
@@ -78,33 +79,37 @@ internal fun NonEmptyList<SdJwtVcValidationErrorDetailsTO>.toJson(): JsonArray =
 internal class ValidateSdJwtVc(
     private val sdJwtVcValidatorFactory: (NonEmptyList<X509Certificate>?) -> SdJwtVcValidator,
     private val parsePemEncodedX509Certificates: ParsePemEncodedX509Certificates,
+    private val verifierId: VerifierId,
 ) {
     context(_: Raise<NonEmptyList<SdJwtVcValidationErrorDetailsTO>>)
     suspend operator fun invoke(
         unverified: JsonObject,
         nonce: Nonce,
+        audience: String? = null,
         issuerChain: String?,
-    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.left(), nonce, issuerChain)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.left(), nonce, audience, issuerChain)
 
     context(_: Raise<NonEmptyList<SdJwtVcValidationErrorDetailsTO>>)
     suspend operator fun invoke(
         unverified: String,
         nonce: Nonce,
+        audience: String? = null,
         issuerChain: String?,
-    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.right(), nonce, issuerChain)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.right(), nonce, audience, issuerChain)
 
     context(_: Raise<NonEmptyList<SdJwtVcValidationErrorDetailsTO>>)
     private suspend fun validate(
         unverified: Either<JsonObject, String>,
         nonce: Nonce,
+        audience: String? = null,
         issuerChain: String?,
     ): SdJwtAndKbJwt<SignedJWT> {
         val sdJwtVcValidator = sdJwtVcValidator(issuerChain)
-
+        val aud = audience ?: verifierId.clientId
         return withError({ errors -> errors.map { it.toSdJwtVcValidationError() } }) {
             unverified.fold(
-                ifLeft = { sdJwtVcValidator.validate(it, nonce, null) },
-                ifRight = { sdJwtVcValidator.validate(it, nonce, null) },
+                ifLeft = { sdJwtVcValidator.validate(it, nonce, aud, null) },
+                ifRight = { sdJwtVcValidator.validate(it, nonce, aud, null) },
             )
         }
     }

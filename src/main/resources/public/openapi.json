@@ -307,6 +307,75 @@
         }
       }
     },
+    "/ui/presentations/{transactionId}/dc-api": {
+      "post": {
+        "tags": [
+          "verifier api"
+        ],
+        "description": "Submits a DC API Wallet Response for a Transaction.",
+        "operationId": "postDcApiWalletResponse",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TransactionId"
+            },
+            "allowEmptyValue": false,
+            "description": "The unique identifier of the Transaction."
+          }
+        ],
+        "requestBody": {
+          "description": "The Wallet's authorisation response, submitted as form data. Either a 'response' JWE encrypted JWT, or the individual DC API response parameters.",
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "nullable": false,
+                "properties": {
+                  "response": {
+                    "type": "string",
+                    "nullable": false,
+                    "description": "An encrypted JWT (JWE) containing the Wallet's authorisation response."
+                  },
+                  "vp_token": {
+                    "type": "string",
+                    "nullable": false,
+                    "description": "The VP Token provided by the Wallet, as a JSON string."
+                  },
+                  "error": {
+                    "$ref": "#/components/schemas/Error"
+                  },
+                  "error_description": {
+                    "$ref": "#/components/schemas/ErrorDescription"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ok"
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DcApiWalletResponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
     "/ui/presentations/{transactionId}/events": {
       "get": {
         "tags": [
@@ -429,7 +498,7 @@
         "description": "Validates an SD-JWT Verifiable Credentials.<p>Verifies the provided value: <ol><li>Is an SD-JWT-VC serialized using compact serialization</li><li>Is signed by a trusted Issuer (checked against a configured X5C chain)</li><li>Contains a valid KeyBinding JWT (with this Verifier as the Audience and the provided Nonce value)</ol></p>",
         "operationId": "validateSdJwtVc",
         "requestBody": {
-          "description": "The value to validate as an SD-JWT Verifiable Credential and the expected Nonce of the KeyBinding JWT.",
+          "description": "The value to validate as an SD-JWT Verifiable Credential, the expected Nonce of the KeyBinding JWT, and optionally the expected audience.",
           "required": true,
           "content": {
             "application/x-www-form-urlencoded": {
@@ -669,6 +738,14 @@
         "format": "url",
         "nullable": false
       },
+      "ExpectedOrigins": {
+        "type": "array",
+        "nullable": false,
+        "items": {
+          "$ref": "#/components/schemas/Origin"
+        },
+        "minItems": 1
+      },
       "InitTransaction": {
         "type": "object",
         "nullable": false,
@@ -841,6 +918,16 @@
               },
               {
                 "$ref": "#/components/schemas/Origin"
+              }
+            ]
+          },
+          "expected_origins": {
+            "allOf": [
+              {
+                "description": "The expected origins that will be used in the Authorization Request."
+              },
+              {
+                "$ref": "#/components/schemas/ExpectedOrigins"
               }
             ]
           }
@@ -1176,6 +1263,53 @@
         },
         "required": [
           "error"
+        ],
+        "additionalProperties": false
+      },
+      "DcApiWalletResponseErrorCode": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "PresentationNotFound",
+          "UnexpectedResponseMode",
+          "PresentationNotInExpectedState",
+          "InvalidVpToken",
+          "MissingVpToken",
+          "RequiredCredentialSetNotSatisfied",
+          "InvalidEncryptedResponse",
+          "HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc",
+          "HAIPValidationError.UnsupportedMsoRevocationMechanism",
+          "HAIPValidationError.SdJwtVcMustUseTokenStatusList"
+        ]
+      },
+      "DcApiWalletResponseError": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "error": {
+            "allOf": [
+              {
+                "description": "The validation error that occurred while processing the Wallet's response."
+              },
+              {
+                "$ref": "#/components/schemas/DcApiWalletResponseErrorCode"
+              }
+            ]
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Short description of the error that occurred."
+          },
+          "cause": {
+            "type": "string",
+            "nullable": true,
+            "description": "The underlying cause of the error, if available."
+          }
+        },
+        "required": [
+          "error",
+          "description"
         ],
         "additionalProperties": false
       },
@@ -1576,6 +1710,10 @@
           },
           "nonce": {
             "$ref": "#/components/schemas/Nonce"
+          },
+          "audience": {
+            "type": "string",
+            "description": "The expected audience for the Key Binding JWT."
           },
           "issuer_chain": {
             "$ref": "#/components/schemas/IssuerChain"

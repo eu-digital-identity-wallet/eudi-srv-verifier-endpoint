@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 @file:OptIn(ExperimentalSerializationApi::class)
+@file:UseSerializers(NonEmptyListSerializer::class)
 
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
@@ -23,6 +24,7 @@ import arrow.core.raise.catch
 import arrow.core.raise.context.ensure
 import arrow.core.raise.context.ensureNotNull
 import arrow.core.raise.context.raise
+import arrow.core.serialization.NonEmptyListSerializer
 import com.eygraber.uri.Uri
 import com.eygraber.uri.Url
 import com.eygraber.uri.toURI
@@ -367,12 +369,9 @@ class InitTransactionLive(
 
         val issuerChain = issuerChain(initDcApiTransactionTO.issuerChain)
         val origin = initDcApiTransactionTO.origin
+        val expectedOrigins = initDcApiTransactionTO.expectedOrigins ?: nonEmptyListOf(origin)
 
-        val channel =
-            Channel.OverDcApi(
-                responseMode = responseMode,
-                origin = origin,
-            )
+        val channel = Channel.OverDcApi(responseMode, origin, expectedOrigins)
 
         // validate according to the selected profile
         with(profile.validator) {
@@ -549,6 +548,10 @@ class InitTransactionLive(
             ResponseModeOption.DirectPostJwt -> {
                 val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
                 DirectPostJwt(responseEncryptionKey)
+            }
+
+            ResponseModeOption.DcApi -> {
+                error("DcApi response mode is not supported")
             }
 
             ResponseModeOption.DcApiJwt -> {
@@ -819,6 +822,7 @@ data class InitDcApiTransactionTO(
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
     @SerialName("issuer_chain") val issuerChain: String? = null,
     @Required @SerialName("origin") val origin: Url,
+    @SerialName("expected_origins") val expectedOrigins: NonEmptyList<Url>? = null,
 )
 
 @Serializable

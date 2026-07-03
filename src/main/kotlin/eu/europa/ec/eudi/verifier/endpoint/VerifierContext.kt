@@ -200,7 +200,7 @@ internal class AppBeans :
         }
 
         registerBean { GenerateResponseCode.Random }
-        registerBean { PostWalletResponseLive(bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean()) }
+        registerBean { PostWalletResponseLive(bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean(), bean()) }
         registerBean { GenerateEphemeralEncryptionKeyPairNimbus(bean<VerifierConfig>().clientMetaData.responseEncryptionOption) }
         registerBean { GetWalletResponseLive(bean(), bean(), bean()) }
         registerBean { GetPresentationEventsLive(bean(), bean()) }
@@ -261,6 +261,7 @@ internal class AppBeans :
                     } ?: appDefault
                 },
                 bean(),
+                verifierId = bean<VerifierConfig>().verifierId,
             )
         }
         registerBean { ProcessSdJwtVc() }
@@ -397,6 +398,7 @@ internal class AppBeans :
                     bean(),
                     bean(),
                     bean(),
+                    bean(),
                 )
             val staticContent = StaticContent()
             val swaggerUi =
@@ -505,7 +507,6 @@ private fun SupplierContextDsl<*>.sdJwtVcValidator(
                 isChainTrustedForContext,
                 config.attestationClassifications.toConsultationAttestationClassifications(),
             ),
-        audience = bean<VerifierConfig>().verifierId,
         statusListTokenValidator = beanProvider<StatusListTokenValidator>().ifAvailable,
         typeMetadataPolicy = bean<TypeMetadataPolicy>(),
         clock = bean(),

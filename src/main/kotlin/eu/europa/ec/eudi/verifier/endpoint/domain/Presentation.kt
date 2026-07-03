@@ -161,6 +161,7 @@ sealed interface Channel {
     data class OverDcApi(
         override val responseMode: ResponseMode.OverDcApi,
         val origin: Url,
+        val expectedOrigins: NonEmptyList<Url>,
     ) : Channel
 }
 

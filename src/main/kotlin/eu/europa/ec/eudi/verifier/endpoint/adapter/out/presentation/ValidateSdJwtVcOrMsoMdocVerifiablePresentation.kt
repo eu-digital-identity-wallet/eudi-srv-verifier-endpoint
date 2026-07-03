@@ -64,10 +64,16 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             Format.SdJwtVc -> {
                 val vpFormatSupported = checkNotNull(vpFormatsSupported.sdJwtVc)
                 val validator = sdJwtVcValidatorFactory(presentation.issuerChain)
+                val audience =
+                    when (presentation.channel) {
+                        is Channel.OverDcApi -> "origin:${presentation.channel.origin}"
+                        is Channel.OverHttp -> config.verifierId.clientId
+                    }
                 validator.validateSdJwtVcVerifiablePresentation(
                     vpFormatSupported,
                     verifiablePresentation,
                     presentation.nonce,
+                    audience,
                     transactionData,
                     presentation.id,
                     presentation.profile,
@@ -94,6 +100,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         vpFormatSupported: VpFormatsSupported.SdJwtVc,
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
+        audience: String,
         transactionData: NonEmptyList<TransactionData>?,
         transactionId: TransactionId,
         profile: Profile,
@@ -111,6 +118,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                         validate(
                             unverified = verifiablePresentation.value,
                             nonce = nonce,
+                            audience = audience,
                             transactionId = transactionId,
                         )
                     }
@@ -119,6 +127,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                         validate(
                             unverified = verifiablePresentation.value,
                             nonce = nonce,
+                            audience = audience,
                             transactionId = transactionId,
                         )
                     }

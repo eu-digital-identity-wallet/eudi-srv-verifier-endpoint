@@ -74,6 +74,7 @@ enum class RequestUriMethod {
 enum class ResponseModeOption {
     DirectPost,
     DirectPostJwt,
+    DcApi,
     DcApiJwt,
 }
 

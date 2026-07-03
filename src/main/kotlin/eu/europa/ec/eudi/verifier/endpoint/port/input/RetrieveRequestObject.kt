@@ -403,6 +403,7 @@ private fun ResponseModeOption.name(): String =
     when (this) {
         ResponseModeOption.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
         ResponseModeOption.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
+        ResponseModeOption.DcApi -> error("DC API request objects are not retrieved through RetrieveRequestObject")
         ResponseModeOption.DcApiJwt -> error("DC API request objects are not retrieved through RetrieveRequestObject")
     }
 

@@ -110,7 +110,7 @@ class WalletApi(
             logger.info("Handling PostWalletResponse ...")
             val requestId = req.requestId()
             val walletResponse = req.awaitFormData().walletResponse()
-            postWalletResponse(requestId, walletResponse)
+            postWalletResponse(PresentationLookup.ByRequestId(requestId), walletResponse)
         }.fold(
             transform = { response ->
                 logger.info("PostWalletResponse processed")
@@ -233,7 +233,7 @@ class WalletApi(
                 .toURL()
         }
 
-        private fun WalletResponseValidationError.toJson(): JsonObject =
+        internal fun WalletResponseValidationError.toJson(): JsonObject =
             buildJsonObject {
                 when (this@toJson) {
                     WalletResponseValidationError.IncorrectState -> {

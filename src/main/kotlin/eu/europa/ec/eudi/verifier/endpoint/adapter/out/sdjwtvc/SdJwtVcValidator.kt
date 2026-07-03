@@ -41,7 +41,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusVal
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
 import kotlinx.serialization.json.JsonObject
 import org.slf4j.LoggerFactory
 import java.security.cert.TrustAnchor
@@ -133,7 +132,6 @@ private val log = LoggerFactory.getLogger(SdJwtVcValidator::class.java)
 
 internal class SdJwtVcValidator(
     private val isChainTrustedForAttestation: IsChainTrustedForAttestation<NonEmptyList<X509Certificate>, TrustAnchor>,
-    private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
     private val clock: Clock,
     private val skew: Duration,
@@ -193,26 +191,29 @@ internal class SdJwtVcValidator(
     suspend fun validate(
         unverified: String,
         nonce: Nonce,
+        audience: String,
         transactionId: TransactionId? = null,
-    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.right(), nonce, transactionId)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.right(), nonce, audience, transactionId)
 
     context(_: Raise<NonEmptyList<SdJwtVcValidationError>>)
     suspend fun validate(
         unverified: JsonObject,
         nonce: Nonce,
+        audience: String,
         transactionId: TransactionId? = null,
-    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.left(), nonce, transactionId)
+    ): SdJwtAndKbJwt<SignedJWT> = validate(unverified.left(), nonce, audience, transactionId)
 
     context(_: Raise<NonEmptyList<SdJwtVcValidationError>>)
     private suspend fun validate(
         unverified: Either<JsonObject, String>,
         nonce: Nonce,
+        audience: String,
         transactionId: TransactionId?,
     ): SdJwtAndKbJwt<SignedJWT> {
         val challenge =
             ChallengePredicate(
                 issuedAt = clock.now(),
-                audience = audience.clientId,
+                audience = audience,
                 nonce = nonce.value,
                 skew = skew,
             )
