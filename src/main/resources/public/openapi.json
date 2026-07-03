@@ -340,11 +340,6 @@
                     "nullable": false,
                     "description": "An encrypted JWT (JWE) containing the Wallet's authorisation response."
                   },
-                  "state": {
-                    "type": "string",
-                    "nullable": false,
-                    "description": "The state value from the authorization request."
-                  },
                   "vp_token": {
                     "type": "string",
                     "nullable": false,
@@ -370,7 +365,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InitTransactionError"
+                  "$ref": "#/components/schemas/DcApiWalletResponseError"
                 }
               }
             }
@@ -1253,6 +1248,53 @@
         ],
         "additionalProperties": false
       },
+      "DcApiWalletResponseErrorCode": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "PresentationNotFound",
+          "UnexpectedResponseMode",
+          "PresentationNotInExpectedState",
+          "InvalidVpToken",
+          "MissingVpToken",
+          "RequiredCredentialSetNotSatisfied",
+          "InvalidEncryptedResponse",
+          "HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc",
+          "HAIPValidationError.UnsupportedMsoRevocationMechanism",
+          "HAIPValidationError.SdJwtVcMustUseTokenStatusList"
+        ]
+      },
+      "DcApiWalletResponseError": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "error": {
+            "allOf": [
+              {
+                "description": "The validation error that occurred while processing the Wallet's response."
+              },
+              {
+                "$ref": "#/components/schemas/DcApiWalletResponseErrorCode"
+              }
+            ]
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Short description of the error that occurred."
+          },
+          "cause": {
+            "type": "string",
+            "nullable": true,
+            "description": "The underlying cause of the error, if available."
+          }
+        },
+        "required": [
+          "error",
+          "description"
+        ],
+        "additionalProperties": false
+      },
       "ResponseCode": {
         "type": "string",
         "nullable": false
@@ -1651,7 +1693,7 @@
           "nonce": {
             "$ref": "#/components/schemas/Nonce"
           },
-          "expected_audience": {
+          "audience": {
             "type": "string",
             "description": "The expected audience for the Key Binding JWT."
           },

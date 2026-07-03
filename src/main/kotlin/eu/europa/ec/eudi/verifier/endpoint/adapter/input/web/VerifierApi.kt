@@ -167,7 +167,7 @@ internal class VerifierApi(
             fun String.toJsonObject(): JsonObject = Json.decodeFromString<JsonObject>(this)
 
             return AuthorisationResponseTO(
-                state = getFirst("state"),
+                state = null,
                 vpToken = getFirst("vp_token")?.toJsonObject(),
                 error = getFirst("error"),
                 errorDescription = getFirst("error_description"),

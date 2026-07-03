@@ -64,7 +64,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             Format.SdJwtVc -> {
                 val vpFormatSupported = checkNotNull(vpFormatsSupported.sdJwtVc)
                 val validator = sdJwtVcValidatorFactory(presentation.issuerChain)
-                val expectedAudience =
+                val audience =
                     when (presentation.channel) {
                         is Channel.OverDcApi -> "origin:${presentation.channel.origin}"
                         is Channel.OverHttp -> config.verifierId.clientId
@@ -73,7 +73,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                     vpFormatSupported,
                     verifiablePresentation,
                     presentation.nonce,
-                    expectedAudience,
+                    audience,
                     transactionData,
                     presentation.id,
                     presentation.profile,
@@ -100,7 +100,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         vpFormatSupported: VpFormatsSupported.SdJwtVc,
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
-        expectedAudience: String,
+        audience: String,
         transactionData: NonEmptyList<TransactionData>?,
         transactionId: TransactionId,
         profile: Profile,
@@ -118,7 +118,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                         validate(
                             unverified = verifiablePresentation.value,
                             nonce = nonce,
-                            expectedAudience = expectedAudience,
+                            audience = audience,
                             transactionId = transactionId,
                         )
                     }
@@ -127,7 +127,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                         validate(
                             unverified = verifiablePresentation.value,
                             nonce = nonce,
-                            expectedAudience = expectedAudience,
+                            audience = audience,
                             transactionId = transactionId,
                         )
                     }
