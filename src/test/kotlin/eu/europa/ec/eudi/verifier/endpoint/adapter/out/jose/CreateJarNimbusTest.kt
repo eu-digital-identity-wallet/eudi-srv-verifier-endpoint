@@ -35,10 +35,10 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.domain.DCQL
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.HashAlgorithm
+import eu.europa.ec.eudi.verifier.endpoint.domain.HttpResponseModeOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestUriMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode
-import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseModeOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.UnresolvedAuthorizationRequestUri
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
@@ -59,7 +59,7 @@ class CreateJarNimbusTest {
             verifierId = verifierId,
             requestJarOption = EmbedOption.ByValue,
             responseUriBuilder = { _ -> URL("https://foo") },
-            responseModeOption = ResponseModeOption.DirectPostJwt,
+            defaultHttpResponseModeOption = HttpResponseModeOption.DirectPostJwt,
             maxAge = 3.days,
             clientMetaData = clientMetaData,
             transactionDataHashAlgorithm = HashAlgorithm.SHA_256,

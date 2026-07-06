@@ -43,7 +43,7 @@ class InitTransactionTest {
             verifierId = TestContext.verifierId,
             requestJarOption = EmbedOption.ByValue,
             responseUriBuilder = { _ -> uri },
-            responseModeOption = ResponseModeOption.DirectPostJwt,
+            defaultHttpResponseModeOption = HttpResponseModeOption.DirectPostJwt,
             maxAge = 3.days,
             clientMetaData = TestContext.clientMetaData,
             transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
@@ -86,7 +86,7 @@ class InitTransactionTest {
                     verifierId = TestContext.verifierId,
                     requestJarOption = EmbedOption.ByReference { _ -> uri },
                     responseUriBuilder = { _ -> URL("https://foo") },
-                    responseModeOption = ResponseModeOption.DirectPostJwt,
+                    defaultHttpResponseModeOption = HttpResponseModeOption.DirectPostJwt,
                     maxAge = 3.days,
                     clientMetaData = TestContext.clientMetaData,
                     transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
@@ -143,7 +143,7 @@ class InitTransactionTest {
         }
 
     /**
-     * Verifies [InitTransactionTO.responseMode] takes precedence over [VerifierConfig.responseModeOption].
+     * Verifies [InitTransactionTO.responseMode] takes precedence over [VerifierConfig.defaultHttpResponseModeOption].
      */
     @Test
     fun `when response_mode is provided this must take precedence over what is configured in VerifierConfig`() =
@@ -152,7 +152,7 @@ class InitTransactionTest {
                 InitTransactionTO(
                     dcqlQuery(),
                     nonce = "nonce",
-                    responseMode = ResponseModeTO.DirectPost,
+                    responseMode = InitTransactionTO.ResponseModeTO.DirectPost,
                 )
 
             val useCase: InitTransaction =
@@ -169,7 +169,7 @@ class InitTransactionTest {
             assertNotNull(jwtSecuredAuthorizationRequest.request)
             val presentation = loadPresentationById(testTransactionId)
             val requestObjectRetrieved = assertIs<Presentation.RequestObjectRetrieved>(presentation)
-            assertEquals(ResponseModeOption.DirectPost, requestObjectRetrieved.channel.responseMode.option)
+            assertEquals(ResponseModeType.DirectPost, requestObjectRetrieved.channel.responseMode.type)
         }
 
     /**

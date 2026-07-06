@@ -82,8 +82,8 @@ sealed interface WalletResponseValidationError {
 
     data class UnexpectedResponseMode(
         val requestId: RequestId?,
-        val expected: ResponseModeOption,
-        val actual: ResponseModeOption,
+        val expected: ResponseModeType,
+        val actual: ResponseModeType,
     ) : WalletResponseValidationError
 
     data object PresentationNotInExpectedState : WalletResponseValidationError
@@ -362,8 +362,8 @@ class PostWalletResponseLive(
                         ensure(walletResponse is AuthorisationResponse.DirectPost) {
                             UnexpectedResponseMode(
                                 presentation.channel.requestId,
-                                expected = ResponseModeOption.DirectPost,
-                                actual = walletResponse.responseModeOption,
+                                expected = ResponseModeType.DirectPost,
+                                actual = walletResponse.responseModeType,
                             )
                         }
                         walletResponse.response
@@ -375,8 +375,8 @@ class PostWalletResponseLive(
                                 ensure(walletResponse.isErrorResponse()) {
                                     UnexpectedResponseMode(
                                         presentation.channel.requestId,
-                                        expected = ResponseModeOption.DirectPostJwt,
-                                        actual = ResponseModeOption.DirectPost,
+                                        expected = ResponseModeType.DirectPostJwt,
+                                        actual = ResponseModeType.DirectPost,
                                     )
                                 }
                                 walletResponse.response
@@ -394,8 +394,8 @@ class PostWalletResponseLive(
                                 raise(
                                     UnexpectedResponseMode(
                                         presentation.channel.requestId,
-                                        expected = ResponseModeOption.DirectPostJwt,
-                                        actual = walletResponse.responseModeOption,
+                                        expected = ResponseModeType.DirectPostJwt,
+                                        actual = walletResponse.responseModeType,
                                     ),
                                 )
                             }
@@ -412,8 +412,8 @@ class PostWalletResponseLive(
                                 ensure(walletResponse.isErrorResponse()) {
                                     UnexpectedResponseMode(
                                         null,
-                                        expected = ResponseModeOption.DcApiJwt,
-                                        actual = ResponseModeOption.DcApi,
+                                        expected = ResponseModeType.DcApiJwt,
+                                        actual = ResponseModeType.DcApi,
                                     )
                                 }
                                 walletResponse.response
@@ -431,8 +431,8 @@ class PostWalletResponseLive(
                                 raise(
                                     UnexpectedResponseMode(
                                         null,
-                                        expected = ResponseModeOption.DcApiJwt,
-                                        actual = walletResponse.responseModeOption,
+                                        expected = ResponseModeType.DcApiJwt,
+                                        actual = walletResponse.responseModeType,
                                     ),
                                 )
                             }
@@ -509,13 +509,13 @@ private fun DCQL.satisfiedBy(response: Map<QueryId, List<VerifiablePresentation>
         ?.fold(true, Boolean::and)
         ?: response.keys.containsAll(credentials.ids)
 
-private val AuthorisationResponse.responseModeOption: ResponseModeOption
+private val AuthorisationResponse.responseModeType: ResponseModeType
     get() =
         when (this) {
-            is AuthorisationResponse.DirectPost -> ResponseModeOption.DirectPost
-            is AuthorisationResponse.DirectPostJwt -> ResponseModeOption.DirectPostJwt
-            is AuthorisationResponse.DcApi -> ResponseModeOption.DcApi
-            is AuthorisationResponse.DcApiJwt -> ResponseModeOption.DcApiJwt
+            is AuthorisationResponse.DirectPost -> ResponseModeType.DirectPost
+            is AuthorisationResponse.DirectPostJwt -> ResponseModeType.DirectPostJwt
+            is AuthorisationResponse.DcApi -> ResponseModeType.DcApi
+            is AuthorisationResponse.DcApiJwt -> ResponseModeType.DcApiJwt
         }
 private val AuthorisationResponse.encryptedResponseOrNull: Jwt?
     get() =

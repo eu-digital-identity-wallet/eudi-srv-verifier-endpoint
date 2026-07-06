@@ -44,7 +44,7 @@ import kotlin.test.*
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
-        "verifier.response.mode=DirectPost",
+        "verifier.defaultHttpResponseMode=DirectPost",
         "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
         "verifier.clientMetadata.responseEncryption.method=A128CBC-HS256",
     ],
