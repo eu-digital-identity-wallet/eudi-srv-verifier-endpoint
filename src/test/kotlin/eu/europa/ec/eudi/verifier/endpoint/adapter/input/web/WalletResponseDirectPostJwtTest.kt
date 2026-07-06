@@ -29,7 +29,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
-import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
@@ -60,7 +60,7 @@ import kotlin.time.Instant
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
-        "verifier.response.mode=DirectPostJwt",
+        "verifier.defaultHttpResponseMode=DirectPostJwt",
         "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
         "verifier.clientMetadata.responseEncryption.method=A128GCM",
         "verifier.jwk.embed=ByValue",
@@ -200,7 +200,7 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
                 VerifierApiClient
                     .loadInitTransactionTO(
                         "02-dcql.json",
-                    ).copy(responseMode = ResponseModeTO.DirectPostJwt)
+                    ).copy(responseMode = InitTransactionTO.ResponseModeTO.DirectPostJwt)
             val transactionInitialized =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
                     VerifierApiClient.initTransaction(
@@ -242,7 +242,7 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
-        "verifier.response.mode=DirectPostJwt",
+        "verifier.defaultHttpResponseMode=DirectPostJwt",
         "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
         "verifier.clientMetadata.responseEncryption.method=A128GCM",
         "verifier.jwk.embed=ByValue",
@@ -347,7 +347,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
-        "verifier.response.mode=DirectPostJwt",
+        "verifier.defaultHttpResponseMode=DirectPostJwt",
         "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
         "verifier.clientMetadata.responseEncryption.method=A128GCM",
         "verifier.jwk.embed=ByValue",

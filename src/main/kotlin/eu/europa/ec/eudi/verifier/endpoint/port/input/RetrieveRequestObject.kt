@@ -306,7 +306,7 @@ private class WalletMetadataValidator(
         presentation: Presentation.Requested,
     ) {
         val responseMode =
-            presentation.channel.responseMode.option
+            presentation.channel.responseMode.type
                 .name()
         val supportedResponseModes = metadata.responseModesSupported ?: RFC8414.DEFAULT_RESPONSE_MODES_SUPPORTED
         ensure(responseMode in supportedResponseModes) {
@@ -398,14 +398,6 @@ private val VerifierId.clientIdPrefix: String
             is VerifierId.X509SanDns -> OpenId4VPSpec.CLIENT_ID_PREFIX_X509_SAN_DNS
             is VerifierId.X509Hash -> OpenId4VPSpec.CLIENT_ID_PREFIX_X509_HASH
         }
-
-private fun ResponseModeOption.name(): String =
-    when (this) {
-        ResponseModeOption.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
-        ResponseModeOption.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
-        ResponseModeOption.DcApi -> error("DC API request objects are not retrieved through RetrieveRequestObject")
-        ResponseModeOption.DcApiJwt -> error("DC API request objects are not retrieved through RetrieveRequestObject")
-    }
 
 private fun <T> commonGround(
     walletSupported: Collection<T>?,

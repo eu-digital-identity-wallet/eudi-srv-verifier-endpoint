@@ -109,7 +109,7 @@ variables of the service in [docker-compose.yaml](docker/docker-compose.yaml)
       - "8080:8080"
     environment:
       VERIFIER_PUBLICURL: "https://10.240.174.10"
-      VERIFIER_RESPONSE_MODE: "DirectPost"
+      VERIFIER_DEFAULTHTTPRESPONSEMODE: "DirectPost"
       VERIFIER_ACCESS_CERTIFICATE_KEYSTORE: file:///keystore.jks
 ```
 
@@ -125,7 +125,7 @@ To provide an external keystore mount it to the path designated by the value of 
       - "8080:8080"
     environment:
       VERIFIER_PUBLICURL: "https://10.240.174.10"
-      VERIFIER_RESPONSE_MODE: "DirectPost"
+      VERIFIER_DEFAULTHTTPRESPONSEMODE: "DirectPost"
       VERIFIER_ACCESS_CERTIFICATE_KEYSTORE: file:///certs/keystore.jks
       VERIFIER_ACCESS_CERTIFICATE_KEYSTORE_TYPE: "jks"
       VERIFIER_ACCESS_CERTIFICATE_KEYSTORE_PASSWORD: <PASSWORD OF KEYSTORE>
@@ -590,8 +590,8 @@ Description: Default `request_uri_method` to use for a Presentation when one is 
 Possible values: `Get`, `Post`  
 Default value: `Get`  
 
-Variable: `VERIFIER_RESPONSE_MODE`  
-Description: How Authorization Responses are expected    
+Variable: `VERIFIER_DEFEAULTHTTPRESPONSEMODE`  
+Description: How Authorization Responses are expected for HTTP Presentation   
 Possible values: `DirectPost`, `DirectPostJwt`  
 Default value: `DirectPostJwt`
 

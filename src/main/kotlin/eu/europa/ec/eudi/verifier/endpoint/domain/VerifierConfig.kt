@@ -71,11 +71,9 @@ enum class RequestUriMethod {
 /**
  * Configuration option for response mode
  */
-enum class ResponseModeOption {
+enum class HttpResponseModeOption {
     DirectPost,
     DirectPostJwt,
-    DcApi,
-    DcApiJwt,
 }
 
 sealed interface ResponseMode {
@@ -102,12 +100,27 @@ sealed interface ResponseMode {
     }
 }
 
-val ResponseMode.option: ResponseModeOption
+enum class ResponseModeType {
+    DirectPost,
+    DirectPostJwt,
+    DcApi,
+    DcApiJwt,
+}
+
+fun ResponseModeType.name(): String =
+    when (this) {
+        ResponseModeType.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
+        ResponseModeType.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
+        ResponseModeType.DcApi -> OpenId4VPSpec.RESPONSE_MODE_DCAPI
+        ResponseModeType.DcApiJwt -> OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT
+    }
+
+val ResponseMode.type: ResponseModeType
     get() =
         when (this) {
-            is ResponseMode.OverDcApi.DcApiJwt -> ResponseModeOption.DcApiJwt
-            is ResponseMode.OverHttp.DirectPost -> ResponseModeOption.DirectPost
-            is ResponseMode.OverHttp.DirectPostJwt -> ResponseModeOption.DirectPostJwt
+            is ResponseMode.OverDcApi.DcApiJwt -> ResponseModeType.DcApiJwt
+            is ResponseMode.OverHttp.DirectPost -> ResponseModeType.DirectPost
+            is ResponseMode.OverHttp.DirectPostJwt -> ResponseModeType.DirectPostJwt
         }
 
 data class ResponseEncryptionOption(
@@ -316,7 +329,7 @@ data class VerifierConfig(
     val verifierId: VerifierId,
     val requestJarOption: EmbedOption<RequestId>,
     val requestUriMethod: RequestUriMethod,
-    val responseModeOption: ResponseModeOption,
+    val defaultHttpResponseModeOption: HttpResponseModeOption,
     val responseUriBuilder: PresentationRelatedUrlBuilder<RequestId>,
     val maxAge: Duration,
     val clientMetaData: ClientMetaData,

@@ -75,21 +75,6 @@ enum class RequestUriMethodTO {
 }
 
 /**
- * Specifies the response_mode for a request
- */
-@Serializable
-enum class ResponseModeTO {
-    @SerialName(OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST)
-    DirectPost,
-
-    @SerialName(OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT)
-    DirectPostJwt,
-
-    @SerialName(OpenId4VPSpec.RESPONSE_MODE_DCAPI_JWT)
-    DcApiJwt,
-}
-
-/**
  * Specifies whether a property of a request will be provided by value or by reference.
  */
 @Serializable
@@ -133,7 +118,19 @@ data class InitTransactionTO(
     @SerialName("authorization_request_uri") val authorizationRequestUri: String? = null,
     @SerialName("profile") val profile: ProfileTO? = ProfileTO.OpenId4VP,
     @Transient val output: Output = Output.Json,
-)
+) {
+    /**
+     * Specifies the response_mode for a request
+     */
+    @Serializable
+    enum class ResponseModeTO {
+        @SerialName(OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST)
+        DirectPost,
+
+        @SerialName(OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT)
+        DirectPostJwt,
+    }
+}
 
 private val InitTransactionTO.profileOrDefault: ProfileTO
     get() = profile ?: ProfileTO.OpenId4VP
@@ -300,7 +297,6 @@ class InitTransactionLive(
 
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO.responseMode)
-        check(responseMode is ResponseMode.OverHttp)
 
         val channel =
             Channel.OverHttp(
@@ -364,8 +360,7 @@ class InitTransactionLive(
                 )
             }
         // if response mode is direct post jwt then generate ephemeral key
-        val responseMode = responseMode(ResponseModeTO.DcApiJwt)
-        check(responseMode is ResponseMode.OverDcApi)
+        val responseMode = ResponseMode.OverDcApi.DcApiJwt(generateEphemeralEncryptionKeyPair())
 
         val issuerChain = issuerChain(initDcApiTransactionTO.issuerChain)
         val origin = initDcApiTransactionTO.origin
@@ -531,32 +526,22 @@ class InitTransactionLive(
     /**
      * Gets the [ResponseMode] for the provided [InitTransactionTO].
      */
-    private suspend fun responseMode(responseMode: ResponseModeTO?): ResponseMode {
-        val responseModeOption =
+    private suspend fun responseMode(responseMode: InitTransactionTO.ResponseModeTO?): ResponseMode.OverHttp {
+        val httpResponseModeOption =
             when (responseMode) {
-                ResponseModeTO.DirectPost -> ResponseModeOption.DirectPost
-                ResponseModeTO.DirectPostJwt -> ResponseModeOption.DirectPostJwt
-                ResponseModeTO.DcApiJwt -> ResponseModeOption.DcApiJwt
-                null -> verifierConfig.responseModeOption
+                InitTransactionTO.ResponseModeTO.DirectPost -> HttpResponseModeOption.DirectPost
+                InitTransactionTO.ResponseModeTO.DirectPostJwt -> HttpResponseModeOption.DirectPostJwt
+                null -> verifierConfig.defaultHttpResponseModeOption
             }
 
-        return when (responseModeOption) {
-            ResponseModeOption.DirectPost -> {
+        return when (httpResponseModeOption) {
+            HttpResponseModeOption.DirectPost -> {
                 DirectPost
             }
 
-            ResponseModeOption.DirectPostJwt -> {
+            HttpResponseModeOption.DirectPostJwt -> {
                 val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
                 DirectPostJwt(responseEncryptionKey)
-            }
-
-            ResponseModeOption.DcApi -> {
-                error("DcApi response mode is not supported")
-            }
-
-            ResponseModeOption.DcApiJwt -> {
-                val responseEncryptionKey = generateEphemeralEncryptionKeyPair()
-                DcApiJwt(responseEncryptionKey)
             }
         }
     }

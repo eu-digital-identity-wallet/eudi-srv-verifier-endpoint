@@ -565,8 +565,8 @@ private fun verifierConfig(environment: Environment): VerifierConfig {
         }
     val requestUriMethod = environment.getProperty<RequestUriMethod>("verifier.requestJwt.requestUriMethod") ?: RequestUriMethod.Get
     val responseModeOption =
-        environment.getProperty("verifier.response.mode", ResponseModeOption::class.java)
-            ?: ResponseModeOption.DirectPostJwt
+        environment.getProperty<HttpResponseModeOption>("verifier.defaultHttpResponseMode")
+            ?: HttpResponseModeOption.DirectPostJwt
 
     val maxAge = environment.getProperty("verifier.maxAge")?.let { Duration.parse(it) } ?: 5.minutes
 
@@ -591,7 +591,7 @@ private fun verifierConfig(environment: Environment): VerifierConfig {
         requestJarOption = requestJarOption,
         requestUriMethod = requestUriMethod,
         responseUriBuilder = WalletApi.directPost(publicUrl),
-        responseModeOption = responseModeOption,
+        defaultHttpResponseModeOption = responseModeOption,
         maxAge = maxAge,
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
