@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
@@ -93,19 +95,21 @@ kotlin {
         implementation = JvmImplementation.VENDOR_SPECIFIC
     }
 
-    compilerOptions {
-        apiVersion = KotlinVersion.DEFAULT
-        freeCompilerArgs.addAll(
-            "-Xjsr305=strict",
-            "-Xannotation-default-target=param-property",
-            "-Xcontext-parameters",
-        )
-        optIn.addAll(
-            "kotlinx.serialization.ExperimentalSerializationApi",
-            "kotlin.io.encoding.ExperimentalEncodingApi",
-            "kotlin.contracts.ExperimentalContracts",
-            "kotlin.time.ExperimentalTime",
-        )
+    target {
+        compilerOptions {
+            javaParameters = true
+            jvmDefault = JvmDefaultMode.ENABLE
+            jvmTarget = JvmTarget.fromTarget(libs.versions.java.get())
+            apiVersion = KotlinVersion.DEFAULT
+            languageVersion = KotlinVersion.DEFAULT
+            optIn.addAll(
+                "kotlin.contracts.ExperimentalContracts",
+            )
+            freeCompilerArgs.addAll(
+                "-Xjsr305=strict",
+                "-Xannotation-default-target=param-property",
+            )
+        }
     }
 }
 
