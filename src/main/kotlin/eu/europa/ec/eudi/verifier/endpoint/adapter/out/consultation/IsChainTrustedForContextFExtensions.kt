@@ -73,9 +73,8 @@ fun IsChainTrustedForContextF.Companion.usingTrustValidatorService(
 
 @Serializable
 private enum class VerificationContextTO {
-    WalletInstanceAttestation,
-    WalletUnitAttestation,
-    WalletUnitAttestationStatus,
+    WalletProviderAttestation,
+    WalletOrKeyStorageStatus,
     PID,
     PIDStatus,
     QEAA,
@@ -86,15 +85,15 @@ private enum class VerificationContextTO {
     EAAStatus,
     WalletRelyingPartyAccessCertificate,
     WalletRelyingPartyRegistrationCertificate,
+    WalletRelyingPartyRegistrationCertificateStatus,
     Custom,
     ;
 
     companion object {
         fun from(context: VerificationContext): VerificationContextTO =
             when (context) {
-                VerificationContext.WalletInstanceAttestation -> WalletInstanceAttestation
-                VerificationContext.WalletUnitAttestation -> WalletUnitAttestation
-                VerificationContext.WalletUnitAttestationStatus -> WalletUnitAttestationStatus
+                VerificationContext.WalletProviderAttestation -> WalletProviderAttestation
+                VerificationContext.WalletOrKeyStorageStatus -> WalletOrKeyStorageStatus
                 VerificationContext.PID -> PID
                 VerificationContext.PIDStatus -> PIDStatus
                 VerificationContext.QEAA -> QEAA
@@ -106,6 +105,7 @@ private enum class VerificationContextTO {
                 is VerificationContext.Custom -> Custom
                 VerificationContext.WalletRelyingPartyAccessCertificate -> WalletRelyingPartyAccessCertificate
                 VerificationContext.WalletRelyingPartyRegistrationCertificate -> WalletRelyingPartyRegistrationCertificate
+                VerificationContext.WalletRelyingPartyRegistrationCertificateStatus -> WalletRelyingPartyRegistrationCertificateStatus
             }
     }
 }
