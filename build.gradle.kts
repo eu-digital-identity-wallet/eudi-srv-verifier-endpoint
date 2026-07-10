@@ -90,14 +90,11 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-webtestclient")
 }
 
-java {
-    sourceCompatibility = JavaVersion.toVersion(libs.versions.java.get())
-}
-
 kotlin {
-
     jvmToolchain {
         languageVersion = JavaLanguageVersion.of(libs.versions.java.get())
+        vendor = JvmVendorSpec.ADOPTIUM
+        implementation = JvmImplementation.VENDOR_SPECIFIC
     }
 
     compilerOptions {
