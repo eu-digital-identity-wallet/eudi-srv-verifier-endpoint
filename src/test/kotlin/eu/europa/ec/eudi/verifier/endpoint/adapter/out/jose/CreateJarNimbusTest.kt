@@ -17,6 +17,7 @@
 
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import arrow.core.nonEmptyListOf
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSHeader
@@ -41,6 +42,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.RequestUriMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode
 import eu.europa.ec.eudi.verifier.endpoint.domain.UnresolvedAuthorizationRequestUri
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierInfo
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import kotlinx.serialization.json.Json
 import net.minidev.json.JSONObject
@@ -65,6 +67,7 @@ class CreateJarNimbusTest {
             transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
             requestUriMethod = RequestUriMethod.Get,
             authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
+            verifierInfo = nonEmptyListOf(VerifierInfo("test", "test")),
         )
 
     private val createJar = CreateJarNimbus(verifierConfig)
@@ -84,6 +87,7 @@ class CreateJarNimbusTest {
                 state = TestContext.testRequestId.value,
                 audience = emptyList(),
                 issuedAt = TestContext.testClock.now(),
+                verifierInfo = nonEmptyListOf(VerifierInfo("test", "test")),
             )
 
         // responseMode is direct_post.jwt, so we need to generate an ephemeral key

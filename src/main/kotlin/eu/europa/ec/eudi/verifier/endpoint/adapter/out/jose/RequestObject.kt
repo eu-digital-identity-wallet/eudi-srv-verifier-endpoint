@@ -34,6 +34,7 @@ internal data class RequestObject(
     val issuedAt: Instant,
     val transactionData: List<String>? = null,
     val expectedOrigins: List<Url>? = null,
+    val verifierInfo: List<VerifierInfo>,
 )
 
 context(verifierConfig: VerifierConfig)
@@ -63,6 +64,7 @@ internal fun requestObjectFromDomain(
                 issuedAt = issuedAt,
                 transactionData = transactionData,
                 expectedOrigins = channel.expectedOrigins,
+                verifierInfo = verifierConfig.verifierInfo,
             )
         }
 
@@ -82,6 +84,7 @@ internal fun requestObjectFromDomain(
                         issuedAt = issuedAt,
                         transactionData = transactionData,
                         expectedOrigins = null,
+                        verifierInfo = verifierConfig.verifierInfo,
                     )
                 }
 
@@ -99,6 +102,7 @@ internal fun requestObjectFromDomain(
                         issuedAt = issuedAt,
                         transactionData = transactionData,
                         expectedOrigins = null,
+                        verifierInfo = verifierConfig.verifierInfo,
                     )
                 }
             }

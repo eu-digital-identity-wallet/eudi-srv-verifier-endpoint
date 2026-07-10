@@ -27,11 +27,13 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.ECDHEncrypter
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWK
+import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.JWSAlgorithmStringSerializer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.isSelfSigned
+import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -245,6 +247,17 @@ data class AccessCertificate(
         get() = key.parsedX509CertChain.first()
 }
 
+/**
+ * Registration certificate of the Verifier Endpoint.
+ */
+@Serializable
+data class VerifierInfo(
+    @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_FORMAT)
+    val format: String,
+    @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_DATA)
+    val data: String,
+)
+
 typealias OriginalClientId = String
 typealias ClientId = String
 
@@ -335,6 +348,7 @@ data class VerifierConfig(
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
     val authorizationRequestUri: UnresolvedAuthorizationRequestUri,
+    val verifierInfo: List<VerifierInfo>,
 )
 
 /**

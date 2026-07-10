@@ -21,7 +21,13 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.JWSVerifier
+import com.nimbusds.jose.crypto.ECDSAVerifier
+import com.nimbusds.jose.jwk.Curve
+import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.util.Base64
+import com.nimbusds.jose.util.X509CertChainUtils
+import com.nimbusds.jwt.SignedJWT
 import com.sksamuel.aedile.core.asCache
 import eu.europa.ec.eudi.etsi1196x2.consultation.*
 import eu.europa.ec.eudi.sdjwt.vc.*
@@ -87,6 +93,8 @@ import java.net.URL
 import java.security.KeyStore
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
+import java.security.interfaces.ECPublicKey
+import kotlin.collections.first
 import kotlin.collections.toSet
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
@@ -380,7 +388,41 @@ internal class AppBeans :
         //
         // Config
         //
-        registerBean { verifierConfig(env) }
+        registerBean {
+            val config = bean<VerifierEndpointConfigurationProperties>()
+            config.registrationCertificate
+                .map {
+                    val jwt = SignedJWT.parse(it.trim())
+                    val x5c = jwt.header.x509CertChain
+                    require(!x5c.isNullOrEmpty()) { "Issuer info must contain a valid certificate chain" }
+
+                    val chain = X509CertChainUtils.parse(x5c)
+                    val leafCert = chain.first()
+
+                    val verifier: JWSVerifier =
+                        when (val publicKey = leafCert.publicKey) {
+                            is ECPublicKey -> {
+                                val curve =
+                                    Curve.forECParameterSpec(publicKey.params)
+                                        ?: error("Unsupported EC curve for leaf certificate")
+                                ECDSAVerifier(ECKey.Builder(curve, publicKey).build())
+                            }
+
+                            else -> {
+                                error("Unsupported public key type for leaf certificate")
+                            }
+                        }
+                    require(jwt.verify(verifier)) {
+                        "JWT signature does not match the public key of the first (leaf) certificate in 'x5c'"
+                    }
+                    VerifierInfo(
+                        format = "registration_cert",
+                        data = jwt.serialize(),
+                    )
+                }.toNonEmptyListOrThrow()
+        }
+
+        registerBean { verifierConfig(env, bean()) }
 
         //
         // End points
@@ -539,7 +581,10 @@ private fun accessCertificate(environment: Environment): AccessCertificate {
     return AccessCertificate(key, algorithm)
 }
 
-private fun verifierConfig(environment: Environment): VerifierConfig {
+private fun verifierConfig(
+    environment: Environment,
+    verifierInfo: NonEmptyList<VerifierInfo>,
+): VerifierConfig {
     val verifierId =
         run {
             val originalClientId = environment.getProperty("verifier.originalClientId", "verifier")
@@ -596,6 +641,7 @@ private fun verifierConfig(environment: Environment): VerifierConfig {
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
         authorizationRequestUri = authorizationRequestUri,
+        verifierInfo = verifierInfo,
     )
 }
 
@@ -741,6 +787,7 @@ data class VerifierEndpointConfigurationProperties(
     val validation: ValidationConfigurationProperties,
     val trustValidator: TrustValidatorConfigurationProperties? = null,
     val attestationClassifications: AttestationClassifications = AttestationClassifications(),
+    val registrationCertificate: List<String>,
 )
 
 data class ValidationConfigurationProperties(

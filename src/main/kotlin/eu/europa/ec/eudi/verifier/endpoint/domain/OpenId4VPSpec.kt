@@ -98,4 +98,8 @@ object OpenId4VPSpec {
     const val RESPONSE_MODE_DCAPI = "dc_api"
     const val RESPONSE_MODE_DCAPI_JWT = "dc_api.jwt"
     const val DCAPI_EXPECTED_ORIGINS = "expected_origins"
+
+    const val VERIFIER_INFO = "verifier_info"
+    const val VERIFIER_INFO_FORMAT = "format"
+    const val VERIFIER_INFO_DATA = "data"
 }
