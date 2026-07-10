@@ -1,15 +1,12 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.owasp.dependencycheck.gradle.extension.DependencyCheckExtension
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
 plugins {
-    base
-    alias(libs.plugins.spring.boot)
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.plugin.spring)
     alias(libs.plugins.kotlin.plugin.serialization)
+    alias(libs.plugins.spring.boot)
     alias(libs.plugins.spotless)
     alias(libs.plugins.kover)
     alias(libs.plugins.dependencycheck)
@@ -17,7 +14,6 @@ plugins {
 
 repositories {
     mavenCentral()
-    mavenLocal()
     maven {
         url = uri("https://maven.waltid.dev/releases")
         mavenContent {
@@ -113,12 +109,8 @@ kotlin {
     }
 }
 
-testing {
-    suites {
-        val test by getting(JvmTestSuite::class) {
-            useJUnitJupiter()
-        }
-    }
+tasks.test {
+    useJUnitPlatform()
 }
 
 springBoot {
@@ -126,19 +118,18 @@ springBoot {
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {
-    imageName.set("$group/${project.name}")
-    publish.set(false)
-    // get the BP_OCI_* from env, for https://github.com/paketo-buildpacks/image-labels
-    // get the BP_JVM_* from env, jlink optimisation
-    environment.set(System.getenv())
-    val env = environment.get()
+    imageName = "$group/${project.name}"
+    publish = false
+    environment = System.getenv()
+
     docker {
+        val environment = environment.get()
         publishRegistry {
-            env["REGISTRY_URL"]?.let { url = it }
-            env["REGISTRY_USERNAME"]?.let { username = it }
-            env["REGISTRY_PASSWORD"]?.let { password = it }
+            environment["REGISTRY_URL"]?.let { url = it }
+            environment["REGISTRY_USERNAME"]?.let { username = it }
+            environment["REGISTRY_PASSWORD"]?.let { password = it }
         }
-        env["DOCKER_METADATA_OUTPUT_TAGS"]?.let { tagStr ->
+        environment["DOCKER_METADATA_OUTPUT_TAGS"]?.let { tagStr ->
             tags = tagStr.split(delimiters = arrayOf("\n", " ")).onEach { println("Tag: $it") }
         }
     }
@@ -146,18 +137,23 @@ tasks.named<BootBuildImage>("bootBuildImage") {
 
 spotless {
     val ktlintVersion = libs.versions.ktlintVersion.get()
+
     kotlin {
         ktlint(ktlintVersion)
         licenseHeaderFile("FileHeader.txt")
     }
+
     kotlinGradle {
         ktlint(ktlintVersion)
     }
 }
 
-val nvdApiKey: String? = System.getenv("NVD_API_KEY") ?: properties["nvdApiKey"]?.toString()
-val dependencyCheckExtension = extensions.findByType(DependencyCheckExtension::class.java)
-dependencyCheckExtension?.apply {
+dependencyCheck {
     formats = mutableListOf("XML", "HTML")
-    nvd.apiKey = nvdApiKey ?: ""
+
+    nvd {
+        apiKey = System.getenv("NVD_API_KEY") ?: findProperty("nvdApiKey")?.toString() ?: ""
+        delay = 10000
+        maxRetryCount = 2
+    }
 }
