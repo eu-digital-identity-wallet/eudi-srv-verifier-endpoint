@@ -66,9 +66,6 @@ dependencies {
     implementation(libs.ktor.client.serialization) {
         because("ktor client serialization (required by http client for SD-JWT)")
     }
-    implementation(libs.jsonpathkt) {
-        because("Evaluate JsonPaths on vp_token")
-    }
     implementation(libs.tink) {
         because("Support OctetKeyPairs and extra EncryptionMethods")
     }
@@ -104,6 +101,7 @@ kotlin {
             languageVersion = KotlinVersion.DEFAULT
             optIn.addAll(
                 "kotlin.contracts.ExperimentalContracts",
+                "kotlinx.serialization.ExperimentalSerializationApi",
             )
             freeCompilerArgs.addAll(
                 "-Xjsr305=strict",

@@ -1,28 +1,27 @@
 [versions]
 coroutines = "1.11.0"
 kotlin = "2.4.0"
-springboot = "4.0.1"
+springboot = "4.1.0"
 java = "25"
 kotlinxSerialization = "1.11.0"
 kotlinxDatetime = "0.8.0-0.6.x-compat"
 cose = "1.1.0"
 oauth2OidcSdk = "11.37.2"
-spotless = "8.6.0"
+spotless = "8.8.0"
 ktlintVersion = "1.8.0"
 bouncyCastle = "1.84"
 arrow = "2.2.3"
-dependencycheck = "12.1.1"
-swaggerUi = "5.30.2"
+dependencycheck = "12.2.2"
+swaggerUi = "5.32.8"
 waltid = "0.11.0"
 sdJwt = "0.20.1"
 ktor = "3.5.1"
-jsonpathkt = "2.0.1"
-tink = "1.21.0"
+tink = "1.22.0"
 statium = "0.5.1"
 kover = "0.9.8"
 zxing = "3.5.4"
 uri = "0.0.21"
-aedile = "2.1.2"
+aedile = "3.0.4"
 consultation = "0.4.0-alpha.1"
 
 [libraries]
@@ -44,7 +43,6 @@ bouncy-castle = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bou
 swagger-ui = { module = "org.webjars:swagger-ui", version.ref = "swaggerUi" }
 waltid-mdoc-credentials = { module = "id.walt.mdoc-credentials:waltid-mdoc-credentials-jvm", version.ref = "waltid" }
 sd-jwt = { module = "eu.europa.ec.eudi:eudi-lib-jvm-sdjwt-kt", version.ref = "sdJwt" }
-jsonpathkt = { module = "com.nfeld.jsonpathkt:jsonpathkt", version.ref = "jsonpathkt" }
 tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
 statium = { module = "eu.europa.ec.eudi:eudi-lib-kmp-statium", version.ref = "statium" }
 zxing = { module = "com.google.zxing:javase", version.ref = "zxing" }
