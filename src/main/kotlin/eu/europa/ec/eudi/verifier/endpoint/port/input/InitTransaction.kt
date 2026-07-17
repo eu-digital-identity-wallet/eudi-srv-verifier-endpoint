@@ -117,8 +117,8 @@ data class InitTransactionTO(
     @SerialName("authorization_request_scheme") val authorizationRequestScheme: String? = null,
     @SerialName("authorization_request_uri") val authorizationRequestUri: String? = null,
     @SerialName("profile") val profile: ProfileTO? = ProfileTO.OpenId4VP,
-    @SerialName("intended_use_id") val intendedUseId: String? = null, // nullable
-    @SerialName("registration_certificate") val registrationCertificate: String? = null, // nullable
+    @SerialName("intended_use_id") val intendedUseId: String? = null,
+    @SerialName("registration_certificate") val registrationCertificate: String? = null,
     @Transient val output: Output = Output.Json,
 ) {
     /**

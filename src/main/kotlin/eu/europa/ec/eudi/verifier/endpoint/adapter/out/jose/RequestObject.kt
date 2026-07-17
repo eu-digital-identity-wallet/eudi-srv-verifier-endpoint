@@ -119,7 +119,7 @@ internal fun requestObjectFromDomain(
     }
 }
 
- @ConsistentCopyVisibility
+@ConsistentCopyVisibility
 @Serializable
 data class VerifierInfo private constructor(
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_FORMAT)
