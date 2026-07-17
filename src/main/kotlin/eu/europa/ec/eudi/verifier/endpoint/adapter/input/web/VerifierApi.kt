@@ -69,8 +69,7 @@ internal class VerifierApi(
             GET(
                 REGISTRATION_CERTIFICATE_RETRIEVE_PATH,
                 accept(APPLICATION_JSON),
-                this@VerifierApi::handleGetRegistrationCertificateInformation,
-            )
+            ) { handleGetRegistrationCertificateInformation() }
         }
 
     private suspend fun handleInitTransaction(
@@ -223,7 +222,7 @@ internal class VerifierApi(
         }
     }
 
-    private suspend fun handleGetRegistrationCertificateInformation(req: ServerRequest): ServerResponse {
+    private suspend fun handleGetRegistrationCertificateInformation(): ServerResponse {
         val registrationCertificate = registrationCertificate.map { RegistrationCertificationInfoTO.from(it) }
 
         return ok().json().bodyValueAndAwait(
@@ -287,6 +286,22 @@ internal class VerifierApi(
 
                     ValidationError.InvalidAuthorizationRequestScheme -> {
                         "InvalidAuthorizationRequestScheme"
+                    }
+
+                    ValidationError.InvalidRegistrationCertificate -> {
+                        "InvalidRegistrationCertificate"
+                    }
+
+                    ValidationError.MissingRegistrationCertificate -> {
+                        "MissingRegistrationCertificate"
+                    }
+
+                    ValidationError.UnknownIntendedUseId -> {
+                        "UnknownIntendedUseId"
+                    }
+
+                    ValidationError.OnlyRegistrationCertificateOrIntendedUseIdMustBeProvided -> {
+                        "OnlyRegistrationCertificateOrIntendedUseIdMustBeProvided"
                     }
 
                     ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported -> {
@@ -366,7 +381,7 @@ private data class RegistrationCertificationInfoTO(
     companion object {
         fun from(to: RegistrationCertificate) =
             RegistrationCertificationInfoTO(
-                registrationCertificate = to.registrationCertificate,
+                registrationCertificate = to.registrationCertificate.parsedString,
                 intendedUseId = to.intentUseId,
                 description = to.description,
             )

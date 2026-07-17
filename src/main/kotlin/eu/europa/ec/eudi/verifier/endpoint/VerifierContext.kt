@@ -21,13 +21,7 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.JWSVerifier
-import com.nimbusds.jose.crypto.ECDSAVerifier
-import com.nimbusds.jose.jwk.Curve
-import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.util.Base64
-import com.nimbusds.jose.util.X509CertChainUtils
-import com.nimbusds.jwt.SignedJWT
 import com.sksamuel.aedile.core.asCache
 import eu.europa.ec.eudi.etsi1196x2.consultation.*
 import eu.europa.ec.eudi.sdjwt.vc.*
@@ -93,8 +87,6 @@ import java.net.URL
 import java.security.KeyStore
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
-import java.security.interfaces.ECPublicKey
-import kotlin.collections.first
 import kotlin.collections.map
 import kotlin.collections.toSet
 import kotlin.time.Duration
@@ -183,7 +175,6 @@ internal class AppBeans :
                 bean(),
                 bean(),
                 WalletApi.requestJwtByReference(env.publicUrl()),
-                bean(),
                 bean(),
                 bean(),
                 bean(),
@@ -395,10 +386,7 @@ internal class AppBeans :
             val config = bean<VerifierEndpointConfigurationProperties>()
             config.wrprc.map { it.toRegistrationCertificates() }
         }
-        registerBean {
-            val config = bean<VerifierEndpointConfigurationProperties>()
-            config.wrprc.map { it.toVerifierInfo() }
-        }
+
         registerBean {
             verifierConfig(env, bean())
         }
@@ -625,45 +613,10 @@ private fun verifierConfig(
     )
 }
 
-private fun RegistrationCertificateInfo.toVerifierInfo(): VerifierInfo {
-    val validatedJwt = this.registrationCertificate.certificate.validateSignedJWT()
-    return VerifierInfo(
-        format = "registration_cert",
-        data = validatedJwt,
-    )
-}
-
-private fun String.validateSignedJWT(): String {
-    val jwt = SignedJWT.parse(this.trim())
-    val x5c = jwt.header.x509CertChain
-    require(!x5c.isNullOrEmpty()) { "Issuer info must contain a valid certificate chain" }
-
-    val chain = X509CertChainUtils.parse(x5c)
-    val leafCert = chain.first()
-
-    val verifier: JWSVerifier =
-        when (val publicKey = leafCert.publicKey) {
-            is ECPublicKey -> {
-                val curve =
-                    Curve.forECParameterSpec(publicKey.params)
-                        ?: error("Unsupported EC curve for leaf certificate")
-                ECDSAVerifier(ECKey.Builder(curve, publicKey).build())
-            }
-
-            else -> {
-                error("Unsupported public key type for leaf certificate")
-            }
-        }
-    require(jwt.verify(verifier)) {
-        "JWT signature does not match the public key of the first (leaf) certificate in 'x5c'"
-    }
-    return jwt.parsedString
-}
-
 private fun RegistrationCertificateInfo.toRegistrationCertificates(): RegistrationCertificate =
-    RegistrationCertificate(
+    RegistrationCertificate.create(
         description = description,
-        registrationCertificate = registrationCertificate.certificate.validateSignedJWT(),
+        registrationCertificate = registrationCertificate.certificate,
         intentUseId = intendedUseId,
     )
 
@@ -825,15 +778,10 @@ data class RegistrationCertificateInfo(
     val registrationCertificate: RegistrationCertificateTO,
 )
 
-// This has to move possibly outside of here
 @JvmInline
 value class RegistrationCertificateTO(
     val certificate: String,
-) {
-    init {
-        // TODO: here goes jwt validaiton
-    }
-}
+)
 
 data class ValidationConfigurationProperties(
     @Name("sd-jwt-vc") val sdJwtVc: SdJwtVcConfigurationProperties,

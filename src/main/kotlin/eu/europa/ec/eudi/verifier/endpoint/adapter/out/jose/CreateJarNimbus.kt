@@ -57,12 +57,19 @@ class CreateJarNimbus(
         nonce: Nonce,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,
-        verifierInfo: List<VerifierInfo>,
+        registrationCertificate: RegistrationCertificate,
     ): Jwt =
         withContext(Dispatchers.Default) {
             val requestObject =
                 context(verifierConfig) {
-                    requestObjectFromDomain(issuedAt, transactionData, channel, query, nonce, verifierInfo)
+                    requestObjectFromDomain(
+                        issuedAt,
+                        transactionData,
+                        channel,
+                        query,
+                        nonce,
+                        registrationCertificate.registrationCertificate,
+                    )
                 }
             val responseMode = channel.responseMode
             val signedJar = sign(responseMode, requestObject, walletNonce)
@@ -137,7 +144,7 @@ class CreateJarNimbus(
         val scope = Scope(*requestObject.scope.map { Scope.Value(it) }.toTypedArray())
         val state = requestObject.state?.let { State(requestObject.state) }
         val expectedOrigins = requestObject.expectedOrigins?.takeIf { it.isNotEmpty() }
-        val verifierInfo = requestObject.verifierInfo
+        val verifierInfo = listOf(requestObject.verifierInfo)
 
         val authorizationRequestClaims =
             with(AuthorizationRequest.Builder(responseType, clientId)) {

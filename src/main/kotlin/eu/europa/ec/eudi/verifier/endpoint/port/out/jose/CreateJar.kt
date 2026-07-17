@@ -31,6 +31,6 @@ fun interface CreateJar {
         nonce: Nonce,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,
-        verifierInfo: List<VerifierInfo>,
+        registrationCertificate: RegistrationCertificate,
     ): Jwt
 }

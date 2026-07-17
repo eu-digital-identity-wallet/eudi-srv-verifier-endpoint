@@ -24,21 +24,27 @@ import arrow.core.serialization.NonEmptyListSerializer
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.JWSVerifier
 import com.nimbusds.jose.crypto.ECDHEncrypter
+import com.nimbusds.jose.crypto.ECDSAVerifier
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
+import com.nimbusds.jose.jwk.Curve
+import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.jwk.JWK
+import com.nimbusds.jose.util.X509CertChainUtils
+import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.JWSAlgorithmStringSerializer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.isSelfSigned
-import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import java.net.URL
 import java.security.KeyStore
 import java.security.cert.X509Certificate
+import java.security.interfaces.ECPublicKey
 import kotlin.time.Duration
 
 typealias PresentationRelatedUrlBuilder<ID> = (ID) -> URL
@@ -246,22 +252,48 @@ data class AccessCertificate(
         get() = key.parsedX509CertChain.first()
 }
 
-data class RegistrationCertificate(
-    val description: String,
-    val registrationCertificate: String, // Do we lock this up as a jwt?
-    val intentUseId: String,
-)
-
 /**
  * Registration certificate of the Verifier Endpoint.
  */
-@Serializable
-data class VerifierInfo(
-    @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_FORMAT)
-    val format: String,
-    @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_DATA)
-    val data: String, // Do we lock this up as a jwt?
-)
+@ConsistentCopyVisibility
+data class RegistrationCertificate private constructor(
+    val description: String,
+    val registrationCertificate: SignedJWT,
+    val intentUseId: String,
+) {
+    companion object {
+        fun create(
+            description: String,
+            registrationCertificate: String,
+            intentUseId: String,
+        ): RegistrationCertificate {
+            val jwt = SignedJWT.parse(registrationCertificate.trim())
+            val x5c = jwt.header.x509CertChain
+            require(!x5c.isNullOrEmpty()) { "Issuer info must contain a valid certificate chain" }
+
+            val chain = X509CertChainUtils.parse(x5c)
+            val leafCert = chain.first()
+
+            val verifier: JWSVerifier =
+                when (val publicKey = leafCert.publicKey) {
+                    is ECPublicKey -> {
+                        val curve =
+                            Curve.forECParameterSpec(publicKey.params)
+                                ?: error("Unsupported EC curve for leaf certificate")
+                        ECDSAVerifier(ECKey.Builder(curve, publicKey).build())
+                    }
+
+                    else -> {
+                        error("Unsupported public key type for leaf certificate")
+                    }
+                }
+            require(jwt.verify(verifier)) {
+                "JWT signature does not match the public key of the first (leaf) certificate in 'x5c'"
+            }
+            return RegistrationCertificate(description, jwt, intentUseId)
+        }
+    }
+}
 
 typealias OriginalClientId = String
 typealias ClientId = String

@@ -121,12 +121,6 @@ data class InitTransactionTO(
     @SerialName("registration_certificate") val registrationCertificate: String? = null, // nullable
     @Transient val output: Output = Output.Json,
 ) {
-    init {
-        require(!intendedUseId.isNullOrBlank() xor !registrationCertificate.isNullOrBlank()) {
-            "Either 'intendedUseId' or 'registrationCertificate' must be provided"
-        }
-    }
-
     /**
      * Specifies the response_mode for a request
      */
@@ -158,6 +152,14 @@ sealed interface ValidationError {
     data object UnsupportedFormat : ValidationError
 
     data object InvalidIssuerChain : ValidationError
+
+    data object OnlyRegistrationCertificateOrIntendedUseIdMustBeProvided : ValidationError
+
+    data object MissingRegistrationCertificate : ValidationError
+
+    data object InvalidRegistrationCertificate : ValidationError
+
+    data object UnknownIntendedUseId : ValidationError
 
     data object ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme : ValidationError
 
@@ -290,8 +292,6 @@ class InitTransactionLive(
     private val publishPresentationEvent: PublishPresentationEvent,
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509Certificates,
     private val generateQrCode: GenerateQrCode,
-    // add the available registration certificates
-    private val registrationCertificates: List<RegistrationCertificate>,
 ) : InitTransaction {
     context(_: Raise<ValidationError>)
     override suspend fun invoke(initTransactionTO: InitTransactionTO): InitTransactionResponse {
@@ -305,16 +305,14 @@ class InitTransactionLive(
                 )
             }
 
+        ensureOnlyRegistrationCertificateOrIntendedUseIdExists(initTransactionTO.registrationCertificate, initTransactionTO.intendedUseId)
+
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO.responseMode)
 
         val retrieveRegistrationCertificate =
-            if (initTransactionTO.intendedUseId != null) {
-                registrationCertificates.find { it.intentUseId == initTransactionTO.intendedUseId }
-            } else if (null != initTransactionTO.registrationCertificate) {
-                registrationCertificates.find { it.registrationCertificate == initTransactionTO.registrationCertificate }
-            } else {
-                error("No intended use id or registration certificate found")
+            context(verifierConfig) {
+                resolveRegistrationCertificate(initTransactionTO.intendedUseId, initTransactionTO.registrationCertificate)
             }
 
         val channel =
@@ -355,7 +353,7 @@ class InitTransactionLive(
                 profile,
                 channel,
                 unresolvedAuthorizationRequestUri,
-                retrieveRegistrationCertificate!!, // call the method here to convert it to domain obj
+                retrieveRegistrationCertificate, // call the method here to convert it to domain obj
             )
         val response = initTransactionTO.output.createResponse(authorizationRequest)
 
@@ -379,6 +377,12 @@ class InitTransactionLive(
                     initDcApiTransactionTO.transactionData,
                 )
             }
+
+        ensureOnlyRegistrationCertificateOrIntendedUseIdExists(
+            initDcApiTransactionTO.registrationCertificate,
+            initDcApiTransactionTO.intendedUseId,
+        )
+
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = DcApiJwt(generateEphemeralEncryptionKeyPair())
 
@@ -396,13 +400,9 @@ class InitTransactionLive(
         }
 
         val retrieveRegistrationCertificate =
-            if (initDcApiTransactionTO.intendedUseId != null) {
-                registrationCertificates.find { it.intentUseId == initDcApiTransactionTO.intendedUseId }
-            } else {
-                registrationCertificates.find { it.registrationCertificate == initDcApiTransactionTO.registrationCertificate }
+            context(verifierConfig) {
+                resolveRegistrationCertificate(initDcApiTransactionTO.intendedUseId, initDcApiTransactionTO.registrationCertificate)
             }
-
-        requireNotNull(retrieveRegistrationCertificate) { "No intended use id or registration certificate found" }
 
         // Initialize presentation
         val presentation =
@@ -419,13 +419,13 @@ class InitTransactionLive(
                 registrationCertificate = retrieveRegistrationCertificate,
             )
 
-        val verifierInfo =
-            listOf(
-                VerifierInfo(
-                    format = "registration_cert",
-                    data = retrieveRegistrationCertificate.registrationCertificate,
-                ),
-            )
+//        val verifierInfo =
+//            listOf(
+//                VerifierInfo(
+//                    format = "registration_cert",
+//                    data = retrieveRegistrationCertificate.registrationCertificate.parsedString,
+//                ),
+//            )
         val jar =
             createJar(
                 clock.now(),
@@ -435,7 +435,7 @@ class InitTransactionLive(
                 presentation.nonce,
                 null,
                 EncryptionRequirement.NotRequired,
-                verifierInfo,
+                presentation.registrationCertificate,
             )
 
         storePresentation(presentation)
@@ -513,7 +513,7 @@ class InitTransactionLive(
                         presentation.nonce,
                         null,
                         EncryptionRequirement.NotRequired,
-                        verifierInfo = listOf(VerifierInfo("registration_cert", retrieveRegistrationCertificate.registrationCertificate)),
+                        presentation.registrationCertificate,
                     )
                 val authorizationRequest =
                     InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
@@ -564,6 +564,16 @@ class InitTransactionLive(
                 }
                 GetWalletResponseMethod.Redirect(template)
             } ?: GetWalletResponseMethod.Poll
+
+    context(_: Raise<ValidationError>)
+    private fun ensureOnlyRegistrationCertificateOrIntendedUseIdExists(
+        registrationCertificate: String?,
+        intendedUseId: String?,
+    ) {
+        ensure(!intendedUseId.isNullOrBlank() xor !registrationCertificate.isNullOrBlank()) {
+            ValidationError.OnlyRegistrationCertificateOrIntendedUseIdMustBeProvided
+        }
+    }
 
     /**
      * Gets the [ResponseMode] for the provided [InitTransactionTO].
@@ -842,6 +852,36 @@ private val Profile.validator: ProfileValidator
             Profile.ETSI119472Part2 -> ProfileValidator.ETSI119472Part2
         }
 
+context(_: Raise<ValidationError>, verifierConfig: VerifierConfig)
+private fun resolveRegistrationCertificate(
+    intendedUseId: String? = null,
+    registrationCertificate: String? = null,
+): RegistrationCertificate =
+    when {
+        !intendedUseId.isNullOrBlank() -> {
+            ensureNotNull(verifierConfig.registrationCertificates.find { it.intentUseId == intendedUseId }) {
+                ValidationError.UnknownIntendedUseId
+            }
+        }
+
+        !registrationCertificate.isNullOrBlank() -> {
+            catch(
+                block = {
+                    RegistrationCertificate.create(
+                        description = "Provided registration certificate",
+                        registrationCertificate = registrationCertificate,
+                        intentUseId = "provided",
+                    )
+                },
+                catch = { raise(ValidationError.InvalidRegistrationCertificate) },
+            )
+        }
+
+        else -> {
+            raise(ValidationError.MissingRegistrationCertificate)
+        }
+    }
+
 @Serializable
 data class InitDcApiTransactionTO(
     @Required @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL,
@@ -852,13 +892,7 @@ data class InitDcApiTransactionTO(
     @SerialName("expected_origins") val expectedOrigins: NonEmptyList<Url>? = null,
     @SerialName("intended_use_id") val intendedUseId: String? = null, // nullable
     @SerialName("registration_certificate") val registrationCertificate: String? = null, // nullable
-) {
-    init {
-        require(!intendedUseId.isNullOrBlank() xor !registrationCertificate.isNullOrBlank()) {
-            "Either 'intendedUseId' or 'registrationCertificate' must be provided"
-        }
-    }
-}
+)
 
 @Serializable
 data class InitDcApiTransactionResponseTO(

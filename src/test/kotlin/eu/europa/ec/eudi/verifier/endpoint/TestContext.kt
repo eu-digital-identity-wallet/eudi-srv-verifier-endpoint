@@ -105,7 +105,6 @@ object TestContext {
             repo.publishPresentationEvent,
             ParsePemEncodedX509CertificatesWithNimbus,
             generateQrCode,
-            registrationCertificates = listOf(RegistrationCertificate("test", "test", "1")),
         )
 }
 
