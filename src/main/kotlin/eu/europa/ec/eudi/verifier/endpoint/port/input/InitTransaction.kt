@@ -117,8 +117,16 @@ data class InitTransactionTO(
     @SerialName("authorization_request_scheme") val authorizationRequestScheme: String? = null,
     @SerialName("authorization_request_uri") val authorizationRequestUri: String? = null,
     @SerialName("profile") val profile: ProfileTO? = ProfileTO.OpenId4VP,
+    @SerialName("intended_use_id") val intendedUseId: String? = null, // nullable
+    @SerialName("registration_certificate") val registrationCertificate: String? = null, // nullable
     @Transient val output: Output = Output.Json,
 ) {
+    init {
+        require(!intendedUseId.isNullOrBlank() xor !registrationCertificate.isNullOrBlank()) {
+            "Either 'intendedUseId' or 'registrationCertificate' must be provided"
+        }
+    }
+
     /**
      * Specifies the response_mode for a request
      */
@@ -282,6 +290,8 @@ class InitTransactionLive(
     private val publishPresentationEvent: PublishPresentationEvent,
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509Certificates,
     private val generateQrCode: GenerateQrCode,
+    // add the available registration certificates
+    private val registrationCertificates: List<RegistrationCertificate>,
 ) : InitTransaction {
     context(_: Raise<ValidationError>)
     override suspend fun invoke(initTransactionTO: InitTransactionTO): InitTransactionResponse {
@@ -297,6 +307,15 @@ class InitTransactionLive(
 
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO.responseMode)
+
+        val retrieveRegistrationCertificate =
+            if (initTransactionTO.intendedUseId != null) {
+                registrationCertificates.find { it.intentUseId == initTransactionTO.intendedUseId }
+            } else if (null != initTransactionTO.registrationCertificate) {
+                registrationCertificates.find { it.registrationCertificate == initTransactionTO.registrationCertificate }
+            } else {
+                error("No intended use id or registration certificate found")
+            }
 
         val channel =
             Channel.OverHttp(
@@ -336,6 +355,7 @@ class InitTransactionLive(
                 profile,
                 channel,
                 unresolvedAuthorizationRequestUri,
+                retrieveRegistrationCertificate!!, // call the method here to convert it to domain obj
             )
         val response = initTransactionTO.output.createResponse(authorizationRequest)
 
@@ -360,7 +380,7 @@ class InitTransactionLive(
                 )
             }
         // if response mode is direct post jwt then generate ephemeral key
-        val responseMode = ResponseMode.OverDcApi.DcApiJwt(generateEphemeralEncryptionKeyPair())
+        val responseMode = DcApiJwt(generateEphemeralEncryptionKeyPair())
 
         val issuerChain = issuerChain(initDcApiTransactionTO.issuerChain)
         val origin = initDcApiTransactionTO.origin
@@ -375,6 +395,15 @@ class InitTransactionLive(
             }
         }
 
+        val retrieveRegistrationCertificate =
+            if (initDcApiTransactionTO.intendedUseId != null) {
+                registrationCertificates.find { it.intentUseId == initDcApiTransactionTO.intendedUseId }
+            } else {
+                registrationCertificates.find { it.registrationCertificate == initDcApiTransactionTO.registrationCertificate }
+            }
+
+        requireNotNull(retrieveRegistrationCertificate) { "No intended use id or registration certificate found" }
+
         // Initialize presentation
         val presentation =
             Presentation.RequestObjectRetrieved(
@@ -387,8 +416,16 @@ class InitTransactionLive(
                 transactionData = type.transactionData,
                 issuerChain = issuerChain,
                 profile = profile,
+                registrationCertificate = retrieveRegistrationCertificate,
             )
 
+        val verifierInfo =
+            listOf(
+                VerifierInfo(
+                    format = "registration_cert",
+                    data = retrieveRegistrationCertificate.registrationCertificate,
+                ),
+            )
         val jar =
             createJar(
                 clock.now(),
@@ -398,6 +435,7 @@ class InitTransactionLive(
                 presentation.nonce,
                 null,
                 EncryptionRequirement.NotRequired,
+                verifierInfo,
             )
 
         storePresentation(presentation)
@@ -417,6 +455,7 @@ class InitTransactionLive(
         profile: Profile,
         channel: Channel.OverHttp,
         unresolvedAuthorizationRequestUri: UnresolvedAuthorizationRequestUri,
+        retrieveRegistrationCertificate: RegistrationCertificate,
     ): Pair<Presentation, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> =
         when (jarMode) {
             is EmbedOption.ByReference -> {
@@ -430,6 +469,7 @@ class InitTransactionLive(
                         issuerChain = issuerChain,
                         profile = profile,
                         channel = channel,
+                        registrationCertificate = retrieveRegistrationCertificate,
                     )
 
                 val requestUri = jarMode.buildUrl(presentation.channel.requestId)
@@ -461,6 +501,7 @@ class InitTransactionLive(
                         nonce = nonce,
                         issuerChain = issuerChain,
                         profile = profile,
+                        registrationCertificate = retrieveRegistrationCertificate,
                     )
 
                 val jar =
@@ -472,6 +513,7 @@ class InitTransactionLive(
                         presentation.nonce,
                         null,
                         EncryptionRequirement.NotRequired,
+                        verifierInfo = listOf(VerifierInfo("registration_cert", retrieveRegistrationCertificate.registrationCertificate)),
                     )
                 val authorizationRequest =
                     InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
@@ -808,7 +850,15 @@ data class InitDcApiTransactionTO(
     @SerialName("issuer_chain") val issuerChain: String? = null,
     @Required @SerialName("origin") val origin: Url,
     @SerialName("expected_origins") val expectedOrigins: NonEmptyList<Url>? = null,
-)
+    @SerialName("intended_use_id") val intendedUseId: String? = null, // nullable
+    @SerialName("registration_certificate") val registrationCertificate: String? = null, // nullable
+) {
+    init {
+        require(!intendedUseId.isNullOrBlank() xor !registrationCertificate.isNullOrBlank()) {
+            "Either 'intendedUseId' or 'registrationCertificate' must be provided"
+        }
+    }
+}
 
 @Serializable
 data class InitDcApiTransactionResponseTO(

@@ -57,11 +57,12 @@ class CreateJarNimbus(
         nonce: Nonce,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,
+        verifierInfo: List<VerifierInfo>,
     ): Jwt =
         withContext(Dispatchers.Default) {
             val requestObject =
                 context(verifierConfig) {
-                    requestObjectFromDomain(issuedAt, transactionData, channel, query, nonce)
+                    requestObjectFromDomain(issuedAt, transactionData, channel, query, nonce, verifierInfo)
                 }
             val responseMode = channel.responseMode
             val signedJar = sign(responseMode, requestObject, walletNonce)

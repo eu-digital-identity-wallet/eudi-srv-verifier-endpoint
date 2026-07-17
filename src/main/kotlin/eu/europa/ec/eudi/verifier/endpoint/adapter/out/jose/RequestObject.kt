@@ -44,6 +44,7 @@ internal fun requestObjectFromDomain(
     channel: Channel,
     query: DCQL,
     nonce: Nonce,
+    verifierInfo: List<VerifierInfo>,
 ): RequestObject {
     val scope = emptyList<String>()
     val responseType = listOf(OpenId4VPSpec.VP_TOKEN)
@@ -64,7 +65,7 @@ internal fun requestObjectFromDomain(
                 issuedAt = issuedAt,
                 transactionData = transactionData,
                 expectedOrigins = channel.expectedOrigins,
-                verifierInfo = verifierConfig.verifierInfo,
+                verifierInfo = verifierInfo,
             )
         }
 
@@ -84,7 +85,7 @@ internal fun requestObjectFromDomain(
                         issuedAt = issuedAt,
                         transactionData = transactionData,
                         expectedOrigins = null,
-                        verifierInfo = verifierConfig.verifierInfo,
+                        verifierInfo = verifierInfo,
                     )
                 }
 
@@ -102,7 +103,7 @@ internal fun requestObjectFromDomain(
                         issuedAt = issuedAt,
                         transactionData = transactionData,
                         expectedOrigins = null,
-                        verifierInfo = verifierConfig.verifierInfo,
+                        verifierInfo = verifierInfo,
                     )
                 }
             }

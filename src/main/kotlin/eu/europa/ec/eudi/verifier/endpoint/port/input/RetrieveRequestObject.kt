@@ -160,6 +160,7 @@ class RetrieveRequestObjectLive(
                     presentation.nonce,
                     method.walletNonceOrNull,
                     encryptionRequirement,
+                    listOf(VerifierInfo("registration_cert", presentation.registrationCertificate.registrationCertificate)),
                 )
             val updatedPresentation = presentation.retrieveRequestObject(clock)
             storePresentation(updatedPresentation)

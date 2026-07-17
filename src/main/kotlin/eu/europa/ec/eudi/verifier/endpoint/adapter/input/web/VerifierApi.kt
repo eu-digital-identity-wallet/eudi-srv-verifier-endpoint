@@ -41,6 +41,7 @@ internal class VerifierApi(
     private val getWalletResponse: GetWalletResponse,
     private val getPresentationEvents: GetPresentationEvents,
     private val postWalletResponse: PostWalletResponse,
+    private val registrationCertificate: List<RegistrationCertificate>,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
     val route =
@@ -65,6 +66,11 @@ internal class VerifierApi(
 
             GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
             GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
+            GET(
+                REGISTRATION_CERTIFICATE_RETRIEVE_PATH,
+                accept(APPLICATION_JSON),
+                this@VerifierApi::handleGetRegistrationCertificateInformation,
+            )
         }
 
     private suspend fun handleInitTransaction(
@@ -217,6 +223,16 @@ internal class VerifierApi(
         }
     }
 
+    private suspend fun handleGetRegistrationCertificateInformation(req: ServerRequest): ServerResponse {
+        val registrationCertificate = registrationCertificate.map { RegistrationCertificationInfoTO.from(it) }
+
+        return ok().json().bodyValueAndAwait(
+            RegisteredRegistrationCertificatesTO(
+                registrationCertificate,
+            ),
+        )
+    }
+
     companion object {
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
         const val INIT_TRANSACTION_PATH_V2 = "/ui/presentations/v2"
@@ -224,6 +240,7 @@ internal class VerifierApi(
         const val DC_API_WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}/dc-api"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
         const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
+        const val REGISTRATION_CERTIFICATE_RETRIEVE_PATH = "/ui/registration-certificates"
 
         const val TRANSACTION_ID_HEADER = "Transaction-Id"
         const val AUTHORIZATION_REQUEST_URI_HEADER = "Authorization-Request-Uri"
@@ -330,6 +347,28 @@ private data class JwtSecuredAuthorizationRequestV1TO(
                 request = to.request,
                 requestUri = to.requestUri,
                 requestUriMethod = to.requestUriMethod,
+            )
+    }
+}
+
+@Serializable
+private data class RegisteredRegistrationCertificatesTO(
+    @SerialName("intended_uses")
+    val registeredRegistrationCertificates: List<RegistrationCertificationInfoTO>,
+)
+
+@Serializable
+private data class RegistrationCertificationInfoTO(
+    @SerialName("registration_certificate") val registrationCertificate: String,
+    @SerialName("intended_use_id") val intendedUseId: String,
+    @SerialName("description") val description: String,
+) {
+    companion object {
+        fun from(to: RegistrationCertificate) =
+            RegistrationCertificationInfoTO(
+                registrationCertificate = to.registrationCertificate,
+                intendedUseId = to.intentUseId,
+                description = to.description,
             )
     }
 }

@@ -50,7 +50,7 @@ class InitTransactionTest {
             transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
             requestUriMethod = RequestUriMethod.Get,
             authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
-            verifierInfo = nonEmptyListOf(VerifierInfo("test", "test")),
+            registrationCertificates = nonEmptyListOf(RegistrationCertificate("test", "test", "test")),
         )
 
     @Test
@@ -94,7 +94,7 @@ class InitTransactionTest {
                     transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                     requestUriMethod = RequestUriMethod.Get,
                     authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
-                    verifierInfo = nonEmptyListOf(VerifierInfo("test", "test")),
+                    registrationCertificates = nonEmptyListOf(RegistrationCertificate("test", "test", "test")),
                 )
 
             val input =

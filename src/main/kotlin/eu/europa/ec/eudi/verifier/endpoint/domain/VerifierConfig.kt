@@ -27,7 +27,6 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.ECDHEncrypter
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWK
-import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.JWSAlgorithmStringSerializer
@@ -247,6 +246,12 @@ data class AccessCertificate(
         get() = key.parsedX509CertChain.first()
 }
 
+data class RegistrationCertificate(
+    val description: String,
+    val registrationCertificate: String, // Do we lock this up as a jwt?
+    val intentUseId: String,
+)
+
 /**
  * Registration certificate of the Verifier Endpoint.
  */
@@ -255,7 +260,7 @@ data class VerifierInfo(
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_FORMAT)
     val format: String,
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_DATA)
-    val data: String,
+    val data: String, // Do we lock this up as a jwt?
 )
 
 typealias OriginalClientId = String
@@ -348,7 +353,7 @@ data class VerifierConfig(
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
     val authorizationRequestUri: UnresolvedAuthorizationRequestUri,
-    val verifierInfo: List<VerifierInfo>,
+    val registrationCertificates: List<RegistrationCertificate>,
 )
 
 /**

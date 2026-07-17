@@ -185,6 +185,7 @@ sealed interface Presentation {
         val nonce: Nonce,
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
+        val registrationCertificate: RegistrationCertificate,
     ) : Presentation
 
     /**
@@ -203,6 +204,7 @@ sealed interface Presentation {
         val nonce: Nonce,
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
+        val registrationCertificate: RegistrationCertificate,
     ) : Presentation {
         init {
             require(initiatedAt <= requestObjectRetrievedAt)
@@ -223,6 +225,7 @@ sealed interface Presentation {
                     requested.nonce,
                     requested.issuerChain,
                     requested.profile,
+                    requested.registrationCertificate,
                 )
         }
     }
