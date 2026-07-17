@@ -60,6 +60,7 @@ class InitTransactionTest {
                 InitTransactionTO(
                     dcqlQuery(),
                     "nonce",
+                    intendedUseId = "1",
                 )
 
             val useCase: InitTransaction =
@@ -94,13 +95,14 @@ class InitTransactionTest {
                     transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                     requestUriMethod = RequestUriMethod.Get,
                     authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
-                    registrationCertificates = nonEmptyListOf(RegistrationCertificate("test", "test", "test")),
+                    registrationCertificates = nonEmptyListOf(RegistrationCertificate("test", "test", "1")),
                 )
 
             val input =
                 InitTransactionTO(
                     dcqlQuery(),
-                    "nonce",
+                    nonce = "nonce",
+                    intendedUseId = "1",
                 )
 
             val useCase =
@@ -129,6 +131,7 @@ class InitTransactionTest {
                 InitTransactionTO(
                     dcqlQuery = null,
                     nonce = "nonce",
+                    intendedUseId = "1",
                 )
             testWithInvalidInput(input, ValidationError.MissingPresentationQuery)
         }
@@ -141,6 +144,7 @@ class InitTransactionTest {
                 InitTransactionTO(
                     dcqlQuery(),
                     nonce = null,
+                    intendedUseId = "1",
                 )
             testWithInvalidInput(input, ValidationError.MissingNonce)
         }
@@ -156,6 +160,7 @@ class InitTransactionTest {
                     dcqlQuery(),
                     nonce = "nonce",
                     responseMode = InitTransactionTO.ResponseModeTO.DirectPost,
+                    intendedUseId = "1",
                 )
 
             val useCase: InitTransaction =
@@ -186,6 +191,7 @@ class InitTransactionTest {
                     dcqlQuery = dcqlQuery(),
                     nonce = "nonce",
                     jarMode = EmbedModeTO.ByReference,
+                    intendedUseId = "1",
                 )
 
             val useCase: InitTransaction =
@@ -221,6 +227,7 @@ class InitTransactionTest {
                     dcqlQuery = dcqlQuery(),
                     "nonce",
                     redirectUriTemplate = "https://client.example.org/cb#response_code=#CODE#",
+                    intendedUseId = "1",
                 )
 
             either { useCase(invalidPlaceHolderInput) }
@@ -238,6 +245,7 @@ class InitTransactionTest {
                     "nonce",
                     redirectUriTemplate =
                         "hts:/client.example.org/cb%response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
+                    intendedUseId = "1",
                 )
 
             either { useCase(invalidUrlInput) }
@@ -259,6 +267,7 @@ class InitTransactionTest {
                     "nonce",
                     redirectUriTemplate =
                         "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
+                    intendedUseId = "1",
                 )
 
             val useCase: InitTransaction =
@@ -283,6 +292,7 @@ class InitTransactionTest {
                 InitTransactionTO(
                     dcqlQuery(),
                     "nonce",
+                    intendedUseId = "1",
                 )
 
             val useCase: InitTransaction =

@@ -354,6 +354,9 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         "verifier.validation.sdJwtVc.statusCheck.enabled=false",
         "verifier.attestation-classifications.eaa[0].use-case=mDL",
         "verifier.attestation-classifications.eaa[0].doc-types=org.iso.18013.5.1.mDL",
+        "verifier.wrprc[0].intended-use-id=1",
+        "verifier.wrprc[0].description=test",
+        "verifier.wrprc[0].registration-certificate=eyJ4NWMiOlsiTUlJQmNUQ0NBUmlnQXdJQkFnSUdBWjlHbC9yaU1Bb0dDQ3FHU000OUJBTUNNRUF4UGpBOEJnTlZCQU1NTlZSbGMzUWdTWE56ZFdWeUlFbHVabThnWXpKa056VmtNMll0TVRWbFpDMDBNemszTFdJeU5HRXRabVk0WkdWbFlUTXlZekJpTUI0WERUSTJNRGN3T1RFeE1UWXpNMW9YRFRJM01EY3dPVEV4TVRZek0xb3dRREUrTUR3R0ExVUVBd3cxVkdWemRDQkpjM04xWlhJZ1NXNW1ieUJqTW1RM05XUXpaaTB4TldWa0xUUXpPVGN0WWpJMFlTMW1aamhrWldWaE16SmpNR0l3V1RBVEJnY3Foa2pPUFFJQkJnZ3Foa2pPUFFNQkJ3TkNBQVNYNEJjd2JCS2hvVVdqNHhDc2tVZWZPRGczdEhoak5WZjUwZGFmTWpCTkg1SEhyK3UyUXpyZkluNE9KWlc5UEVkbFF3b1ZhSVNRc09odlg5dmxWVW5YTUFvR0NDcUdTTTQ5QkFNQ0EwY0FNRVFDSUd1clFZSmhNcTdGTnZPS3dPZG5Na2UwSExrU2pkY3RJV2hoSGl2U3l3YnJBaUFLdnpzZDgzci9IU3E3aTdRUHJ4dHJvbUEvZ1grMEc5SWFtRjFLdDZ6Ky93PT0iXSwia2lkIjoiYzYzNjgzZjItN2RmMy00M2ZmLWI1MzktZDA3MTk0NDViMGJlIiwidHlwIjoiSldUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJodHRwczovL2lzc3Vlci5leGFtcGxlIiwic3ViIjoiaXNzdWVyLWluZm8iLCJpYXQiOjE3ODM1OTU3OTJ9.Ai4XydxG__EASIOboGWcPzK2hMTIrHSvGrnT3UhInc8UkXBiCacPgEurYQ9fO6J1fhhX2eRe6t7xRcbT-Rzy-g",
     ],
 )
 internal class DeviceResponseValidationTest {

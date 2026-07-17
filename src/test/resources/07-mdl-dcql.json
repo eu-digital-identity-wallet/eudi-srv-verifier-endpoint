@@ -230,5 +230,6 @@
     ]
   },
   "nonce": "706f6c4d-c92d-4472-9dbf-d814c94f90c2",
-  "request_uri_method": "get"
+  "request_uri_method": "get",
+  "intended_use_id": "1"
 }

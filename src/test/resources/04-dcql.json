@@ -71,5 +71,6 @@
       }
     ]
   },
-  "nonce": "nonce"
+  "nonce": "nonce",
+  "intended_use_id": "1"
 }
