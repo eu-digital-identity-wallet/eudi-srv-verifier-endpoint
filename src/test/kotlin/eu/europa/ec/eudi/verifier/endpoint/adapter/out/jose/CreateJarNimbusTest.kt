@@ -121,7 +121,7 @@ class CreateJarNimbusTest {
                 state = TestContext.testRequestId.value,
                 audience = emptyList(),
                 issuedAt = TestContext.testClock.now(),
-                verifierInfo = VerifierInfo("test", "test"),
+                verifierInfo = VerifierInfo("test"),
             )
 
         // responseMode is direct_post.jwt, so we need to generate an ephemeral key

@@ -119,13 +119,17 @@ internal fun requestObjectFromDomain(
     }
 }
 
+@ConsistentCopyVisibility
 @Serializable
-class VerifierInfo private constructor(
+data class VerifierInfo private constructor(
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_FORMAT)
     val format: String,
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_DATA)
     val data: Jwt,
 ) {
+    constructor(data: JWT) : this("registration_cert", data.parsedString)
+    constructor(data: String) : this("registration_cert", data)
+
     companion object {
         fun createRegistrationCertificateEntry(data: JWT): VerifierInfo = VerifierInfo("registration_cert", data.parsedString)
     }
