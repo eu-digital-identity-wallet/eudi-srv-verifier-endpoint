@@ -17,9 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import arrow.core.NonEmptyList
 import com.eygraber.uri.Url
-import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.SignedJWT
-import eu.europa.ec.eudi.sdjwt.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
@@ -56,7 +54,7 @@ internal fun requestObjectFromDomain(
     val responseType = listOf(OpenId4VPSpec.VP_TOKEN)
     val audience = listOf("https://self-issued.me/v2")
     val transactionData = transactionData?.map { it.base64Url }
-    val verifierInfo = VerifierInfo.createRegistrationCertificateEntry(registrationCertificate)
+    val verifierInfo = VerifierInfo(data = registrationCertificate)
 
     return when (channel) {
         is Channel.OverDcApi -> {
@@ -119,18 +117,11 @@ internal fun requestObjectFromDomain(
     }
 }
 
-@ConsistentCopyVisibility
 @Serializable
-data class VerifierInfo private constructor(
+data class VerifierInfo(
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_FORMAT)
-    val format: String,
+    val format: String = "registration_cert",
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_DATA)
-    val data: Jwt,
-) {
-    constructor(data: JWT) : this("registration_cert", data.parsedString)
-    constructor(data: String) : this("registration_cert", data)
-
-    companion object {
-        fun createRegistrationCertificateEntry(data: JWT): VerifierInfo = VerifierInfo("registration_cert", data.parsedString)
-    }
-}
+    @Serializable(with = SignedJWTSerializer::class)
+    val data: SignedJWT,
+)
