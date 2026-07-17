@@ -119,9 +119,8 @@ internal fun requestObjectFromDomain(
     }
 }
 
-@ConsistentCopyVisibility
 @Serializable
-data class VerifierInfo private constructor(
+class VerifierInfo private constructor(
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_FORMAT)
     val format: String,
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_DATA)
