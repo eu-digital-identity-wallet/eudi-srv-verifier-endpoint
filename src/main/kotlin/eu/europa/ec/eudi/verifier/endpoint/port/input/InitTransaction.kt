@@ -419,13 +419,6 @@ class InitTransactionLive(
                 registrationCertificate = retrieveRegistrationCertificate,
             )
 
-//        val verifierInfo =
-//            listOf(
-//                VerifierInfo(
-//                    format = "registration_cert",
-//                    data = retrieveRegistrationCertificate.registrationCertificate.parsedString,
-//                ),
-//            )
         val jar =
             createJar(
                 clock.now(),
@@ -890,8 +883,8 @@ data class InitDcApiTransactionTO(
     @SerialName("issuer_chain") val issuerChain: String? = null,
     @Required @SerialName("origin") val origin: Url,
     @SerialName("expected_origins") val expectedOrigins: NonEmptyList<Url>? = null,
-    @SerialName("intended_use_id") val intendedUseId: String? = null, // nullable
-    @SerialName("registration_certificate") val registrationCertificate: String? = null, // nullable
+    @SerialName("intended_use_id") val intendedUseId: String? = null,
+    @SerialName("registration_certificate") val registrationCertificate: String? = null,
 )
 
 @Serializable
