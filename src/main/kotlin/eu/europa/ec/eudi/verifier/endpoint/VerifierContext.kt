@@ -383,12 +383,7 @@ internal class AppBeans :
         //
 
         registerBean {
-            val config = bean<VerifierEndpointConfigurationProperties>()
-            config.wrprc.map { it.toRegistrationCertificates() }
-        }
-
-        registerBean {
-            verifierConfig(env, bean())
+            verifierConfig(env, bean<VerifierEndpointConfigurationProperties>().intendedUses)
         }
 
         //
@@ -408,7 +403,7 @@ internal class AppBeans :
                     bean(),
                     bean(),
                     bean(),
-                    bean(),
+                    bean<VerifierConfig>().intendedUses,
                 )
             val staticContent = StaticContent()
             val swaggerUi =
@@ -551,7 +546,7 @@ private fun accessCertificate(environment: Environment): AccessCertificate {
 
 private fun verifierConfig(
     environment: Environment,
-    registrationCertificate: List<RegistrationCertificate>,
+    intendedUse: List<IntendedUse>,
 ): VerifierConfig {
     val verifierId =
         run {
@@ -609,14 +604,14 @@ private fun verifierConfig(
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
         authorizationRequestUri = authorizationRequestUri,
-        registrationCertificates = registrationCertificate,
+        intendedUses = intendedUse.map { it.toIntendedUse() },
     )
 }
 
-private fun RegistrationCertificateInfo.toRegistrationCertificates(): RegistrationCertificate =
-    RegistrationCertificate.create(
+private fun IntendedUse.toIntendedUse(): eu.europa.ec.eudi.verifier.endpoint.domain.IntendedUse =
+    eu.europa.ec.eudi.verifier.endpoint.domain.IntendedUse.create(
         description = description,
-        registrationCertificate = registrationCertificate.certificate,
+        registrationCertificate = registrationCertificate,
         intentUseId = intendedUseId,
     )
 
@@ -762,25 +757,20 @@ data class VerifierEndpointConfigurationProperties(
     val validation: ValidationConfigurationProperties,
     val trustValidator: TrustValidatorConfigurationProperties? = null,
     val attestationClassifications: AttestationClassifications = AttestationClassifications(),
-    val wrprc: List<RegistrationCertificateInfo>,
+    val intendedUses: List<IntendedUse>,
 ) {
     init {
-        val uniqueIds = wrprc.map { it.intendedUseId }.toSet()
-        require(uniqueIds.size == wrprc.size) {
-            "Within verifier.wrprc, the same intended use id MUST NOT be present more than once"
+        val uniqueIds = intendedUses.map { it.intendedUseId }.toSet()
+        require(uniqueIds.size == intendedUses.size) {
+            "Within verifier.intendedUses, the same intended use id MUST NOT be present more than once"
         }
     }
 }
 
-data class RegistrationCertificateInfo(
+data class IntendedUse(
     val intendedUseId: String,
     val description: String,
-    val registrationCertificate: RegistrationCertificateTO,
-)
-
-@JvmInline
-value class RegistrationCertificateTO(
-    val certificate: String,
+    val registrationCertificate: String,
 )
 
 data class ValidationConfigurationProperties(

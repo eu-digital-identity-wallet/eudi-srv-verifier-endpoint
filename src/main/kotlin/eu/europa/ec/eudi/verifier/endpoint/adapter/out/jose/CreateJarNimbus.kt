@@ -68,7 +68,7 @@ class CreateJarNimbus(
                         channel,
                         query,
                         nonce,
-                        registrationCertificate.registrationCertificate,
+                        registrationCertificate,
                     )
                 }
             val responseMode = channel.responseMode

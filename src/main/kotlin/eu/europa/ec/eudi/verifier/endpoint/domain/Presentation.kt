@@ -19,6 +19,7 @@ import arrow.core.NonEmptyList
 import arrow.core.raise.context.Raise
 import arrow.core.raise.context.ensure
 import com.eygraber.uri.Url
+import com.nimbusds.jwt.SignedJWT
 import kotlinx.serialization.json.JsonObject
 import java.security.cert.X509Certificate
 import kotlin.time.Instant
@@ -164,6 +165,8 @@ sealed interface Channel {
         val expectedOrigins: NonEmptyList<Url>,
     ) : Channel
 }
+
+typealias RegistrationCertificate = SignedJWT
 
 /**
  * The entity that represents the presentation process

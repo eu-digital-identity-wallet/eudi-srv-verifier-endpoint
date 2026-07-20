@@ -253,12 +253,12 @@ data class AccessCertificate(
 }
 
 /**
- * Registration certificate of the Verifier Endpoint.
+ * Intended uses of the Verifier Endpoint.
  */
 @ConsistentCopyVisibility
-data class RegistrationCertificate private constructor(
+data class IntendedUse private constructor(
     val description: String,
-    val registrationCertificate: SignedJWT,
+    val registrationCertificate: RegistrationCertificate,
     val intentUseId: String,
 ) {
     companion object {
@@ -266,7 +266,7 @@ data class RegistrationCertificate private constructor(
             description: String,
             registrationCertificate: String,
             intentUseId: String,
-        ): RegistrationCertificate {
+        ): IntendedUse {
             val jwt = SignedJWT.parse(registrationCertificate.trim())
             val x5c = jwt.header.x509CertChain
             require(!x5c.isNullOrEmpty()) { "Issuer info must contain a valid certificate chain" }
@@ -290,7 +290,7 @@ data class RegistrationCertificate private constructor(
             require(jwt.verify(verifier)) {
                 "JWT signature does not match the public key of the first (leaf) certificate in 'x5c'"
             }
-            return RegistrationCertificate(description, jwt, intentUseId)
+            return IntendedUse(description, jwt, intentUseId)
         }
     }
 }
@@ -385,7 +385,7 @@ data class VerifierConfig(
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
     val authorizationRequestUri: UnresolvedAuthorizationRequestUri,
-    val registrationCertificates: List<RegistrationCertificate>,
+    val intendedUses: List<IntendedUse>,
 )
 
 /**

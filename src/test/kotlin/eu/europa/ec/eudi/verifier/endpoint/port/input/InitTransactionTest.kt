@@ -19,7 +19,6 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.getOrElse
 import arrow.core.left
-import arrow.core.nonEmptyListOf
 import arrow.core.raise.either
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
@@ -51,9 +50,9 @@ class InitTransactionTest {
             transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
             requestUriMethod = RequestUriMethod.Get,
             authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
-            registrationCertificates =
+            intendedUses =
                 listOf(
-                    RegistrationCertificate.create(
+                    IntendedUse.create(
                         description = "test",
                         registrationCertificate = TestUtils.loadResource("wrprc.jwt"),
                         intentUseId = "1",
@@ -104,9 +103,9 @@ class InitTransactionTest {
                     transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                     requestUriMethod = RequestUriMethod.Get,
                     authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
-                    registrationCertificates =
+                    intendedUses =
                         listOf(
-                            RegistrationCertificate.create(
+                            IntendedUse.create(
                                 description = "test",
                                 registrationCertificate = wrprc,
                                 intentUseId = "1",

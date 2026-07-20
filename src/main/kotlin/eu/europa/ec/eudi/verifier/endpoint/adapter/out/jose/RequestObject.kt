@@ -48,7 +48,7 @@ internal fun requestObjectFromDomain(
     channel: Channel,
     query: DCQL,
     nonce: Nonce,
-    registrationCertificate: SignedJWT,
+    registrationCertificate: RegistrationCertificate,
 ): RequestObject {
     val scope = emptyList<String>()
     val responseType = listOf(OpenId4VPSpec.VP_TOKEN)

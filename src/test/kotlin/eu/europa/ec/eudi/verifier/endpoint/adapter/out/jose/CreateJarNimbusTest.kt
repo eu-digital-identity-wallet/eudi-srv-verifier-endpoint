@@ -17,7 +17,6 @@
 
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import arrow.core.nonEmptyListOf
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSHeader
@@ -37,8 +36,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.DCQL
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.HashAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.domain.HttpResponseModeOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.IntendedUse
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
-import eu.europa.ec.eudi.verifier.endpoint.domain.RegistrationCertificate
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestUriMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode
 import eu.europa.ec.eudi.verifier.endpoint.domain.UnresolvedAuthorizationRequestUri
@@ -67,9 +66,9 @@ class CreateJarNimbusTest {
             transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
             requestUriMethod = RequestUriMethod.Get,
             authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
-            registrationCertificates =
+            intendedUses =
                 listOf(
-                    RegistrationCertificate.create(
+                    IntendedUse.create(
                         description = "test",
                         registrationCertificate = TestUtils.loadResource("wrprc.jwt"),
                         intentUseId = "1",

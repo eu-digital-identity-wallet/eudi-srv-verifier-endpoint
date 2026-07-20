@@ -418,20 +418,20 @@
         }
       }
     },
-    "/ui/registration-certificates": {
+    "/ui/intended-uses": {
       "get": {
         "tags": [
           "verifier api"
         ],
-        "description": "Get the available configured registration certificates",
-        "operationId": "getRegistrationCertificates",
+        "description": "Get the available configured intended uses",
+        "operationId": "getIntendedUses",
         "responses": {
           "200": {
             "description": "Ok",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RegistrationCertificatesResponse"
+                  "$ref": "#/components/schemas/IntendedUsesResponse"
                 }
               }
             }
@@ -769,7 +769,7 @@
         "nullable": true,
         "description": "The registration certificate as a JWT"
       },
-      "RegistrationCertificatesResponse": {
+      "IntendedUsesResponse": {
         "type": "object",
         "properties": {
           "intended_uses": {

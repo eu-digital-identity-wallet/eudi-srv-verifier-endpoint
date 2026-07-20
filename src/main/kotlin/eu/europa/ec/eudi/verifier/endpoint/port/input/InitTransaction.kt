@@ -31,6 +31,7 @@ import com.eygraber.uri.toURI
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.isSelfSigned
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -305,12 +306,10 @@ class InitTransactionLive(
                 )
             }
 
-        ensureOnlyRegistrationCertificateOrIntendedUseIdExists(initTransactionTO.registrationCertificate, initTransactionTO.intendedUseId)
-
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO.responseMode)
 
-        val retrieveRegistrationCertificate =
+        val registrationCertificate =
             context(verifierConfig) {
                 resolveRegistrationCertificate(initTransactionTO.intendedUseId, initTransactionTO.registrationCertificate)
             }
@@ -353,7 +352,7 @@ class InitTransactionLive(
                 profile,
                 channel,
                 unresolvedAuthorizationRequestUri,
-                retrieveRegistrationCertificate, // call the method here to convert it to domain obj
+                registrationCertificate,
             )
         val response = initTransactionTO.output.createResponse(authorizationRequest)
 
@@ -378,11 +377,6 @@ class InitTransactionLive(
                 )
             }
 
-        ensureOnlyRegistrationCertificateOrIntendedUseIdExists(
-            initDcApiTransactionTO.registrationCertificate,
-            initDcApiTransactionTO.intendedUseId,
-        )
-
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = DcApiJwt(generateEphemeralEncryptionKeyPair())
 
@@ -399,7 +393,7 @@ class InitTransactionLive(
             }
         }
 
-        val retrieveRegistrationCertificate =
+        val registrationCertificate =
             context(verifierConfig) {
                 resolveRegistrationCertificate(initDcApiTransactionTO.intendedUseId, initDcApiTransactionTO.registrationCertificate)
             }
@@ -416,7 +410,7 @@ class InitTransactionLive(
                 transactionData = type.transactionData,
                 issuerChain = issuerChain,
                 profile = profile,
-                registrationCertificate = retrieveRegistrationCertificate,
+                registrationCertificate = registrationCertificate,
             )
 
         val jar =
@@ -448,7 +442,7 @@ class InitTransactionLive(
         profile: Profile,
         channel: Channel.OverHttp,
         unresolvedAuthorizationRequestUri: UnresolvedAuthorizationRequestUri,
-        retrieveRegistrationCertificate: RegistrationCertificate,
+        registrationCertificate: RegistrationCertificate,
     ): Pair<Presentation, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> =
         when (jarMode) {
             is EmbedOption.ByReference -> {
@@ -462,7 +456,7 @@ class InitTransactionLive(
                         issuerChain = issuerChain,
                         profile = profile,
                         channel = channel,
-                        registrationCertificate = retrieveRegistrationCertificate,
+                        registrationCertificate = registrationCertificate,
                     )
 
                 val requestUri = jarMode.buildUrl(presentation.channel.requestId)
@@ -494,7 +488,7 @@ class InitTransactionLive(
                         nonce = nonce,
                         issuerChain = issuerChain,
                         profile = profile,
-                        registrationCertificate = retrieveRegistrationCertificate,
+                        registrationCertificate = registrationCertificate,
                     )
 
                 val jar =
@@ -557,16 +551,6 @@ class InitTransactionLive(
                 }
                 GetWalletResponseMethod.Redirect(template)
             } ?: GetWalletResponseMethod.Poll
-
-    context(_: Raise<ValidationError>)
-    private fun ensureOnlyRegistrationCertificateOrIntendedUseIdExists(
-        registrationCertificate: String?,
-        intendedUseId: String?,
-    ) {
-        ensure(!intendedUseId.isNullOrBlank() xor !registrationCertificate.isNullOrBlank()) {
-            ValidationError.OnlyRegistrationCertificateOrIntendedUseIdMustBeProvided
-        }
-    }
 
     /**
      * Gets the [ResponseMode] for the provided [InitTransactionTO].
@@ -849,10 +833,14 @@ context(_: Raise<ValidationError>, verifierConfig: VerifierConfig)
 private fun resolveRegistrationCertificate(
     intendedUseId: String? = null,
     registrationCertificate: String? = null,
-): RegistrationCertificate =
+): SignedJWT =
     when {
+        !intendedUseId.isNullOrBlank() && !registrationCertificate.isNullOrBlank() -> {
+            raise(ValidationError.OnlyRegistrationCertificateOrIntendedUseIdMustBeProvided)
+        }
+
         !intendedUseId.isNullOrBlank() -> {
-            ensureNotNull(verifierConfig.registrationCertificates.find { it.intentUseId == intendedUseId }) {
+            ensureNotNull(verifierConfig.intendedUses.find { it.intentUseId == intendedUseId }?.registrationCertificate) {
                 ValidationError.UnknownIntendedUseId
             }
         }
@@ -860,11 +848,7 @@ private fun resolveRegistrationCertificate(
         !registrationCertificate.isNullOrBlank() -> {
             catch(
                 block = {
-                    RegistrationCertificate.create(
-                        description = "Provided registration certificate",
-                        registrationCertificate = registrationCertificate,
-                        intentUseId = "provided",
-                    )
+                    SignedJWT.parse(registrationCertificate)
                 },
                 catch = { raise(ValidationError.InvalidRegistrationCertificate) },
             )
