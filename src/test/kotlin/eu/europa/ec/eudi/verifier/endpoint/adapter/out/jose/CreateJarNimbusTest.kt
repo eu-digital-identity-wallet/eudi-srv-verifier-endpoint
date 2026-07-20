@@ -94,10 +94,12 @@ class CreateJarNimbusTest {
                 state = TestContext.testRequestId.value,
                 audience = emptyList(),
                 issuedAt = TestContext.testClock.now(),
-                verifierInfo =
-                    VerifierInfo(
-                        "registration_cert",
-                        SignedJWT.parse(wrprc),
+                verifierInfos =
+                    listOf(
+                        VerifierInfo(
+                            "registration_cert",
+                            SignedJWT.parse(wrprc),
+                        ),
                     ),
             )
 

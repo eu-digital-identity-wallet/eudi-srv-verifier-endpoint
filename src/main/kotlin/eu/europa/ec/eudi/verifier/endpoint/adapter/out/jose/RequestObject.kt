@@ -38,7 +38,7 @@ internal data class RequestObject(
     val issuedAt: Instant,
     val transactionData: List<String>? = null,
     val expectedOrigins: List<Url>? = null,
-    val verifierInfo: VerifierInfo,
+    val verifierInfos: List<VerifierInfo>,
 )
 
 context(verifierConfig: VerifierConfig)
@@ -54,7 +54,7 @@ internal fun requestObjectFromDomain(
     val responseType = listOf(OpenId4VPSpec.VP_TOKEN)
     val audience = listOf("https://self-issued.me/v2")
     val transactionData = transactionData?.map { it.base64Url }
-    val verifierInfo = VerifierInfo(data = registrationCertificate)
+    val verifierInfo = VerifierInfo(format = ETSI119472Part2.REGISTRATION_CERTIFICATE, data = registrationCertificate)
 
     return when (channel) {
         is Channel.OverDcApi -> {
@@ -71,7 +71,7 @@ internal fun requestObjectFromDomain(
                 issuedAt = issuedAt,
                 transactionData = transactionData,
                 expectedOrigins = channel.expectedOrigins,
-                verifierInfo = verifierInfo,
+                verifierInfos = listOf(verifierInfo),
             )
         }
 
@@ -91,7 +91,7 @@ internal fun requestObjectFromDomain(
                         issuedAt = issuedAt,
                         transactionData = transactionData,
                         expectedOrigins = null,
-                        verifierInfo = verifierInfo,
+                        verifierInfos = listOf(verifierInfo),
                     )
                 }
 
@@ -109,7 +109,7 @@ internal fun requestObjectFromDomain(
                         issuedAt = issuedAt,
                         transactionData = transactionData,
                         expectedOrigins = null,
-                        verifierInfo = verifierInfo,
+                        verifierInfos = listOf(verifierInfo),
                     )
                 }
             }
@@ -120,7 +120,7 @@ internal fun requestObjectFromDomain(
 @Serializable
 data class VerifierInfo(
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_FORMAT)
-    val format: String = "registration_cert",
+    val format: String,
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_DATA)
     @Serializable(with = SignedJWTSerializer::class)
     val data: SignedJWT,

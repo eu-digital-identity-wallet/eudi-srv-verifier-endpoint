@@ -144,7 +144,6 @@ class CreateJarNimbus(
         val scope = Scope(*requestObject.scope.map { Scope.Value(it) }.toTypedArray())
         val state = requestObject.state?.let { State(requestObject.state) }
         val expectedOrigins = requestObject.expectedOrigins?.takeIf { it.isNotEmpty() }
-        val verifierInfo = listOf(requestObject.verifierInfo)
 
         val authorizationRequestClaims =
             with(AuthorizationRequest.Builder(responseType, clientId)) {
@@ -174,7 +173,7 @@ class CreateJarNimbus(
             optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, requestObject.transactionData?.toJackson())
             optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)
             optionalClaim(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS, expectedOrigins?.toJackson())
-            claim(OpenId4VPSpec.VERIFIER_INFO, verifierInfo.toJackson())
+            claim(OpenId4VPSpec.VERIFIER_INFO, requestObject.verifierInfos.toJackson())
             build()
         }
     }
