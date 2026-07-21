@@ -374,11 +374,11 @@ private data class IntendedUseTO(
     @SerialName("registration_certificate") val registrationCertificate: String,
 ) {
     companion object {
-        fun from(to: IntendedUse) =
+        fun from(intendedUse: IntendedUse) =
             IntendedUseTO(
-                intendedUseId = to.intentUseId,
-                description = to.description,
-                registrationCertificate = to.registrationCertificate.value.serialize(),
+                intendedUseId = intendedUse.id,
+                description = intendedUse.description,
+                registrationCertificate = intendedUse.registrationCertificate.value.serialize(),
             )
     }
 }

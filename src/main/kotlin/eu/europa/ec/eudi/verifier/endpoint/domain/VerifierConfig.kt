@@ -24,13 +24,9 @@ import arrow.core.serialization.NonEmptyListSerializer
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.JWSVerifier
 import com.nimbusds.jose.crypto.ECDHEncrypter
-import com.nimbusds.jose.crypto.ECDSAVerifier
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWK
-import com.nimbusds.jose.util.X509CertChainUtils
-import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.JWSAlgorithmStringSerializer
@@ -42,7 +38,6 @@ import kotlinx.serialization.UseSerializers
 import java.net.URL
 import java.security.KeyStore
 import java.security.cert.X509Certificate
-import java.security.interfaces.ECPublicKey
 import kotlin.time.Duration
 
 typealias PresentationRelatedUrlBuilder<ID> = (ID) -> URL
@@ -257,7 +252,7 @@ data class AccessCertificate(
 data class IntendedUse private constructor(
     val description: String,
     val registrationCertificate: RegistrationCertificate,
-    val intentUseId: String,
+    val id: String,
 ) {
     companion object {
         fun create(

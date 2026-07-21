@@ -31,7 +31,6 @@ import com.eygraber.uri.toURI
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.isSelfSigned
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -836,7 +835,7 @@ private fun resolveRegistrationCertificate(
         .fromNullables(intendedUseId, registrationCertificate)
         ?.fold(
             fa = { intendedUseId ->
-                ensureNotNull(verifierConfig.intendedUses.find { it.intentUseId == intendedUseId }?.registrationCertificate) {
+                ensureNotNull(verifierConfig.intendedUses.find { it.id == intendedUseId }?.registrationCertificate) {
                     ValidationError.UnknownIntendedUseId
                 }
             },
