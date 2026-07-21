@@ -276,16 +276,8 @@ data class IntendedUse private constructor(
 
             val verifier: JWSVerifier =
                 when (val publicKey = leafCert.publicKey) {
-                    is ECPublicKey -> {
-                        val curve =
-                            Curve.forECParameterSpec(publicKey.params)
-                                ?: error("Unsupported EC curve for leaf certificate")
-                        ECDSAVerifier(ECKey.Builder(curve, publicKey).build())
-                    }
-
-                    else -> {
-                        error("Unsupported public key type for leaf certificate")
-                    }
+                    is ECPublicKey -> ECDSAVerifier(publicKey)
+                    else -> error("Unsupported public key type for leaf certificate")
                 }
             require(jwt.verify(verifier)) {
                 "JWT signature does not match the public key of the first (leaf) certificate in 'x5c'"
