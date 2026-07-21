@@ -378,7 +378,7 @@ private data class IntendedUseTO(
             IntendedUseTO(
                 intendedUseId = to.intentUseId,
                 description = to.description,
-                registrationCertificate = to.registrationCertificate.parsedString,
+                registrationCertificate = to.registrationCertificate.value.serialize(),
             )
     }
 }

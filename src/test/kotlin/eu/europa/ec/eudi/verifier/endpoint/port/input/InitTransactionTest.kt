@@ -55,7 +55,7 @@ class InitTransactionTest {
                     IntendedUse.create(
                         description = "test",
                         registrationCertificate = TestUtils.loadResource("wrprc.jwt"),
-                        intentUseId = "1",
+                        id = "1",
                     ),
                 ),
         )
@@ -108,7 +108,7 @@ class InitTransactionTest {
                             IntendedUse.create(
                                 description = "test",
                                 registrationCertificate = wrprc,
-                                intentUseId = "1",
+                                id = "1",
                             ),
                         ),
                 )

@@ -71,7 +71,7 @@ class CreateJarNimbusTest {
                     IntendedUse.create(
                         description = "test",
                         registrationCertificate = TestUtils.loadResource("wrprc.jwt"),
-                        intentUseId = "1",
+                        id = "1",
                     ),
                 ),
         )
@@ -94,11 +94,11 @@ class CreateJarNimbusTest {
                 state = TestContext.testRequestId.value,
                 audience = emptyList(),
                 issuedAt = TestContext.testClock.now(),
-                verifierInfos =
+                verifierInfo =
                     listOf(
                         VerifierInfo(
                             "registration_cert",
-                            SignedJWT.parse(wrprc),
+                            wrprc,
                         ),
                     ),
             )

@@ -546,7 +546,7 @@ private fun accessCertificate(environment: Environment): AccessCertificate {
 
 private fun verifierConfig(
     environment: Environment,
-    intendedUse: List<IntendedUse>,
+    intendedUse: List<IntendedUseConfigurationProperties>,
 ): VerifierConfig {
     val verifierId =
         run {
@@ -608,11 +608,11 @@ private fun verifierConfig(
     )
 }
 
-private fun IntendedUse.toIntendedUse(): eu.europa.ec.eudi.verifier.endpoint.domain.IntendedUse =
-    eu.europa.ec.eudi.verifier.endpoint.domain.IntendedUse.create(
+private fun IntendedUseConfigurationProperties.toIntendedUse(): IntendedUse =
+    IntendedUse.create(
         description = description,
         registrationCertificate = registrationCertificate,
-        intentUseId = intendedUseId,
+        id = id,
     )
 
 private fun Environment.clientMetaData(): ClientMetaData {
@@ -757,18 +757,18 @@ data class VerifierEndpointConfigurationProperties(
     val validation: ValidationConfigurationProperties,
     val trustValidator: TrustValidatorConfigurationProperties? = null,
     val attestationClassifications: AttestationClassifications = AttestationClassifications(),
-    val intendedUses: List<IntendedUse>,
+    val intendedUses: List<IntendedUseConfigurationProperties>,
 ) {
     init {
-        val uniqueIds = intendedUses.map { it.intendedUseId }.toSet()
+        val uniqueIds = intendedUses.map { it.id }.toSet()
         require(uniqueIds.size == intendedUses.size) {
-            "Within verifier.intendedUses, the same intended use id MUST NOT be present more than once"
+            "Within verifier.intendedUses, the same id MUST NOT be present more than once"
         }
     }
 }
 
-data class IntendedUse(
-    val intendedUseId: String,
+data class IntendedUseConfigurationProperties(
+    val id: String,
     val description: String,
     val registrationCertificate: String,
 )

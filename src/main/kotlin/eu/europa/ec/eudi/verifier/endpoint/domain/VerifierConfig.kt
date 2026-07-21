@@ -28,8 +28,6 @@ import com.nimbusds.jose.JWSVerifier
 import com.nimbusds.jose.crypto.ECDHEncrypter
 import com.nimbusds.jose.crypto.ECDSAVerifier
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
-import com.nimbusds.jose.jwk.Curve
-import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.util.X509CertChainUtils
 import com.nimbusds.jwt.SignedJWT
@@ -265,24 +263,10 @@ data class IntendedUse private constructor(
         fun create(
             description: String,
             registrationCertificate: String,
-            intentUseId: String,
+            id: String,
         ): IntendedUse {
-            val jwt = SignedJWT.parse(registrationCertificate.trim())
-            val x5c = jwt.header.x509CertChain
-            require(!x5c.isNullOrEmpty()) { "Issuer info must contain a valid certificate chain" }
-
-            val chain = X509CertChainUtils.parse(x5c)
-            val leafCert = chain.first()
-
-            val verifier: JWSVerifier =
-                when (val publicKey = leafCert.publicKey) {
-                    is ECPublicKey -> ECDSAVerifier(publicKey)
-                    else -> error("Unsupported public key type for leaf certificate")
-                }
-            require(jwt.verify(verifier)) {
-                "JWT signature does not match the public key of the first (leaf) certificate in 'x5c'"
-            }
-            return IntendedUse(description, jwt, intentUseId)
+            val registrationCertificate = RegistrationCertificate.parse(registrationCertificate)
+            return IntendedUse(description, registrationCertificate, id)
         }
     }
 }

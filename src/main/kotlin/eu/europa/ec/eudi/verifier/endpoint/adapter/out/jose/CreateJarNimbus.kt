@@ -173,7 +173,7 @@ class CreateJarNimbus(
             optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, requestObject.transactionData?.toJackson())
             optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)
             optionalClaim(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS, expectedOrigins?.toJackson())
-            claim(OpenId4VPSpec.VERIFIER_INFO, requestObject.verifierInfos.toJackson())
+            claim(OpenId4VPSpec.VERIFIER_INFO, requestObject.verifierInfo.toJackson())
             build()
         }
     }

@@ -17,7 +17,6 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import arrow.core.NonEmptyList
 import com.eygraber.uri.Url
-import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
@@ -38,7 +37,7 @@ internal data class RequestObject(
     val issuedAt: Instant,
     val transactionData: List<String>? = null,
     val expectedOrigins: List<Url>? = null,
-    val verifierInfos: List<VerifierInfo>,
+    val verifierInfo: List<VerifierInfo>,
 )
 
 context(verifierConfig: VerifierConfig)
@@ -54,7 +53,7 @@ internal fun requestObjectFromDomain(
     val responseType = listOf(OpenId4VPSpec.VP_TOKEN)
     val audience = listOf("https://self-issued.me/v2")
     val transactionData = transactionData?.map { it.base64Url }
-    val verifierInfo = VerifierInfo(format = ETSI119472Part2.REGISTRATION_CERTIFICATE, data = registrationCertificate)
+    val verifierInfo = VerifierInfo(format = ETSI119472Part2.REGISTRATION_CERTIFICATE, data = registrationCertificate.value.serialize())
 
     return when (channel) {
         is Channel.OverDcApi -> {
@@ -71,7 +70,7 @@ internal fun requestObjectFromDomain(
                 issuedAt = issuedAt,
                 transactionData = transactionData,
                 expectedOrigins = channel.expectedOrigins,
-                verifierInfos = listOf(verifierInfo),
+                verifierInfo = listOf(verifierInfo),
             )
         }
 
@@ -91,7 +90,7 @@ internal fun requestObjectFromDomain(
                         issuedAt = issuedAt,
                         transactionData = transactionData,
                         expectedOrigins = null,
-                        verifierInfos = listOf(verifierInfo),
+                        verifierInfo = listOf(verifierInfo),
                     )
                 }
 
@@ -109,7 +108,7 @@ internal fun requestObjectFromDomain(
                         issuedAt = issuedAt,
                         transactionData = transactionData,
                         expectedOrigins = null,
-                        verifierInfos = listOf(verifierInfo),
+                        verifierInfo = listOf(verifierInfo),
                     )
                 }
             }
@@ -122,6 +121,5 @@ data class VerifierInfo(
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_FORMAT)
     val format: String,
     @Required @SerialName(OpenId4VPSpec.VERIFIER_INFO_DATA)
-    @Serializable(with = SignedJWTSerializer::class)
-    val data: SignedJWT,
+    val data: String,
 )

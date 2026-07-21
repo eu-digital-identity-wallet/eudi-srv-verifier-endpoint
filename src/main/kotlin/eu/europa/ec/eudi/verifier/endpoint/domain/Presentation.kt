@@ -19,9 +19,16 @@ import arrow.core.NonEmptyList
 import arrow.core.raise.context.Raise
 import arrow.core.raise.context.ensure
 import com.eygraber.uri.Url
+import com.nimbusds.jose.JOSEObjectType
+import com.nimbusds.jose.JWSVerifier
+import com.nimbusds.jose.crypto.ECDSAVerifier
+import com.nimbusds.jose.util.X509CertChainUtils
+import com.nimbusds.jose.util.X509CertUtils
 import com.nimbusds.jwt.SignedJWT
+import com.nimbusds.oauth2.sdk.util.X509CertificateUtils
 import kotlinx.serialization.json.JsonObject
 import java.security.cert.X509Certificate
+import java.security.interfaces.ECPublicKey
 import kotlin.time.Instant
 
 @JvmInline
@@ -166,7 +173,39 @@ sealed interface Channel {
     ) : Channel
 }
 
-typealias RegistrationCertificate = SignedJWT
+@JvmInline
+value class RegistrationCertificate private constructor(
+    val value: SignedJWT,
+) {
+    companion object {
+        fun parse(value: String): RegistrationCertificate {
+            val parsed = SignedJWT.parse(value)
+
+            require(JOSEObjectType(ETSI119475.REGISTRATION_CERTIFICATE_TYPE) == parsed.header.type) {
+                "Invalid registration certificate type. Expected ${ETSI119475.REGISTRATION_CERTIFICATE_TYPE}, found ${parsed.header.type?.type}"
+            }
+
+            val x5c =
+                parsed.header.x509CertChain
+                    ?.map { X509CertUtils.parseWithException(it.decode()) }
+            require(!x5c.isNullOrEmpty()) {
+                "Registration certificate must contain a certificate chain"
+            }
+
+            val signingKey = x5c.first().publicKey
+            require(signingKey is ECPublicKey) {
+                "Registration certificate must be signed with an EC key"
+            }
+
+            val verifier = ECDSAVerifier(signingKey)
+            require(parsed.verify(verifier)) {
+                "JWT signature does not match the public key of the first (leaf) certificate in 'x5c'"
+            }
+
+            return RegistrationCertificate(parsed)
+        }
+    }
+}
 
 /**
  * The entity that represents the presentation process
@@ -207,7 +246,6 @@ sealed interface Presentation {
         val nonce: Nonce,
         val issuerChain: NonEmptyList<X509Certificate>?,
         val profile: Profile,
-        val registrationCertificate: RegistrationCertificate,
     ) : Presentation {
         init {
             require(initiatedAt <= requestObjectRetrievedAt)
@@ -228,7 +266,6 @@ sealed interface Presentation {
                     requested.nonce,
                     requested.issuerChain,
                     requested.profile,
-                    requested.registrationCertificate,
                 )
         }
     }

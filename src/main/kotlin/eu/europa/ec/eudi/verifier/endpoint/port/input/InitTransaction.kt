@@ -410,7 +410,6 @@ class InitTransactionLive(
                 transactionData = type.transactionData,
                 issuerChain = issuerChain,
                 profile = profile,
-                registrationCertificate = registrationCertificate,
             )
 
         val jar =
@@ -422,7 +421,7 @@ class InitTransactionLive(
                 presentation.nonce,
                 null,
                 EncryptionRequirement.NotRequired,
-                presentation.registrationCertificate,
+                registrationCertificate,
             )
 
         storePresentation(presentation)
@@ -488,7 +487,6 @@ class InitTransactionLive(
                         nonce = nonce,
                         issuerChain = issuerChain,
                         profile = profile,
-                        registrationCertificate = registrationCertificate,
                     )
 
                 val jar =
@@ -500,7 +498,7 @@ class InitTransactionLive(
                         presentation.nonce,
                         null,
                         EncryptionRequirement.NotRequired,
-                        presentation.registrationCertificate,
+                        registrationCertificate,
                     )
                 val authorizationRequest =
                     InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
@@ -833,31 +831,26 @@ context(_: Raise<ValidationError>, verifierConfig: VerifierConfig)
 private fun resolveRegistrationCertificate(
     intendedUseId: String? = null,
     registrationCertificate: String? = null,
-): SignedJWT =
-    when {
-        !intendedUseId.isNullOrBlank() && !registrationCertificate.isNullOrBlank() -> {
-            raise(ValidationError.OnlyRegistrationCertificateOrIntendedUseIdMustBeProvided)
-        }
-
-        !intendedUseId.isNullOrBlank() -> {
-            ensureNotNull(verifierConfig.intendedUses.find { it.intentUseId == intendedUseId }?.registrationCertificate) {
-                ValidationError.UnknownIntendedUseId
-            }
-        }
-
-        !registrationCertificate.isNullOrBlank() -> {
-            catch(
-                block = {
-                    SignedJWT.parse(registrationCertificate)
-                },
-                catch = { raise(ValidationError.InvalidRegistrationCertificate) },
-            )
-        }
-
-        else -> {
-            raise(ValidationError.MissingRegistrationCertificate)
-        }
-    }
+): RegistrationCertificate =
+    Ior
+        .fromNullables(intendedUseId, registrationCertificate)
+        ?.fold(
+            fa = { intendedUseId ->
+                ensureNotNull(verifierConfig.intendedUses.find { it.intentUseId == intendedUseId }?.registrationCertificate) {
+                    ValidationError.UnknownIntendedUseId
+                }
+            },
+            fb = { registrationCertificate ->
+                catch({
+                    RegistrationCertificate.parse(registrationCertificate)
+                }) {
+                    raise(ValidationError.InvalidRegistrationCertificate)
+                }
+            },
+            fab = { _, _ ->
+                raise(ValidationError.OnlyRegistrationCertificateOrIntendedUseIdMustBeProvided)
+            },
+        ) ?: raise(ValidationError.MissingRegistrationCertificate)
 
 @Serializable
 data class InitDcApiTransactionTO(

@@ -836,16 +836,16 @@ Description: Comma-separated list of allowed sub-resource integrity hash algorit
 Allowed values: `sha256`, `sha384`, `sha512`  
 Default value: `sha256,sha384,sha512`  
 
-### WRPRC Configuration
+### Wallet Relying Party Intended Uses and Registration Certificates (WRPRC) Configuration
 
-Variable: `VERIFIER_WRPRC_XX_INTENDED_USE_ID` (e.g. `VERIFIER_WRPRC_01_INTENDED_USE_ID`)    
-Description: Identifier of a configured Wallet Relying Party Registration Certificate intended use.  
+Variable: `VERIFIER_INTENDEDUSES_XX_ID` (e.g. `VERIFIER_INTENDEDUSES_0_ID`)    
+Description: Identifier of a configured Wallet Relying Party intended use.  
 
-Variable: `VERIFIER_WRPRC_XX_DESCRIPTION` (e.g. `VERIFIER_WRPRC_01_DESCRIPTION`)    
-Description: Human-readable description of the configured Wallet Relying Party Registration Certificate intended use.   
+Variable: `VERIFIER_INTENDEDUSES_XX_DESCRIPTION` (e.g. `VERIFIER_INTENDEDUSES_0_DESCRIPTION`)    
+Description: Human-readable description of the configured Wallet Relying Party intended use.   
 
-Variable: `VERIFIER_WRPRC_XX_REGISTRATION_CERTIFICATE` (e.g. `VERIFIER_WRPRC_01_REGISTRATION_CERTIFICATE`)   
-Description: Wallet Relying Party Registration Certificate, encoded as a JWT.  
+Variable: `VERIFIER_INTENDEDUSES_XX_REGISTRATIONCERTIFICATE` (e.g. `VERIFIER_INTENDEDUSES_0_REGISTRATIONCERTIFICATE`)   
+Description: Wallet Relying Party Registration Certificate of the configured Wallet Relying Party intended use, serialized using JWS Compact Serialization.     
 
 ## How to contribute
 
