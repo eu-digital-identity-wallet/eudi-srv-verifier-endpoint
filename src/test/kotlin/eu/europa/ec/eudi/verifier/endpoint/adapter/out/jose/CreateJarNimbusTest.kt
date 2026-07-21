@@ -36,6 +36,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.DCQL
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.HashAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.domain.HttpResponseModeOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.IntendedUse
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestUriMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode
@@ -65,6 +66,14 @@ class CreateJarNimbusTest {
             transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
             requestUriMethod = RequestUriMethod.Get,
             authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
+            intendedUses =
+                listOf(
+                    IntendedUse.create(
+                        description = "test",
+                        registrationCertificate = TestUtils.loadResource("wrprc.jwt"),
+                        id = "1",
+                    ),
+                ),
         )
 
     private val createJar = CreateJarNimbus(verifierConfig)
@@ -72,6 +81,7 @@ class CreateJarNimbusTest {
     @Test
     fun `given a request object, it should be signed and decoded`() {
         val query = checkNotNull(Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery)
+        val wrprc = checkNotNull(TestUtils.loadResource("wrprc.jwt"))
         val requestObject =
             RequestObject(
                 verifierId = verifierId,
@@ -84,6 +94,13 @@ class CreateJarNimbusTest {
                 state = TestContext.testRequestId.value,
                 audience = emptyList(),
                 issuedAt = TestContext.testClock.now(),
+                verifierInfo =
+                    listOf(
+                        VerifierInfo(
+                            "registration_cert",
+                            wrprc,
+                        ),
+                    ),
             )
 
         // responseMode is direct_post.jwt, so we need to generate an ephemeral key

@@ -57,11 +57,19 @@ class CreateJarNimbus(
         nonce: Nonce,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,
+        registrationCertificate: RegistrationCertificate,
     ): Jwt =
         withContext(Dispatchers.Default) {
             val requestObject =
                 context(verifierConfig) {
-                    requestObjectFromDomain(issuedAt, transactionData, channel, query, nonce)
+                    requestObjectFromDomain(
+                        issuedAt,
+                        transactionData,
+                        channel,
+                        query,
+                        nonce,
+                        registrationCertificate,
+                    )
                 }
             val responseMode = channel.responseMode
             val signedJar = sign(responseMode, requestObject, walletNonce)
@@ -165,6 +173,7 @@ class CreateJarNimbus(
             optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, requestObject.transactionData?.toJackson())
             optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)
             optionalClaim(OpenId4VPSpec.DCAPI_EXPECTED_ORIGINS, expectedOrigins?.toJackson())
+            claim(OpenId4VPSpec.VERIFIER_INFO, requestObject.verifierInfo.toJackson())
             build()
         }
     }

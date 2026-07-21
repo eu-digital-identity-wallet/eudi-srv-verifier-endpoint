@@ -13,24 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
-
-import arrow.core.NonEmptyList
-import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import kotlin.time.Instant
+package eu.europa.ec.eudi.verifier.endpoint.domain
 
 /**
- * An out port that signs and encrypts a [Presentation.Requested]
+ * [Electronic Signatures and Trust Infrastructures (ESI); Relying party attributes supporting EUDI Wallet user's authorization decisions](https://www.etsi.org/deliver/etsi_ts/119400_119499/119475/01.02.01_60/ts_119475v010201p.pdf)
  */
-fun interface CreateJar {
-    suspend operator fun invoke(
-        issuedAt: Instant,
-        transactionData: NonEmptyList<TransactionData>?,
-        channel: Channel,
-        query: DCQL,
-        nonce: Nonce,
-        walletNonce: String?,
-        walletJarEncryptionRequirement: EncryptionRequirement,
-        registrationCertificate: RegistrationCertificate,
-    ): Jwt
+object ETSI119475 {
+    const val REGISTRATION_CERTIFICATE_TYPE = "rc-wrp+jwt"
 }
