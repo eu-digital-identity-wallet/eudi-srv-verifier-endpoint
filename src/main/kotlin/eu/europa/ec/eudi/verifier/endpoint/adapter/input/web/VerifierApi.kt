@@ -28,9 +28,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
-import org.springframework.http.MediaType.APPLICATION_JSON
-import org.springframework.http.MediaType.IMAGE_PNG
+import org.springframework.http.MediaType.*
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
@@ -41,6 +39,7 @@ internal class VerifierApi(
     private val getWalletResponse: GetWalletResponse,
     private val getPresentationEvents: GetPresentationEvents,
     private val postWalletResponse: PostWalletResponse,
+    private val intendedUses: List<IntendedUse>,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
     val route =
@@ -65,6 +64,10 @@ internal class VerifierApi(
 
             GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
             GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
+            GET(
+                INTENDED_USES_PATH,
+                accept(APPLICATION_JSON),
+            ) { handleGetIntendedUses() }
         }
 
     private suspend fun handleInitTransaction(
@@ -217,6 +220,13 @@ internal class VerifierApi(
         }
     }
 
+    private suspend fun handleGetIntendedUses(): ServerResponse =
+        ok().json().bodyValueAndAwait(
+            IntendedUsesTO(
+                intendedUses.map { IntendedUseTO.from(it) },
+            ),
+        )
+
     companion object {
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
         const val INIT_TRANSACTION_PATH_V2 = "/ui/presentations/v2"
@@ -224,6 +234,7 @@ internal class VerifierApi(
         const val DC_API_WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}/dc-api"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
         const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
+        const val INTENDED_USES_PATH = "/ui/intended-uses"
 
         const val TRANSACTION_ID_HEADER = "Transaction-Id"
         const val AUTHORIZATION_REQUEST_URI_HEADER = "Authorization-Request-Uri"
@@ -270,6 +281,22 @@ internal class VerifierApi(
 
                     ValidationError.InvalidAuthorizationRequestScheme -> {
                         "InvalidAuthorizationRequestScheme"
+                    }
+
+                    ValidationError.InvalidRegistrationCertificate -> {
+                        "InvalidRegistrationCertificate"
+                    }
+
+                    ValidationError.MissingRegistrationCertificate -> {
+                        "MissingRegistrationCertificate"
+                    }
+
+                    ValidationError.UnknownIntendedUseId -> {
+                        "UnknownIntendedUseId"
+                    }
+
+                    ValidationError.OnlyRegistrationCertificateOrIntendedUseIdMustBeProvided -> {
+                        "OnlyRegistrationCertificateOrIntendedUseIdMustBeProvided"
                     }
 
                     ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported -> {
@@ -330,6 +357,28 @@ private data class JwtSecuredAuthorizationRequestV1TO(
                 request = to.request,
                 requestUri = to.requestUri,
                 requestUriMethod = to.requestUriMethod,
+            )
+    }
+}
+
+@Serializable
+private data class IntendedUsesTO(
+    @SerialName("intended_uses")
+    val intendedUses: List<IntendedUseTO>,
+)
+
+@Serializable
+private data class IntendedUseTO(
+    @SerialName("intended_use_id") val intendedUseId: String,
+    @SerialName("description") val description: String,
+    @SerialName("registration_certificate") val registrationCertificate: String,
+) {
+    companion object {
+        fun from(intendedUse: IntendedUse) =
+            IntendedUseTO(
+                intendedUseId = intendedUse.id,
+                description = intendedUse.description,
+                registrationCertificate = intendedUse.registrationCertificate.value.serialize(),
             )
     }
 }

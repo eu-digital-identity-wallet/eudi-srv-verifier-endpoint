@@ -32,9 +32,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentation
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
-import io.ktor.client.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -160,6 +157,7 @@ class RetrieveRequestObjectLive(
                     presentation.nonce,
                     method.walletNonceOrNull,
                     encryptionRequirement,
+                    presentation.registrationCertificate,
                 )
             val updatedPresentation = presentation.retrieveRequestObject(clock)
             storePresentation(updatedPresentation)

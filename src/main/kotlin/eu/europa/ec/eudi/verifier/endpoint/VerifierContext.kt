@@ -87,6 +87,7 @@ import java.net.URL
 import java.security.KeyStore
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
+import kotlin.collections.map
 import kotlin.collections.toSet
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
@@ -380,7 +381,10 @@ internal class AppBeans :
         //
         // Config
         //
-        registerBean { verifierConfig(env) }
+
+        registerBean {
+            verifierConfig(env, bean<VerifierEndpointConfigurationProperties>().intendedUses)
+        }
 
         //
         // End points
@@ -399,6 +403,7 @@ internal class AppBeans :
                     bean(),
                     bean(),
                     bean(),
+                    bean<VerifierConfig>().intendedUses,
                 )
             val staticContent = StaticContent()
             val swaggerUi =
@@ -539,7 +544,10 @@ private fun accessCertificate(environment: Environment): AccessCertificate {
     return AccessCertificate(key, algorithm)
 }
 
-private fun verifierConfig(environment: Environment): VerifierConfig {
+private fun verifierConfig(
+    environment: Environment,
+    intendedUse: List<IntendedUseConfigurationProperties>,
+): VerifierConfig {
     val verifierId =
         run {
             val originalClientId = environment.getProperty("verifier.originalClientId", "verifier")
@@ -596,8 +604,16 @@ private fun verifierConfig(environment: Environment): VerifierConfig {
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
         authorizationRequestUri = authorizationRequestUri,
+        intendedUses = intendedUse.map { it.toIntendedUse() },
     )
 }
+
+private fun IntendedUseConfigurationProperties.toIntendedUse(): IntendedUse =
+    IntendedUse.create(
+        description = description,
+        registrationCertificate = registrationCertificate,
+        id = id,
+    )
 
 private fun Environment.clientMetaData(): ClientMetaData {
     val responseEncryptionOptionAlgorithm =
@@ -741,6 +757,20 @@ data class VerifierEndpointConfigurationProperties(
     val validation: ValidationConfigurationProperties,
     val trustValidator: TrustValidatorConfigurationProperties? = null,
     val attestationClassifications: AttestationClassifications = AttestationClassifications(),
+    val intendedUses: List<IntendedUseConfigurationProperties>,
+) {
+    init {
+        val uniqueIds = intendedUses.map { it.id }.toSet()
+        require(uniqueIds.size == intendedUses.size) {
+            "Within verifier.intendedUses, the same id MUST NOT be present more than once"
+        }
+    }
+}
+
+data class IntendedUseConfigurationProperties(
+    val id: String,
+    val description: String,
+    val registrationCertificate: String,
 )
 
 data class ValidationConfigurationProperties(

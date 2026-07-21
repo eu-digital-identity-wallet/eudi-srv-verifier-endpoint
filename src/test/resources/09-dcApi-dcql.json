@@ -25,5 +25,6 @@
     "https://europe.verifier.example.com",
     "https://usa.verifier.example.com",
     "https://verifier.example.com"
-  ]
+  ],
+  "intended_use_id": "1"
 }

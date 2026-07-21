@@ -22,6 +22,7 @@ import arrow.core.left
 import arrow.core.raise.either
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.TestUtils
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApiClient
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -49,6 +50,14 @@ class InitTransactionTest {
             transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
             requestUriMethod = RequestUriMethod.Get,
             authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
+            intendedUses =
+                listOf(
+                    IntendedUse.create(
+                        description = "test",
+                        registrationCertificate = TestUtils.loadResource("wrprc.jwt"),
+                        id = "1",
+                    ),
+                ),
         )
 
     @Test
@@ -58,6 +67,7 @@ class InitTransactionTest {
                 InitTransactionTO(
                     dcqlQuery(),
                     "nonce",
+                    intendedUseId = "1",
                 )
 
             val useCase: InitTransaction =
@@ -81,6 +91,7 @@ class InitTransactionTest {
     fun `when request option is embed by ref, request_uri should be present and presentation should be Requested`() =
         runTest {
             val uri = URL("https://foo")
+            val wrprc = TestUtils.loadResource("wrprc.jwt")
             val verifierConfig =
                 VerifierConfig(
                     verifierId = TestContext.verifierId,
@@ -92,12 +103,21 @@ class InitTransactionTest {
                     transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                     requestUriMethod = RequestUriMethod.Get,
                     authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
+                    intendedUses =
+                        listOf(
+                            IntendedUse.create(
+                                description = "test",
+                                registrationCertificate = wrprc,
+                                id = "1",
+                            ),
+                        ),
                 )
 
             val input =
                 InitTransactionTO(
                     dcqlQuery(),
-                    "nonce",
+                    nonce = "nonce",
+                    intendedUseId = "1",
                 )
 
             val useCase =
@@ -126,6 +146,7 @@ class InitTransactionTest {
                 InitTransactionTO(
                     dcqlQuery = null,
                     nonce = "nonce",
+                    intendedUseId = "1",
                 )
             testWithInvalidInput(input, ValidationError.MissingPresentationQuery)
         }
@@ -138,6 +159,7 @@ class InitTransactionTest {
                 InitTransactionTO(
                     dcqlQuery(),
                     nonce = null,
+                    intendedUseId = "1",
                 )
             testWithInvalidInput(input, ValidationError.MissingNonce)
         }
@@ -153,6 +175,7 @@ class InitTransactionTest {
                     dcqlQuery(),
                     nonce = "nonce",
                     responseMode = InitTransactionTO.ResponseModeTO.DirectPost,
+                    intendedUseId = "1",
                 )
 
             val useCase: InitTransaction =
@@ -183,6 +206,7 @@ class InitTransactionTest {
                     dcqlQuery = dcqlQuery(),
                     nonce = "nonce",
                     jarMode = EmbedModeTO.ByReference,
+                    intendedUseId = "1",
                 )
 
             val useCase: InitTransaction =
@@ -218,6 +242,7 @@ class InitTransactionTest {
                     dcqlQuery = dcqlQuery(),
                     "nonce",
                     redirectUriTemplate = "https://client.example.org/cb#response_code=#CODE#",
+                    intendedUseId = "1",
                 )
 
             either { useCase(invalidPlaceHolderInput) }
@@ -235,6 +260,7 @@ class InitTransactionTest {
                     "nonce",
                     redirectUriTemplate =
                         "hts:/client.example.org/cb%response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
+                    intendedUseId = "1",
                 )
 
             either { useCase(invalidUrlInput) }
@@ -256,6 +282,7 @@ class InitTransactionTest {
                     "nonce",
                     redirectUriTemplate =
                         "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
+                    intendedUseId = "1",
                 )
 
             val useCase: InitTransaction =
@@ -280,6 +307,7 @@ class InitTransactionTest {
                 InitTransactionTO(
                     dcqlQuery(),
                     "nonce",
+                    intendedUseId = "1",
                 )
 
             val useCase: InitTransaction =

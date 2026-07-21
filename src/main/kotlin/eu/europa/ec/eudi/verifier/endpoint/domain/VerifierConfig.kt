@@ -245,6 +245,27 @@ data class AccessCertificate(
         get() = key.parsedX509CertChain.first()
 }
 
+/**
+ * Intended uses of the Verifier Endpoint.
+ */
+@ConsistentCopyVisibility
+data class IntendedUse private constructor(
+    val description: String,
+    val registrationCertificate: RegistrationCertificate,
+    val id: String,
+) {
+    companion object {
+        fun create(
+            description: String,
+            registrationCertificate: String,
+            id: String,
+        ): IntendedUse {
+            val registrationCertificate = RegistrationCertificate.parse(registrationCertificate)
+            return IntendedUse(description, registrationCertificate, id)
+        }
+    }
+}
+
 typealias OriginalClientId = String
 typealias ClientId = String
 
@@ -335,6 +356,7 @@ data class VerifierConfig(
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
     val authorizationRequestUri: UnresolvedAuthorizationRequestUri,
+    val intendedUses: List<IntendedUse>,
 )
 
 /**
