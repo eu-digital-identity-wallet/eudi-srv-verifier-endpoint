@@ -15,6 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+/**
+ * [Electronic Signatures and Trust Infrastructures (ESI); Profiles for Electronic Attestation of Attributes; Part 2: Profiles for EAA/PID Presentations to Relying Party](https://www.etsi.org/deliver/etsi_ts/119400_119499/11947202/01.02.01_60/ts_11947202v010201p.pdf)
+ */
 object ETSI119472Part2 {
     const val REGISTRATION_CERTIFICATE = "registration_cert"
 }
