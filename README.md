@@ -251,11 +251,11 @@ An endpoint to control the content of the authorization request that will be pre
 - `issuer_chain`: If provided, a PEM encoded X509 Certificate chain (including start and end markers) of a Verifiable Credential Issuer trusted during this Transaction.
 - `authorization_request_scheme`: If provided, it will be used as the scheme part of the URI contained inside the QR code
 - `profile`: Profile that is applicable for this authorization request. Either `openid4vp` or `haip`. When `haip` is used, the requirements of [High Assurance Interoperability Profile](https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0.html#name-openid-for-verifiable-prese) are enforced.  
-- `intended_use_id`: If provided, identifies one of the configured Wallet Relying Party Registration Certificates to be used for this Transaction.
-- `registration_certificate`: If provided, a Wallet Relying Party Registration Certificate JWT to be used for this Transaction.
+- `intended_use_id`: If provided, identifies one of the configured Wallet Relying Party Intended Uses to be used with this Transaction. The relevant Wallet Relying Party Registration Certificate will be included in the Authorization Request.
+- `registration_certificate`: If provided, a Wallet Relying Party Registration Certificate, serialized using JWS Compact Serialization, to be used with this Transaction.
 
 > [!NOTE]
-> `intended_use_id` and `registration_certificate` are mutually exclusive. Use `intended_use_id` to reference a configured registration certificate, or `registration_certificate` to provide one directly in the transaction initialization request.
+> `intended_use_id` and `registration_certificate` are mutually exclusive. Use `intended_use_id` to reference a configured Intended Use, or `registration_certificate` to provide your Registration Certificate directly in the Transaction initialization request.
 
 This endpoint can produce either JSON or a QR code depending on the Accept header received. It can either:
 
@@ -298,7 +298,7 @@ curl -X POST -H "Content-type: application/json" -d '{
   "request_uri_method": "post",
   "issuer_chain": "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----",
   "profile": "openid4vp",
-  "registration_certificate": "todoaddvalue?"
+  "intended_use_id": "1"
 }' 'http://localhost:8080/ui/presentations'
 ```
 
