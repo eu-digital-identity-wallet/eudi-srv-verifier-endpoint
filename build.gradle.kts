@@ -119,11 +119,11 @@ springBoot {
 }
 
 tasks.bootJar {
-    exclude("application-develop.properties", "application-test.properties", "keystore.jks", "trusted-issuers.jks")
+    exclude("application-develop.properties", "keystore.jks", "trusted-issuers.jks")
 }
 
 tasks.jar {
-    exclude("application-develop.properties", "application-test.properties", "keystore.jks", "trusted-issuers.jks")
+    exclude("application-develop.properties", "keystore.jks", "trusted-issuers.jks")
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {
