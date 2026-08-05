@@ -540,7 +540,7 @@ private fun accessCertificate(environment: Environment): AccessCertificate {
         environment.getProperty("verifier.access-certificate.password")?.takeIf { it.isNotBlank() }
     val key = keyStore.loadJWK(keyAlias, keyPassword)
 
-    val algorithm = environment.getProperty("verifier.access-certificate.signing-algorithm", "ES256").let(JWSAlgorithm::parse)
+    val algorithm = environment.getRequiredProperty("verifier.access-certificate.signing-algorithm").let(JWSAlgorithm::parse)
     return AccessCertificate(key, algorithm)
 }
 

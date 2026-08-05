@@ -118,6 +118,14 @@ springBoot {
     buildInfo()
 }
 
+tasks.bootJar {
+    exclude("application-develop.properties", "keystore.jks", "trusted-issuers.jks")
+}
+
+tasks.jar {
+    exclude("application-develop.properties", "keystore.jks", "trusted-issuers.jks")
+}
+
 tasks.named<BootBuildImage>("bootBuildImage") {
     imageName = "$group/${project.name}"
     publish = false

@@ -31,6 +31,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import java.security.interfaces.ECPrivateKey
 import java.security.interfaces.ECPublicKey
@@ -41,6 +42,7 @@ import java.util.*
  */
 @ExtendWith(SpringExtension::class)
 @SpringBootTest
+@ActiveProfiles("test")
 internal class JweTest {
     private val log: Logger = LoggerFactory.getLogger(JweTest::class.java)
 
