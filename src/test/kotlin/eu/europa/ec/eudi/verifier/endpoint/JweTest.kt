@@ -40,9 +40,9 @@ import java.util.*
 /**
  *
  */
-@ActiveProfiles("develop")
 @ExtendWith(SpringExtension::class)
 @SpringBootTest
+@ActiveProfiles("test")
 internal class JweTest {
     private val log: Logger = LoggerFactory.getLogger(JweTest::class.java)
 

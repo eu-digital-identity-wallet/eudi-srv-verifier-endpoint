@@ -118,9 +118,9 @@ object TestContext {
     classes = [VerifierApplication::class],
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
 )
-@ActiveProfiles("develop")
 @ContextConfiguration
 @AutoConfigureWebTestClient
+@ActiveProfiles("test")
 internal annotation class VerifierApplicationTest(
     /**
      * [Configuration] classes that contain extra bean definitions.
