@@ -561,7 +561,6 @@ Description: Algorithm used to sign Authorization Request
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms   
 Note: The configured signing algorithm must be compatible with the configured signing key  
-Default value: `ES256`
 
 Variable: `VERIFIER_ACCESS_CERTIFICATE_KEYSTORE`  
 Description: URL of the Keystore from which to load the Access Certificate to use for JAR signing  
