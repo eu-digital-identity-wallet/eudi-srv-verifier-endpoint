@@ -39,6 +39,7 @@ internal class VerifierApi(
     private val getWalletResponse: GetWalletResponse,
     private val getPresentationEvents: GetPresentationEvents,
     private val postWalletResponse: PostWalletResponse,
+    private val retrieveDcApiRequest: RetrieveDcApiRequest,
     private val intendedUses: List<IntendedUse>,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
@@ -64,6 +65,7 @@ internal class VerifierApi(
 
             GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
             GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
+            GET(RETRIEVE_DC_API_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleRetrieveDcApiRequest)
             GET(
                 INTENDED_USES_PATH,
                 accept(APPLICATION_JSON),
@@ -220,6 +222,18 @@ internal class VerifierApi(
         }
     }
 
+    private suspend fun handleRetrieveDcApiRequest(req: ServerRequest): ServerResponse {
+        suspend fun found(response: RetrieveDcApiRequestTO) = ok().json().bodyValueAndAwait(response)
+
+        val transactionId = req.transactionId()
+        logger.info("Handling RetrieveDcApiRequest for tx ${transactionId.value}")
+        return when (val result = retrieveDcApiRequest(transactionId)) {
+            is QueryResponse.NotFound -> notFound().buildAndAwait()
+            is QueryResponse.InvalidState -> badRequest().buildAndAwait()
+            is QueryResponse.Found -> found(result.value)
+        }
+    }
+
     private suspend fun handleGetIntendedUses(): ServerResponse =
         ok().json().bodyValueAndAwait(
             IntendedUsesTO(
@@ -234,6 +248,7 @@ internal class VerifierApi(
         const val DC_API_WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}/dc-api"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
         const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
+        const val RETRIEVE_DC_API_PATH = "/ui/presentations/{transactionId}/dcapi/retrieve"
         const val INTENDED_USES_PATH = "/ui/intended-uses"
 
         const val TRANSACTION_ID_HEADER = "Transaction-Id"
