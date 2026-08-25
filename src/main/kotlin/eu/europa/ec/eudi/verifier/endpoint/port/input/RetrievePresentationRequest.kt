@@ -29,14 +29,14 @@ data class RetrieveDcApiRequestTO(
     @Required @SerialName("transaction_id") val transactionId: String,
 )
 
-fun interface RetrieveDcApiRequest {
+fun interface RetrievePresentationRequest {
     suspend operator fun invoke(transactionId: TransactionId): QueryResponse<RetrieveDcApiRequestTO>
 }
 
-class RetrieveDcApiRequestLive(
+class RetrievePresentationRequestLive(
     private val loadPresentationById: LoadPresentationById,
     private val loadPresentationEvents: LoadPresentationEvents,
-) : RetrieveDcApiRequest {
+) : RetrievePresentationRequest {
     override suspend fun invoke(transactionId: TransactionId): QueryResponse<RetrieveDcApiRequestTO> {
         if (loadPresentationById(transactionId) == null) {
             return QueryResponse.NotFound
