@@ -418,6 +418,53 @@
         }
       }
     },
+    "/ui/presentations/{transactionId}/request": {
+      "get": {
+        "tags": [
+          "verifier api"
+        ],
+        "description": "Gets the authorization request of a DC API Transaction.",
+        "operationId": "retrieveDcApiRequest",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TransactionId"
+            },
+            "allowEmptyValue": false,
+            "description": "The unique identifier of the Transaction."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitDcApiTransactionResponse"
+                },
+                "examples": {
+                  "InitDcApiTransactionResponse": {
+                    "$ref": "#/components/examples/InitDcApiTransactionResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Server error."
+          }
+        }
+      }
+    },
     "/ui/intended-uses": {
       "get": {
         "tags": [
