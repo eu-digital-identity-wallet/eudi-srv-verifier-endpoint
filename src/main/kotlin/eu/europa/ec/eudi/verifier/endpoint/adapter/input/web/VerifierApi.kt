@@ -223,7 +223,7 @@ internal class VerifierApi(
     }
 
     private suspend fun handleRetrievePresentationRequest(req: ServerRequest): ServerResponse {
-        suspend fun found(response: RetrieveDcApiRequestTO) = ok().json().bodyValueAndAwait(response)
+        suspend fun found(response: InitDcApiTransactionResponse) = ok().json().bodyValueAndAwait(response)
 
         val transactionId = req.transactionId()
         logger.info("Handling RetrieveDcApiRequest for tx ${transactionId.value}")
