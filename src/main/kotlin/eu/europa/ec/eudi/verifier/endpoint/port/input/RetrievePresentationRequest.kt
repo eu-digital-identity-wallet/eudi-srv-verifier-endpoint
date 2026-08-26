@@ -19,25 +19,16 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationEvents
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
-import kotlinx.serialization.Required
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-
-@Serializable
-data class RetrieveDcApiRequestTO(
-    @Required @SerialName("request") val request: String,
-    @Required @SerialName("transaction_id") val transactionId: String,
-)
 
 fun interface RetrievePresentationRequest {
-    suspend operator fun invoke(transactionId: TransactionId): QueryResponse<RetrieveDcApiRequestTO>
+    suspend operator fun invoke(transactionId: TransactionId): QueryResponse<InitDcApiTransactionResponse>
 }
 
 class RetrievePresentationRequestLive(
     private val loadPresentationById: LoadPresentationById,
     private val loadPresentationEvents: LoadPresentationEvents,
 ) : RetrievePresentationRequest {
-    override suspend fun invoke(transactionId: TransactionId): QueryResponse<RetrieveDcApiRequestTO> {
+    override suspend fun invoke(transactionId: TransactionId): QueryResponse<InitDcApiTransactionResponse> {
         if (loadPresentationById(transactionId) == null) {
             return QueryResponse.NotFound
         }
@@ -45,7 +36,7 @@ class RetrievePresentationRequestLive(
         val events = loadPresentationEvents(transactionId)
         val dcApiEvent = events?.firstOrNull { it is PresentationEvent.DcApiTransactionInitialized }
         if (dcApiEvent is PresentationEvent.DcApiTransactionInitialized) {
-            return QueryResponse.Found(RetrieveDcApiRequestTO(dcApiEvent.response, transactionId.value))
+            return QueryResponse.Found(InitDcApiTransactionResponse(dcApiEvent.response, transactionId.value))
         }
 
         return QueryResponse.InvalidState

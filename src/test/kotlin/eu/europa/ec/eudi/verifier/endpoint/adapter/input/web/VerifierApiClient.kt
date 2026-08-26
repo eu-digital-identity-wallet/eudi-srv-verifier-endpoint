@@ -18,14 +18,13 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi.Companion.TRANSACTION_ID_HEADER
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
-import eu.europa.ec.eudi.verifier.endpoint.port.input.InitDcApiTransactionResponseTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitDcApiTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitDcApiTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.Output
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -47,13 +46,13 @@ object VerifierApiClient {
      * Initializes a Digital Credentials API (DC API) Transaction.
      *
      * Posts an [InitDcApiTransactionTO] to [VerifierApi.INIT_TRANSACTION_PATH_DC_API] and returns
-     * the raw response body parsed as a [InitDcApiTransactionResponseTO] together with the value of the
+     * the raw response body parsed as a [InitDcApiTransactionResponse] together with the value of the
      * [TRANSACTION_ID_HEADER] response header.
      */
     fun initDCApiTransaction(
         client: WebTestClient,
         initDCApiTransactionTO: InitDcApiTransactionTO,
-    ): Pair<InitDcApiTransactionResponseTO, String> {
+    ): Pair<InitDcApiTransactionResponse, String> {
         val result =
             client
                 .post()
@@ -64,7 +63,7 @@ object VerifierApiClient {
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody<InitDcApiTransactionResponseTO>()
+                .expectBody<InitDcApiTransactionResponse>()
                 .returnResult()
 
         val transactionId = checkNotNull(result.responseHeaders.getFirst(TRANSACTION_ID_HEADER))

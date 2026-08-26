@@ -275,7 +275,7 @@ interface InitTransaction {
     suspend operator fun invoke(initTransactionTO: InitTransactionTO): InitTransactionResponse
 
     context(_: Raise<ValidationError>)
-    suspend operator fun invoke(initDcApiTransactionTO: InitDcApiTransactionTO): InitDcApiTransactionResponseTO
+    suspend operator fun invoke(initDcApiTransactionTO: InitDcApiTransactionTO): InitDcApiTransactionResponse
 }
 
 /**
@@ -364,7 +364,7 @@ class InitTransactionLive(
     }
 
     context(_: Raise<ValidationError>)
-    override suspend fun invoke(initDcApiTransactionTO: InitDcApiTransactionTO): InitDcApiTransactionResponseTO {
+    override suspend fun invoke(initDcApiTransactionTO: InitDcApiTransactionTO): InitDcApiTransactionResponse {
         val jarMode = EmbedOption.ByValue
         val profile = Profile.ETSI119472Part2
 
@@ -428,7 +428,7 @@ class InitTransactionLive(
         storePresentation(presentation)
         logTransactionInitialized(presentation, jar)
 
-        return InitDcApiTransactionResponseTO(
+        return InitDcApiTransactionResponse(
             jar,
             presentation.id.value,
         )
@@ -863,14 +863,4 @@ data class InitDcApiTransactionTO(
     @SerialName("expected_origins") val expectedOrigins: NonEmptyList<Url>? = null,
     @SerialName("intended_use_id") val intendedUseId: String? = null,
     @SerialName("registration_certificate") val registrationCertificate: String? = null,
-)
-
-@Serializable
-data class InitDcApiTransactionResponseTO(
-    @Required
-    @SerialName("request")
-    val request: String,
-    @Required
-    @SerialName("transaction_id")
-    val transactionId: String,
 )
