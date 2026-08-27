@@ -596,7 +596,7 @@ Description: Default `request_uri_method` to use for a Presentation when one is 
 Possible values: `Get`, `Post`  
 Default value: `Get`  
 
-Variable: `VERIFIER_DEFEAULTHTTPRESPONSEMODE`  
+Variable: `VERIFIER_DEFAULTHTTPRESPONSEMODE`  
 Description: How Authorization Responses are expected for HTTP Presentation   
 Possible values: `DirectPost`, `DirectPostJwt`  
 Default value: `DirectPostJwt`
