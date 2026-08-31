@@ -61,10 +61,17 @@ The released software is a initial development release version:
 
 ## How to build and run
 
-To start the service locally you can execute 
+To start the service locally you can execute
 ```bash
-./gradlew bootRun
+./gradlew bootRun --args='--spring.profiles.active=develop'
 ```
+
+> [!IMPORTANT]
+> The `develop` profile contains development-specific configuration and it is excluded from 
+> the produced JAR and the container image.
+>
+> It can be used **only** for local development.
+
 To build a local docker image of the service execute
 ```bash
 ./gradlew bootBuildImage
