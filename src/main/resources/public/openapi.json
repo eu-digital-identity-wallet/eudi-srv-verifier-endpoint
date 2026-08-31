@@ -475,7 +475,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request. A request that cannot be read, for example one missing the required `device_response` field, is answered without a body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -549,7 +549,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request. A request that cannot be read, for example one missing the required `sd_jwt_vc` or `nonce` field, is answered without a body.",
             "content": {
               "application/json": {
                 "schema": {
