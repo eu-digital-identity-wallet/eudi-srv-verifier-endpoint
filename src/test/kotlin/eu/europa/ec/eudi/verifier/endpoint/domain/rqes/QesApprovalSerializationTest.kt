@@ -13,9 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.domain
+package eu.europa.ec.eudi.verifier.endpoint.domain.rqes
 
 import arrow.core.nonEmptyListOf
+import eu.europa.ec.eudi.verifier.endpoint.domain.CredentialID
+import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionData
+import eu.europa.ec.eudi.verifier.endpoint.domain.Type
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject

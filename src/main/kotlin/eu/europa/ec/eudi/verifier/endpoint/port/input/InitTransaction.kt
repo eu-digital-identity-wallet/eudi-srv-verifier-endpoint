@@ -38,6 +38,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.EncryptionRequirement
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode.OverDcApi.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode.OverHttp.*
+import eu.europa.ec.eudi.verifier.endpoint.domain.rqes.QesApproval
+import eu.europa.ec.eudi.verifier.endpoint.domain.rqes.QesRequest
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
