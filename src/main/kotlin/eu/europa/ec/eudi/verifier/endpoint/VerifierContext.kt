@@ -206,7 +206,7 @@ internal class AppBeans :
         registerBean { GetWalletResponseLive(bean(), bean(), bean()) }
         registerBean { GetPresentationEventsLive(bean(), bean()) }
 
-        if (env.getProperty("verifier.validation.sdJwtVc.statusCheck.enabled", true)) {
+        if (env.getProperty("verifier.validation.statusCheck.enabled", true)) {
             log.info("Enabling Status List Token validations")
             registerBean<StatusListTokenValidator> {
                 val selfSignedProfileActive = env.activeProfiles.contains("self-signed")

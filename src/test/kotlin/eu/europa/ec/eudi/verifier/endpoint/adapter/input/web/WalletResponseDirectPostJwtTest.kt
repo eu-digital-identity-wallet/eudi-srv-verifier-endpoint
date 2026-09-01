@@ -351,7 +351,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
         "verifier.clientMetadata.responseEncryption.method=A128GCM",
         "verifier.jwk.embed=ByValue",
-        "verifier.validation.sdJwtVc.statusCheck.enabled=false",
+        "verifier.validation.statusCheck.enabled=false",
         "verifier.attestation-classifications.eaa[0].use-case=mDL",
         "verifier.attestation-classifications.eaa[0].doc-types=org.iso.18013.5.1.mDL",
         "verifier.wrprc[0].intended-use-id=1",

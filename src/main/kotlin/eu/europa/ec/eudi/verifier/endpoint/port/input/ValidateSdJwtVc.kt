@@ -51,7 +51,10 @@ internal enum class SdJwtVcValidationErrorCodeTO {
     IssuerCertificateIsNotTrusted,
     UnableToLookupDID,
     UnableToDetermineVerificationMethod,
+    TypeMetadataValidationFailure,
+    TypeMetadataResolutionFailure,
     StatusCheckFailed,
+    StatusNotValid,
     UnexpectedError,
     InvalidIssuerChain,
 }
@@ -144,4 +147,27 @@ private fun SdJwtVcValidationError.toSdJwtVcValidationError(): SdJwtVcValidation
     )
 
 private fun SdJwtVcValidationErrorCode.toSdJwtVcValidationErrorCodeTO(): SdJwtVcValidationErrorCodeTO =
-    SdJwtVcValidationErrorCodeTO.valueOf(name)
+    when (this) {
+        SdJwtVcValidationErrorCode.IsUnparsable -> SdJwtVcValidationErrorCodeTO.IsUnparsable
+        SdJwtVcValidationErrorCode.ContainsInvalidJwt -> SdJwtVcValidationErrorCodeTO.ContainsInvalidJwt
+        SdJwtVcValidationErrorCode.IsMissingHolderPublicKey -> SdJwtVcValidationErrorCodeTO.IsMissingHolderPublicKey
+        SdJwtVcValidationErrorCode.UnsupportedHolderPublicKey -> SdJwtVcValidationErrorCodeTO.UnsupportedHolderPublicKey
+        SdJwtVcValidationErrorCode.ContainsInvalidKeyBindingJwt -> SdJwtVcValidationErrorCodeTO.ContainsInvalidKeyBindingJwt
+        SdJwtVcValidationErrorCode.ContainsKeyBindingJwt -> SdJwtVcValidationErrorCodeTO.ContainsKeyBindingJwt
+        SdJwtVcValidationErrorCode.IsMissingKeyBindingJwt -> SdJwtVcValidationErrorCodeTO.IsMissingKeyBindingJwt
+        SdJwtVcValidationErrorCode.ContainsInvalidDisclosures -> SdJwtVcValidationErrorCodeTO.ContainsInvalidDisclosures
+        SdJwtVcValidationErrorCode.ContainsUnsupportedHashingAlgorithm -> SdJwtVcValidationErrorCodeTO.ContainsUnsupportedHashingAlgorithm
+        SdJwtVcValidationErrorCode.ContainsNonUniqueDigests -> SdJwtVcValidationErrorCodeTO.ContainsNonUniqueDigests
+        SdJwtVcValidationErrorCode.ContainsNonUniqueDisclosures -> SdJwtVcValidationErrorCodeTO.ContainsNonUniqueDisclosures
+        SdJwtVcValidationErrorCode.ContainsDisclosuresWithNoDigests -> SdJwtVcValidationErrorCodeTO.ContainsDisclosuresWithNoDigests
+        SdJwtVcValidationErrorCode.UnsupportedVerificationMethod -> SdJwtVcValidationErrorCodeTO.UnsupportedVerificationMethod
+        SdJwtVcValidationErrorCode.UnableToResolveIssuerMetadata -> SdJwtVcValidationErrorCodeTO.UnableToResolveIssuerMetadata
+        SdJwtVcValidationErrorCode.IssuerCertificateIsNotTrusted -> SdJwtVcValidationErrorCodeTO.IssuerCertificateIsNotTrusted
+        SdJwtVcValidationErrorCode.UnableToLookupDID -> SdJwtVcValidationErrorCodeTO.UnableToLookupDID
+        SdJwtVcValidationErrorCode.UnableToDetermineVerificationMethod -> SdJwtVcValidationErrorCodeTO.UnableToDetermineVerificationMethod
+        SdJwtVcValidationErrorCode.TypeMetadataValidationFailure -> SdJwtVcValidationErrorCodeTO.TypeMetadataValidationFailure
+        SdJwtVcValidationErrorCode.TypeMetadataResolutionFailure -> SdJwtVcValidationErrorCodeTO.TypeMetadataResolutionFailure
+        SdJwtVcValidationErrorCode.StatusCheckFailed -> SdJwtVcValidationErrorCodeTO.StatusCheckFailed
+        SdJwtVcValidationErrorCode.StatusNotValid -> SdJwtVcValidationErrorCodeTO.StatusNotValid
+        SdJwtVcValidationErrorCode.UnexpectedError -> SdJwtVcValidationErrorCodeTO.UnexpectedError
+    }
