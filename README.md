@@ -666,8 +666,8 @@ The supported algorithms are for Issuer data, and MDoc authentication are:
 
 Default value: `true`  
 
-Variable: `VERIFIER_VALIDATION_SDJWTVC_STATUSCHECK_ENABLED`  
-Description: Enables status check validation for sd-jwt-vc attestations shared.  
+Variable: `VERIFIER_VALIDATION_STATUSCHECK_ENABLED`  
+Description: Enables status check validation for attestations shared.  
 Default value: `true`  
 
 Variable: `VERIFIER_TRANSACTIONDATA_HASHALGORITHM`  
