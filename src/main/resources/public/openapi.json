@@ -418,7 +418,7 @@
         }
       }
     },
-    "/ui/presentations/{transactionId}/request": {
+    "/ui/presentations/dc-api/{transactionId}/request": {
       "get": {
         "tags": [
           "verifier api"

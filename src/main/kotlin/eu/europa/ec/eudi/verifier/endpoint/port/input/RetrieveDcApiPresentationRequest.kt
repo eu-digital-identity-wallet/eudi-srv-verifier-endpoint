@@ -20,14 +20,14 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentation
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationEvents
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 
-fun interface RetrievePresentationRequest {
+fun interface RetrieveDcApiPresentationRequest {
     suspend operator fun invoke(transactionId: TransactionId): QueryResponse<InitDcApiTransactionResponse>
 }
 
-class RetrievePresentationRequestLive(
+class RetrieveDcApiPresentationRequestLive(
     private val loadPresentationById: LoadPresentationById,
     private val loadPresentationEvents: LoadPresentationEvents,
-) : RetrievePresentationRequest {
+) : RetrieveDcApiPresentationRequest {
     override suspend fun invoke(transactionId: TransactionId): QueryResponse<InitDcApiTransactionResponse> {
         if (loadPresentationById(transactionId) == null) {
             return QueryResponse.NotFound
