@@ -864,13 +864,3 @@ data class InitDcApiTransactionTO(
     @SerialName("intended_use_id") val intendedUseId: String? = null,
     @SerialName("registration_certificate") val registrationCertificate: String? = null,
 )
-
-@Serializable
-data class InitDcApiTransactionResponseTO(
-    @Required
-    @SerialName("request")
-    val request: String,
-    @Required
-    @SerialName("transaction_id")
-    val transactionId: String,
-)

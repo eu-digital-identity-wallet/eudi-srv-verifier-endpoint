@@ -205,6 +205,7 @@ internal class AppBeans :
         registerBean { GenerateEphemeralEncryptionKeyPairNimbus(bean<VerifierConfig>().clientMetaData.responseEncryptionOption) }
         registerBean { GetWalletResponseLive(bean(), bean(), bean()) }
         registerBean { GetPresentationEventsLive(bean(), bean()) }
+        registerBean { RetrieveDcApiPresentationRequestLive(bean(), bean()) }
 
         if (env.getProperty("verifier.validation.sdJwtVc.statusCheck.enabled", true)) {
             log.info("Enabling Status List Token validations")
@@ -399,6 +400,7 @@ internal class AppBeans :
                 )
             val verifierApi =
                 VerifierApi(
+                    bean(),
                     bean(),
                     bean(),
                     bean(),
