@@ -84,6 +84,14 @@ internal class UtilityApi(
         }.fold(
             transform = { documents -> ok().json().bodyValueAndAwait(documents) },
             recover = { error -> badRequest().json().bodyValueAndAwait(error) },
+            catch = { exception ->
+                if (exception is IllegalArgumentException) {
+                    log.warn("Could not validate MSO MDoc DeviceResponse.", exception)
+                    badRequest().buildAndAwait()
+                } else {
+                    throw exception
+                }
+            },
         )
 
     private suspend fun handleValidateSdJwtVc(request: ServerRequest): ServerResponse =
@@ -103,6 +111,14 @@ internal class UtilityApi(
                 ok().json().bodyValueAndAwait(reCreated)
             },
             recover = { error -> badRequest().json().bodyValueAndAwait(error.toJson()) },
+            catch = { exception ->
+                if (exception is IllegalArgumentException) {
+                    log.warn("Could not validate SD-JWT VC.", exception)
+                    badRequest().buildAndAwait()
+                } else {
+                    throw exception
+                }
+            },
         )
 
     private suspend fun handleProcessSdJwtVc(request: ServerRequest): ServerResponse =
