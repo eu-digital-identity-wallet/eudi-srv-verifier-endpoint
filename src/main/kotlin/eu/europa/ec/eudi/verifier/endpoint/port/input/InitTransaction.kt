@@ -275,7 +275,7 @@ interface InitTransaction {
     suspend operator fun invoke(initTransactionTO: InitTransactionTO): InitTransactionResponse
 
     context(_: Raise<ValidationError>)
-    suspend operator fun invoke(initDcApiTransactionTO: InitDcApiTransactionTO): InitDcApiTransactionResponse
+    suspend operator fun invoke(initDcApiTransactionTO: InitDcApiTransactionTO): InitDcApiTransactionResponseTO
 }
 
 /**
@@ -364,7 +364,7 @@ class InitTransactionLive(
     }
 
     context(_: Raise<ValidationError>)
-    override suspend fun invoke(initDcApiTransactionTO: InitDcApiTransactionTO): InitDcApiTransactionResponse {
+    override suspend fun invoke(initDcApiTransactionTO: InitDcApiTransactionTO): InitDcApiTransactionResponseTO {
         val jarMode = EmbedOption.ByValue
         val profile = Profile.ETSI119472Part2
 
@@ -428,7 +428,7 @@ class InitTransactionLive(
         storePresentation(presentation)
         logTransactionInitialized(presentation, jar)
 
-        return InitDcApiTransactionResponse(
+        return InitDcApiTransactionResponseTO(
             jar,
             presentation.id.value,
         )

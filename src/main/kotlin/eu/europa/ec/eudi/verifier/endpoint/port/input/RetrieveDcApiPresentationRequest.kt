@@ -15,30 +15,32 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.Channel
+import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationEvents
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 
 fun interface RetrieveDcApiPresentationRequest {
-    suspend operator fun invoke(transactionId: TransactionId): QueryResponse<InitDcApiTransactionResponse>
+    suspend operator fun invoke(transactionId: TransactionId): QueryResponse<InitDcApiTransactionResponseTO>
 }
 
 class RetrieveDcApiPresentationRequestLive(
     private val loadPresentationById: LoadPresentationById,
     private val loadPresentationEvents: LoadPresentationEvents,
 ) : RetrieveDcApiPresentationRequest {
-    override suspend fun invoke(transactionId: TransactionId): QueryResponse<InitDcApiTransactionResponse> {
-        if (loadPresentationById(transactionId) == null) {
-            return QueryResponse.NotFound
-        }
+    override suspend fun invoke(transactionId: TransactionId): QueryResponse<InitDcApiTransactionResponseTO> {
+        val presentationById = loadPresentationById(transactionId) ?: return QueryResponse.NotFound
+
+        if (presentationById !is Presentation.RequestObjectRetrieved) return QueryResponse.InvalidState
+        require(presentationById.channel is Channel.OverDcApi)
 
         val events = loadPresentationEvents(transactionId)
-        val dcApiEvent = events?.firstOrNull { it is PresentationEvent.DcApiTransactionInitialized }
-        if (dcApiEvent is PresentationEvent.DcApiTransactionInitialized) {
-            return QueryResponse.Found(InitDcApiTransactionResponse(dcApiEvent.response, transactionId.value))
-        }
+        checkNotNull(events)
 
-        return QueryResponse.InvalidState
+        val dcApiEvent = events.filterIsInstance<PresentationEvent.DcApiTransactionInitialized>().first()
+
+        return QueryResponse.Found(InitDcApiTransactionResponseTO(dcApiEvent.response, transactionId.value))
     }
 }
