@@ -38,8 +38,8 @@ import kotlin.test.assertIs
 
 /**
  * Verifies the JAR `aud` claim per OpenID4VP
- * - Dynamic Discovery (POST + `wallet_metadata` with `iss`) -> `aud` = the Wallet's `iss`.
- * - Static Discovery (GET, or POST without `iss`) -> `aud` = `https://self-issued.me/v2`.
+ * - Dynamic Discovery (POST + `wallet_metadata` with `issuer`) -> `aud` = the Wallet's `issuer`.
+ * - Static Discovery (GET, or POST without `issuer`) -> `aud` = `https://self-issued.me/v2`.
  */
 @VerifierApplicationTest
 @TestPropertySource(
@@ -53,7 +53,7 @@ internal class RequestObjectAudienceTest {
     private lateinit var client: WebTestClient
 
     @Test
-    fun `when wallet posts metadata with iss, the JAR aud is the wallet issuer`() =
+    fun `when wallet posts wallet_metadata, the created JAR aud claim is the wallet issuer`() =
         runTest {
             val initTransaction =
                 VerifierApiClient
@@ -73,7 +73,7 @@ internal class RequestObjectAudienceTest {
             val requestObject =
                 WalletApiClient.postRequestObject(client, transactionInitialized.requestUri!!, walletMetadata, null)
 
-            assertEquals(listOf("https://wallet.example"), audience(requestObject.second))
+            assertEquals(listOf("https://wallet.example"), requestObject.second.audience())
         }
 
     @Test
@@ -90,7 +90,7 @@ internal class RequestObjectAudienceTest {
 
             val requestObject = WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
-            assertEquals(listOf("https://self-issued.me/v2"), audience(requestObject))
+            assertEquals(listOf("https://self-issued.me/v2"), requestObject.audience())
         }
 
     private fun JsonObjectBuilder.putValidWalletMetadata() {
@@ -104,12 +104,10 @@ internal class RequestObjectAudienceTest {
         put("response_modes_supported", buildJsonArray { add("direct_post.jwt") })
     }
 
-    private fun audience(requestObject: JsonObject): List<String> {
-        val aud = requestObject["aud"]
-        return when (aud) {
+    private fun JsonObject.audience(): List<String>? =
+        when (val aud = this["aud"]) {
             is JsonPrimitive -> listOf(aud.content)
             is JsonArray -> aud.map { it.jsonPrimitive.content }
-            else -> emptyList()
+            else -> null
         }
-    }
 }

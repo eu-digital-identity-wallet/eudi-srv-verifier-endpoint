@@ -148,7 +148,7 @@ class RetrieveRequestObjectLive(
 
         suspend fun updatePresentationAndCreateJar(
             encryptionRequirement: EncryptionRequirement,
-            walletIssuer: Audience,
+            walletIdentifier: Audience,
         ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
             val jar =
                 createJar(
@@ -158,7 +158,7 @@ class RetrieveRequestObjectLive(
                     presentation.query,
                     presentation.nonce,
                     method.walletNonceOrNull,
-                    walletIssuer,
+                    walletIdentifier,
                     encryptionRequirement,
                     presentation.registrationCertificate,
                 )
@@ -199,9 +199,9 @@ class RetrieveRequestObjectLive(
         val encryptionRequirement =
             walletMetadata?.validate(presentation) ?: EncryptionRequirement.NotRequired
 
-        val walletIssuer = Audience(walletMetadata?.issuer ?: "https://self-issued.me/v2")
+        val walletIdentifier = Audience(walletMetadata?.issuer ?: "https://self-issued.me/v2")
 
-        val (updatePresentation, jar) = updatePresentationAndCreateJar(encryptionRequirement, walletIssuer)
+        val (updatePresentation, jar) = updatePresentationAndCreateJar(encryptionRequirement, walletIdentifier)
         log(updatePresentation, jar)
         return jar
     }

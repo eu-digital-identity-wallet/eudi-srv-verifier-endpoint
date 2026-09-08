@@ -137,13 +137,13 @@ class CreateJarNimbusTest {
     @Test
     fun `given a wallet issuer, the JAR aud should be the wallet issuer`() =
         runTest {
-            val walletIssuer = Audience("https://wallet.example")
-            val jar = createJarWithWalletIssuer(walletIssuer)
+            val walletIdentifier = Audience("https://wallet.example")
+            val jar = createJarWithWalletIdentifier(walletIdentifier)
             val signedJwt = decode(jar).getOrThrow()
             assertEquals(listOf("https://wallet.example"), signedJwt.jwtClaimsSet.audience)
         }
 
-    private suspend fun createJarWithWalletIssuer(walletIssuer: Audience): String {
+    private suspend fun createJarWithWalletIdentifier(walletIdentifier: Audience): String {
         val query = checkNotNull(Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery)
         val registrationCertificate = RegistrationCertificate.parse(TestUtils.loadResource("wrprc.jwt"))
         val channel =
@@ -160,7 +160,7 @@ class CreateJarNimbusTest {
             query = query,
             nonce = Nonce("test-nonce"),
             walletNonce = null,
-            walletIssuer = walletIssuer,
+            walletIdentifier = walletIdentifier,
             walletJarEncryptionRequirement = EncryptionRequirement.NotRequired,
             registrationCertificate = registrationCertificate,
         )

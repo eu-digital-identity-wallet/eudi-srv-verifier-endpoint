@@ -57,7 +57,7 @@ class CreateJarNimbus(
         query: DCQL,
         nonce: Nonce,
         walletNonce: String?,
-        walletIssuer: Audience,
+        walletIdentifier: Audience,
         walletJarEncryptionRequirement: EncryptionRequirement,
         registrationCertificate: RegistrationCertificate,
     ): Jwt =
@@ -70,7 +70,7 @@ class CreateJarNimbus(
                         channel,
                         query,
                         nonce,
-                        walletIssuer,
+                        walletIdentifier,
                         registrationCertificate,
                     )
                 }

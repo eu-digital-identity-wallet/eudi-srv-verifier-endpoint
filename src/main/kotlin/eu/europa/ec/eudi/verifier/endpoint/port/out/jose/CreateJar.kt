@@ -31,7 +31,7 @@ fun interface CreateJar {
         query: DCQL,
         nonce: Nonce,
         walletNonce: String?,
-        walletIssuer: Audience,
+        walletIdentifier: Audience,
         walletJarEncryptionRequirement: EncryptionRequirement,
         registrationCertificate: RegistrationCertificate,
     ): Jwt

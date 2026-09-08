@@ -48,12 +48,12 @@ internal fun requestObjectFromDomain(
     channel: Channel,
     query: DCQL,
     nonce: Nonce,
-    walletIssuer: Audience,
+    walletIdentifier: Audience,
     registrationCertificate: RegistrationCertificate,
 ): RequestObject {
     val scope = emptyList<String>()
     val responseType = listOf(OpenId4VPSpec.VP_TOKEN)
-    val audience = walletIssuer.toSingleAudienceList()
+    val audience = walletIdentifier.toSingleAudienceList()
     val transactionData = transactionData?.map { it.base64Url }
     val verifierInfo = VerifierInfo(format = ETSI119472Part2.REGISTRATION_CERTIFICATE, data = registrationCertificate.value.serialize())
 

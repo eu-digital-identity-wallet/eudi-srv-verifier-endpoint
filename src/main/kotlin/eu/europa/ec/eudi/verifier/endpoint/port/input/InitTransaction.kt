@@ -388,8 +388,6 @@ class InitTransactionLive(
 
         val channel = Channel.OverDcApi(responseMode, origin, expectedOrigins)
 
-        val walletIssuer = Audience("https://self-issued.me/v2")
-
         // validate according to the selected profile
         with(profile.validator) {
             context(verifierConfig) {
@@ -424,7 +422,7 @@ class InitTransactionLive(
                 presentation.query,
                 presentation.nonce,
                 null,
-                walletIssuer,
+                Audience("https://self-issued.me/v2"),
                 EncryptionRequirement.NotRequired,
                 registrationCertificate,
             )
@@ -481,7 +479,6 @@ class InitTransactionLive(
             }
 
             EmbedOption.ByValue -> {
-                val walletIssuer = Audience("https://self-issued.me/v2")
                 val presentation =
                     Presentation.RequestObjectRetrieved(
                         id = generateTransactionId(),
@@ -503,7 +500,7 @@ class InitTransactionLive(
                         presentation.query,
                         presentation.nonce,
                         null,
-                        walletIssuer,
+                        Audience("https://self-issued.me/v2"),
                         EncryptionRequirement.NotRequired,
                         registrationCertificate,
                     )
