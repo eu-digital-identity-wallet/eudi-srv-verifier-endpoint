@@ -27,6 +27,7 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.X509CertUtils
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import com.nimbusds.oauth2.sdk.id.Audience
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.TestUtils
@@ -136,20 +137,13 @@ class CreateJarNimbusTest {
     @Test
     fun `given a wallet issuer, the JAR aud should be the wallet issuer`() =
         runTest {
-            val jar = createJarWithWalletIssuer("https://wallet.example")
+            val walletIssuer = Audience("https://wallet.example")
+            val jar = createJarWithWalletIssuer(walletIssuer)
             val signedJwt = decode(jar).getOrThrow()
             assertEquals(listOf("https://wallet.example"), signedJwt.jwtClaimsSet.audience)
         }
 
-    @Test
-    fun `given no wallet issuer, the JAR aud should be the self-issued default`() =
-        runTest {
-            val jar = createJarWithWalletIssuer(null)
-            val signedJwt = decode(jar).getOrThrow()
-            assertEquals(listOf("https://self-issued.me/v2"), signedJwt.jwtClaimsSet.audience)
-        }
-
-    private suspend fun createJarWithWalletIssuer(walletIssuer: String?): String {
+    private suspend fun createJarWithWalletIssuer(walletIssuer: Audience): String {
         val query = checkNotNull(Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery)
         val registrationCertificate = RegistrationCertificate.parse(TestUtils.loadResource("wrprc.jwt"))
         val channel =
@@ -197,6 +191,7 @@ class CreateJarNimbusTest {
         assertEquals(r.responseMode, c.getStringClaim("response_mode"))
         assertEquals(r.responseUri?.toExternalForm(), c.getStringClaim(OpenId4VPSpec.RESPONSE_URI))
         assertEquals(r.state, c.getStringClaim("state"))
+        assertEquals(r.audience.map { it.value }, c.audience)
     }
 
     private fun assertX5cHeaderClaimDoesNotContainPEM(header: JWSHeader) {

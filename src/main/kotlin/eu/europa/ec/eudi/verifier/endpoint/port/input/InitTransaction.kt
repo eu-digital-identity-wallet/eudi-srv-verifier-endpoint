@@ -31,6 +31,7 @@ import com.eygraber.uri.toURI
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.oauth2.sdk.id.Audience
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.isSelfSigned
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -387,6 +388,8 @@ class InitTransactionLive(
 
         val channel = Channel.OverDcApi(responseMode, origin, expectedOrigins)
 
+        val walletIssuer = Audience("https://self-issued.me/v2")
+
         // validate according to the selected profile
         with(profile.validator) {
             context(verifierConfig) {
@@ -421,7 +424,7 @@ class InitTransactionLive(
                 presentation.query,
                 presentation.nonce,
                 null,
-                null,
+                walletIssuer,
                 EncryptionRequirement.NotRequired,
                 registrationCertificate,
             )
@@ -478,6 +481,7 @@ class InitTransactionLive(
             }
 
             EmbedOption.ByValue -> {
+                val walletIssuer = Audience("https://self-issued.me/v2")
                 val presentation =
                     Presentation.RequestObjectRetrieved(
                         id = generateTransactionId(),
@@ -499,7 +503,7 @@ class InitTransactionLive(
                         presentation.query,
                         presentation.nonce,
                         null,
-                        null,
+                        walletIssuer,
                         EncryptionRequirement.NotRequired,
                         registrationCertificate,
                     )

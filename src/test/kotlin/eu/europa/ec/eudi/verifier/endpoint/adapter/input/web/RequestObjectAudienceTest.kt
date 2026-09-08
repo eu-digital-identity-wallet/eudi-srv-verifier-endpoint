@@ -77,29 +77,6 @@ internal class RequestObjectAudienceTest {
         }
 
     @Test
-    fun `when wallet posts metadata without iss, the JAR aud is the self-issued default`() =
-        runTest {
-            val initTransaction =
-                VerifierApiClient
-                    .loadInitTransactionTO("02-dcql.json")
-                    .copy(jarMode = EmbedModeTO.ByReference, requestUriMethod = RequestUriMethodTO.Post)
-            val transactionInitialized =
-                assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
-                    VerifierApiClient.initTransaction(client, initTransaction),
-                )
-
-            val walletMetadata =
-                buildJsonObject {
-                    putValidWalletMetadata()
-                }.toString()
-
-            val requestObject =
-                WalletApiClient.postRequestObject(client, transactionInitialized.requestUri!!, walletMetadata, null)
-
-            assertEquals(listOf("https://self-issued.me/v2"), audience(requestObject.second))
-        }
-
-    @Test
     fun `when wallet gets the request object, the JAR aud is the self-issued default`() =
         runTest {
             val initTransaction =
