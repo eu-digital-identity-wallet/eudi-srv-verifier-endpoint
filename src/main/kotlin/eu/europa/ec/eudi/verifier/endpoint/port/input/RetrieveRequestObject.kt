@@ -147,6 +147,7 @@ class RetrieveRequestObjectLive(
 
         suspend fun updatePresentationAndCreateJar(
             encryptionRequirement: EncryptionRequirement,
+            walletIssuer: String?,
         ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
             val jar =
                 createJar(
@@ -156,6 +157,7 @@ class RetrieveRequestObjectLive(
                     presentation.query,
                     presentation.nonce,
                     method.walletNonceOrNull,
+                    walletIssuer,
                     encryptionRequirement,
                     presentation.registrationCertificate,
                 )
@@ -195,8 +197,9 @@ class RetrieveRequestObjectLive(
         val walletMetadata = method.walletMetadataOrNull?.let { parseWalletMetadata(it) }
         val encryptionRequirement =
             walletMetadata?.validate(presentation) ?: EncryptionRequirement.NotRequired
+        val walletIssuer = walletIssuer(method, walletMetadata)
 
-        val (updatePresentation, jar) = updatePresentationAndCreateJar(encryptionRequirement)
+        val (updatePresentation, jar) = updatePresentationAndCreateJar(encryptionRequirement, walletIssuer)
         log(updatePresentation, jar)
         return jar
     }
@@ -343,6 +346,8 @@ private class WalletMetadataValidator(
  */
 @Serializable
 private data class WalletMetadataTO(
+    @SerialName(RFC8414.ISSUER)
+    val issuer: String? = null,
     @Required
     @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED)
     val vpFormatsSupported: VpFormatsSupported,
@@ -388,6 +393,24 @@ private val RetrieveRequestObjectMethod.walletNonceOrNull: String?
             RetrieveRequestObjectMethod.Get -> null
             is RetrieveRequestObjectMethod.Post -> walletNonce
         }
+
+/**
+ * Resolves the Wallet's issuer for the JAR `aud` claim.
+ *
+ * Per OpenID4VP §5.8, when Dynamic Discovery is performed the `aud` claim MUST equal the
+ * Wallet's `iss`. Dynamic Discovery is recognized when the Wallet retrieves the Request Object
+ * via `request_uri_method=post`, provides `wallet_metadata`, and that metadata carries an `iss`
+ * claim. In all other cases the caller falls back to the static-discovery audience.
+ */
+private fun walletIssuer(
+    method: RetrieveRequestObjectMethod,
+    walletMetadata: WalletMetadataTO?,
+): String? {
+    if (method is RetrieveRequestObjectMethod.Post) {
+        return walletMetadata?.issuer
+    }
+    return null
+}
 
 private val VerifierId.clientIdPrefix: String
     get() =

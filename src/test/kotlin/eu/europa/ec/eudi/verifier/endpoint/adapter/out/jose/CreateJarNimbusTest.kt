@@ -32,17 +32,23 @@ import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.TestUtils
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
+import eu.europa.ec.eudi.verifier.endpoint.domain.Channel
 import eu.europa.ec.eudi.verifier.endpoint.domain.DCQL
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.EncryptionRequirement
+import eu.europa.ec.eudi.verifier.endpoint.domain.GetWalletResponseMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.HashAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.domain.HttpResponseModeOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.IntendedUse
+import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
+import eu.europa.ec.eudi.verifier.endpoint.domain.RegistrationCertificate
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestUriMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode
 import eu.europa.ec.eudi.verifier.endpoint.domain.UnresolvedAuthorizationRequestUri
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import net.minidev.json.JSONObject
 import java.net.URL
@@ -125,6 +131,45 @@ class CreateJarNimbusTest {
         val clientMetadata = OIDCClientMetadata.parse(JSONObject(claimSet.getJSONObjectClaim("client_metadata")))
         assertNull(clientMetadata.jwkSetURI)
         assertEquals(JWKSet(ecKey).toPublicJWKSet(), clientMetadata.jwkSet)
+    }
+
+    @Test
+    fun `given a wallet issuer, the JAR aud should be the wallet issuer`() =
+        runTest {
+            val jar = createJarWithWalletIssuer("https://wallet.example")
+            val signedJwt = decode(jar).getOrThrow()
+            assertEquals(listOf("https://wallet.example"), signedJwt.jwtClaimsSet.audience)
+        }
+
+    @Test
+    fun `given no wallet issuer, the JAR aud should be the self-issued default`() =
+        runTest {
+            val jar = createJarWithWalletIssuer(null)
+            val signedJwt = decode(jar).getOrThrow()
+            assertEquals(listOf("https://self-issued.me/v2"), signedJwt.jwtClaimsSet.audience)
+        }
+
+    private suspend fun createJarWithWalletIssuer(walletIssuer: String?): String {
+        val query = checkNotNull(Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery)
+        val registrationCertificate = RegistrationCertificate.parse(TestUtils.loadResource("wrprc.jwt"))
+        val channel =
+            Channel.OverHttp(
+                responseMode = ResponseMode.OverHttp.DirectPost,
+                requestUriMethod = RequestUriMethod.Post,
+                getWalletResponseMethod = GetWalletResponseMethod.Poll,
+                requestId = TestContext.testRequestId,
+            )
+        return createJar(
+            issuedAt = TestContext.testClock.now(),
+            transactionData = null,
+            channel = channel,
+            query = query,
+            nonce = Nonce("test-nonce"),
+            walletNonce = null,
+            walletIssuer = walletIssuer,
+            walletJarEncryptionRequirement = EncryptionRequirement.NotRequired,
+            registrationCertificate = registrationCertificate,
+        )
     }
 
     private fun decode(jwt: String): Result<SignedJWT> =

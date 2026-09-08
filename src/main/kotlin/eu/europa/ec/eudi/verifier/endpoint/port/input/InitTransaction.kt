@@ -421,6 +421,7 @@ class InitTransactionLive(
                 presentation.query,
                 presentation.nonce,
                 null,
+                null,
                 EncryptionRequirement.NotRequired,
                 registrationCertificate,
             )
@@ -497,6 +498,7 @@ class InitTransactionLive(
                         presentation.channel,
                         presentation.query,
                         presentation.nonce,
+                        null,
                         null,
                         EncryptionRequirement.NotRequired,
                         registrationCertificate,

@@ -19,6 +19,7 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
  * [OAuth 2.0 Authorization Server Metadata](https://www.rfc-editor.org/rfc/rfc8414)
  */
 object RFC8414 {
+    const val ISSUER: String = "issuer"
     const val RESPONSE_TYPES_SUPPORTED: String = "response_types_supported"
     const val RESPONSE_MODES_SUPPORTED: String = "response_modes_supported"
     const val JWKS: String = "jwks"

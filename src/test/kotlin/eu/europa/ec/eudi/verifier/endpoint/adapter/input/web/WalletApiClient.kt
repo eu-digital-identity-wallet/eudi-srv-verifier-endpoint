@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.RFC9101
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import kotlinx.serialization.json.JsonObject
@@ -25,6 +26,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.WebTestClient.ResponseSpec.ResponseSpecConsumer
 import org.springframework.test.web.reactive.server.expectBody
+import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyInserters
 
@@ -95,6 +97,42 @@ object WalletApiClient {
         log.info("response: $getResponse.responseBody")
 
         return TestUtils.parseJWTIntoClaims(getResponse.responseBody!!)
+    }
+
+    /**
+     * Wallet application to Verifier Backend, POST to request.jwt (request_uri_method=post)
+     * with optional wallet_metadata and wallet_nonce.
+     */
+    fun postRequestObject(
+        client: WebTestClient,
+        requestUri: String,
+        walletMetadata: String?,
+        walletNonce: String?,
+    ): Pair<JsonObject, JsonObject> {
+        val relativeRequestUri = requestUri.removePrefix("http://localhost:0")
+        log.info("relative request_uri: $relativeRequestUri")
+
+        val form = LinkedMultiValueMap<String, Any>()
+        walletMetadata?.let { form.add(OpenId4VPSpec.WALLET_METADATA, it) }
+        walletNonce?.let { form.add(OpenId4VPSpec.WALLET_NONCE, it) }
+
+        val postResponse =
+            client
+                .post()
+                .uri(relativeRequestUri)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .accept(MediaType.parseMediaType(RFC9101.REQUEST_OBJECT_MEDIA_TYPE))
+                .body(BodyInserters.fromValue(form))
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody<String>()
+                .returnResult()
+
+        assertNotNull(postResponse.responseBody, "postRequestObject response is null")
+        log.info("response: $postResponse.responseBody")
+
+        return TestUtils.parseJWTIntoClaims(postResponse.responseBody!!)
     }
 
     /**
