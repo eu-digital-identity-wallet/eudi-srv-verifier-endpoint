@@ -65,7 +65,7 @@ internal class WalletResponseDirectPostTest {
                 )
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
             val requestObjectJsonResponse =
-                WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri)
+                WalletApiClient.retrieveRequestObjectResponse(client, transactionInitialized.requestUri)
 
             assertNull(requestObjectJsonResponse.supportedEncryptionMethods())
             assertNull(requestObjectJsonResponse.ecKey(), "jwks must not contain EC key")

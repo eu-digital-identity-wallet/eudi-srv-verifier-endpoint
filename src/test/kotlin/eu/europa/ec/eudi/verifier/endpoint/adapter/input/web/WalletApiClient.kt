@@ -41,7 +41,7 @@ object WalletApiClient {
      * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
      * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
      */
-    fun getRequestObjectJsonResponse(
+    fun retrieveRequestObjectResponse(
         client: WebTestClient,
         requestUri: String,
         retrieveRequestObjectMethod: RetrieveRequestObjectMethod = RetrieveRequestObjectMethod.Get,
@@ -49,11 +49,11 @@ object WalletApiClient {
         val (header, payload) =
             when (retrieveRequestObjectMethod) {
                 RetrieveRequestObjectMethod.Get -> {
-                    getRequestObjectPair(client, requestUri)
+                    retrieveRequestObjectUsingGet(client, requestUri)
                 }
 
                 is RetrieveRequestObjectMethod.Post -> {
-                    getRequestObjectUsingPost(
+                    retrieveRequestObjectUsingPost(
                         client,
                         requestUri,
                         retrieveRequestObjectMethod.walletMetadata,
@@ -70,42 +70,9 @@ object WalletApiClient {
     }
 
     /**
-     * Wallet application to Verifier Backend, get DCQL query
-     *
-     * As per ISO 23220-4, Appendix B:
-     * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
-     * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
-     */
-    fun getRequestObject(
-        client: WebTestClient,
-        requestUri: String,
-        retrieveRequestObjectMethod: RetrieveRequestObjectMethod = RetrieveRequestObjectMethod.Get,
-    ) {
-        val (header, payload) =
-            when (retrieveRequestObjectMethod) {
-                RetrieveRequestObjectMethod.Get -> {
-                    getRequestObjectPair(client, requestUri)
-                }
-
-                is RetrieveRequestObjectMethod.Post -> {
-                    getRequestObjectUsingPost(
-                        client,
-                        requestUri,
-                        retrieveRequestObjectMethod.walletMetadata,
-                        retrieveRequestObjectMethod.walletNonce,
-                    )
-                }
-            }
-
-        // debug
-        TestUtils.prettyPrintJson("WalletApi.getRequestObject.prettyHeader:\n", header)
-        TestUtils.prettyPrintJson("WalletApi.getRequestObject.prettyPayload:\n", payload)
-    }
-
-    /**
      * private helper function to get the request object response as a pair of strings (header, payload)
      */
-    private fun getRequestObjectPair(
+    private fun retrieveRequestObjectUsingGet(
         client: WebTestClient,
         requestUri: String,
     ): Pair<JsonObject, JsonObject> {
@@ -135,7 +102,7 @@ object WalletApiClient {
      * private helper function to get the request object response as a pair of strings (header, payload)
      * using request_uri_method post
      */
-    private fun getRequestObjectUsingPost(
+    private fun retrieveRequestObjectUsingPost(
         client: WebTestClient,
         requestUri: String,
         walletMetadata: String?,

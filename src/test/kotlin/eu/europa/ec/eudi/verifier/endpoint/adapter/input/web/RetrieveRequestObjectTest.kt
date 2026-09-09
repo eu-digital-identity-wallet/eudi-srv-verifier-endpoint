@@ -49,7 +49,7 @@ import kotlin.test.assertIs
         "verifier.defaultHttpResponseMode=DirectPostJwt",
     ],
 )
-internal class RetrieveRequestObjectAudienceTest {
+internal class RetrieveRequestObjectTest {
     @Autowired
     private lateinit var client: WebTestClient
 
@@ -73,7 +73,7 @@ internal class RetrieveRequestObjectAudienceTest {
 
             val retrieveRequestObjectMethod = RetrieveRequestObjectMethod.Post(walletMetadata, null)
             val requestObject =
-                WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!, retrieveRequestObjectMethod)
+                WalletApiClient.retrieveRequestObjectResponse(client, transactionInitialized.requestUri!!, retrieveRequestObjectMethod)
 
             assertEquals(listOf("https://wallet.example"), requestObject.audience())
         }
@@ -90,7 +90,7 @@ internal class RetrieveRequestObjectAudienceTest {
                     VerifierApiClient.initTransaction(client, initTransaction),
                 )
 
-            val requestObject = WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
+            val requestObject = WalletApiClient.retrieveRequestObjectResponse(client, transactionInitialized.requestUri!!)
 
             assertEquals(listOf("https://self-issued.me/v2"), requestObject.audience())
         }
