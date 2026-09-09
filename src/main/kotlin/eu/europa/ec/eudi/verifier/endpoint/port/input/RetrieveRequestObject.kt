@@ -25,6 +25,7 @@ import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
+import com.nimbusds.oauth2.sdk.id.Audience
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
@@ -147,6 +148,7 @@ class RetrieveRequestObjectLive(
 
         suspend fun updatePresentationAndCreateJar(
             encryptionRequirement: EncryptionRequirement,
+            walletIdentifier: Audience,
         ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
             val jar =
                 createJar(
@@ -156,6 +158,7 @@ class RetrieveRequestObjectLive(
                     presentation.query,
                     presentation.nonce,
                     method.walletNonceOrNull,
+                    walletIdentifier,
                     encryptionRequirement,
                     presentation.registrationCertificate,
                 )
@@ -196,7 +199,9 @@ class RetrieveRequestObjectLive(
         val encryptionRequirement =
             walletMetadata?.validate(presentation) ?: EncryptionRequirement.NotRequired
 
-        val (updatePresentation, jar) = updatePresentationAndCreateJar(encryptionRequirement)
+        val walletIdentifier = Audience(walletMetadata?.issuer ?: "https://self-issued.me/v2")
+
+        val (updatePresentation, jar) = updatePresentationAndCreateJar(encryptionRequirement, walletIdentifier)
         log(updatePresentation, jar)
         return jar
     }
@@ -343,6 +348,9 @@ private class WalletMetadataValidator(
  */
 @Serializable
 private data class WalletMetadataTO(
+    @SerialName(RFC8414.ISSUER)
+    @Required
+    val issuer: String,
     @Required
     @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED)
     val vpFormatsSupported: VpFormatsSupported,

@@ -31,6 +31,7 @@ import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.oauth2.sdk.AuthorizationRequest
 import com.nimbusds.oauth2.sdk.ResponseType
 import com.nimbusds.oauth2.sdk.Scope
+import com.nimbusds.oauth2.sdk.id.Audience
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
@@ -56,6 +57,7 @@ class CreateJarNimbus(
         query: DCQL,
         nonce: Nonce,
         walletNonce: String?,
+        walletIdentifier: Audience,
         walletJarEncryptionRequirement: EncryptionRequirement,
         registrationCertificate: RegistrationCertificate,
     ): Jwt =
@@ -68,6 +70,7 @@ class CreateJarNimbus(
                         channel,
                         query,
                         nonce,
+                        walletIdentifier,
                         registrationCertificate,
                     )
                 }
@@ -165,7 +168,7 @@ class CreateJarNimbus(
                 v?.let { claim(c, it) }
             }
             issueTime(requestObject.issuedAt.toJavaDate())
-            audience(requestObject.audience)
+            audience(requestObject.audience.map { audience -> audience.value })
             claim(OpenId4VPSpec.NONCE, requestObject.nonce)
             optionalClaim(OpenId4VPSpec.CLIENT_METADATA, clientMetaData?.toJSONObject())
             optionalClaim(OpenId4VPSpec.RESPONSE_URI, requestObject.responseUri?.toExternalForm())

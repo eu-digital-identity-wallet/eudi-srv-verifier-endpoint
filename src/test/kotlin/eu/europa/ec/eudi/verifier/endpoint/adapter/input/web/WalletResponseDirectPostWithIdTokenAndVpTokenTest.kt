@@ -81,7 +81,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
             val requestId =
                 RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
             val presentationId = transactionInitialized.transactionId
-            WalletApiClient.getRequestObject(client, transactionInitialized.requestUri)
+            WalletApiClient.retrieveRequestObjectResponse(client, transactionInitialized.requestUri)
 
             val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
             formEncodedBody.add("state", requestId.value)
@@ -118,7 +118,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
                 val presentationId = TransactionId(transactionInitialized.transactionId)
                 val requestId =
                     RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-                WalletApiClient.getRequestObject(client, transactionInitialized.requestUri)
+                WalletApiClient.retrieveRequestObjectResponse(client, transactionInitialized.requestUri)
 
                 val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
                 formEncodedBody.add("state", requestId.value)
@@ -173,7 +173,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
                 )
             val requestId =
                 RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-            WalletApiClient.getRequestObject(client, transactionInitialized.requestUri)
+            WalletApiClient.retrieveRequestObjectResponse(client, transactionInitialized.requestUri)
 
             // At this point we don't generate an actual encrypted response
             // The response will be rejected before encrypted parsing/verification takes place
@@ -201,7 +201,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
                 )
             val presentationId = TransactionId(transactionInitialized.transactionId)
             val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-            WalletApiClient.getRequestObject(client, transactionInitialized.requestUri)
+            WalletApiClient.retrieveRequestObjectResponse(client, transactionInitialized.requestUri)
 
             val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
             formEncodedBody.add("state", requestId.value)
@@ -237,7 +237,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
                     transactionInitialized.requestUri
                         ?.removePrefix("http://localhost:0/wallet/request.jwt/")!!,
                 )
-            WalletApiClient.getRequestObject(client, transactionInitialized.requestUri)
+            WalletApiClient.retrieveRequestObjectResponse(client, transactionInitialized.requestUri)
 
             val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
             formEncodedBody.add("state", requestId.value)
@@ -266,7 +266,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
                     transactionInitialized.requestUri
                         ?.removePrefix("http://localhost:0/wallet/request.jwt/")!!,
                 )
-            WalletApiClient.getRequestObject(client, transactionInitialized.requestUri)
+            WalletApiClient.retrieveRequestObjectResponse(client, transactionInitialized.requestUri)
 
             val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
             formEncodedBody.add("state", requestId.value)

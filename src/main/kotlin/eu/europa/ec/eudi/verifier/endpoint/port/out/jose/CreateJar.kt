@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
 import arrow.core.NonEmptyList
+import com.nimbusds.oauth2.sdk.id.Audience
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import kotlin.time.Instant
 
@@ -30,6 +31,7 @@ fun interface CreateJar {
         query: DCQL,
         nonce: Nonce,
         walletNonce: String?,
+        walletIdentifier: Audience,
         walletJarEncryptionRequirement: EncryptionRequirement,
         registrationCertificate: RegistrationCertificate,
     ): Jwt

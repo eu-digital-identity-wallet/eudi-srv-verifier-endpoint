@@ -31,6 +31,7 @@ import com.eygraber.uri.toURI
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.oauth2.sdk.id.Audience
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.isSelfSigned
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -421,6 +422,7 @@ class InitTransactionLive(
                 presentation.query,
                 presentation.nonce,
                 null,
+                Audience("https://self-issued.me/v2"),
                 EncryptionRequirement.NotRequired,
                 registrationCertificate,
             )
@@ -498,6 +500,7 @@ class InitTransactionLive(
                         presentation.query,
                         presentation.nonce,
                         null,
+                        Audience("https://self-issued.me/v2"),
                         EncryptionRequirement.NotRequired,
                         registrationCertificate,
                     )

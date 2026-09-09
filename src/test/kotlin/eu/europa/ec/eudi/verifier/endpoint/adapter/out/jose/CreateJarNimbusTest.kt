@@ -27,22 +27,29 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.X509CertUtils
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import com.nimbusds.oauth2.sdk.id.Audience
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.TestUtils
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
+import eu.europa.ec.eudi.verifier.endpoint.domain.Channel
 import eu.europa.ec.eudi.verifier.endpoint.domain.DCQL
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.EncryptionRequirement
+import eu.europa.ec.eudi.verifier.endpoint.domain.GetWalletResponseMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.HashAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.domain.HttpResponseModeOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.IntendedUse
+import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
+import eu.europa.ec.eudi.verifier.endpoint.domain.RegistrationCertificate
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestUriMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode
 import eu.europa.ec.eudi.verifier.endpoint.domain.UnresolvedAuthorizationRequestUri
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import net.minidev.json.JSONObject
 import java.net.URL
@@ -127,6 +134,38 @@ class CreateJarNimbusTest {
         assertEquals(JWKSet(ecKey).toPublicJWKSet(), clientMetadata.jwkSet)
     }
 
+    @Test
+    fun `given a wallet issuer, the JAR aud should be the wallet issuer`() =
+        runTest {
+            val walletIdentifier = Audience("https://wallet.example")
+            val jar = createJarWithWalletIdentifier(walletIdentifier)
+            val signedJwt = decode(jar).getOrThrow()
+            assertEquals(listOf("https://wallet.example"), signedJwt.jwtClaimsSet.audience)
+        }
+
+    private suspend fun createJarWithWalletIdentifier(walletIdentifier: Audience): String {
+        val query = checkNotNull(Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery)
+        val registrationCertificate = RegistrationCertificate.parse(TestUtils.loadResource("wrprc.jwt"))
+        val channel =
+            Channel.OverHttp(
+                responseMode = ResponseMode.OverHttp.DirectPost,
+                requestUriMethod = RequestUriMethod.Post,
+                getWalletResponseMethod = GetWalletResponseMethod.Poll,
+                requestId = TestContext.testRequestId,
+            )
+        return createJar(
+            issuedAt = TestContext.testClock.now(),
+            transactionData = null,
+            channel = channel,
+            query = query,
+            nonce = Nonce("test-nonce"),
+            walletNonce = null,
+            walletIdentifier = walletIdentifier,
+            walletJarEncryptionRequirement = EncryptionRequirement.NotRequired,
+            registrationCertificate = registrationCertificate,
+        )
+    }
+
     private fun decode(jwt: String): Result<SignedJWT> =
         runCatching {
             val signedJWT = SignedJWT.parse(jwt)
@@ -152,6 +191,7 @@ class CreateJarNimbusTest {
         assertEquals(r.responseMode, c.getStringClaim("response_mode"))
         assertEquals(r.responseUri?.toExternalForm(), c.getStringClaim(OpenId4VPSpec.RESPONSE_URI))
         assertEquals(r.state, c.getStringClaim("state"))
+        assertEquals(r.audience.map { it.value }, c.audience)
     }
 
     private fun assertX5cHeaderClaimDoesNotContainPEM(header: JWSHeader) {

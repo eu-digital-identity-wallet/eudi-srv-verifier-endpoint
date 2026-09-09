@@ -15,8 +15,10 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.RFC9101
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.input.RetrieveRequestObjectMethod
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.slf4j.Logger
@@ -25,6 +27,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.WebTestClient.ResponseSpec.ResponseSpecConsumer
 import org.springframework.test.web.reactive.server.expectBody
+import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyInserters
 
@@ -38,11 +41,27 @@ object WalletApiClient {
      * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
      * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
      */
-    fun getRequestObjectJsonResponse(
+    fun retrieveRequestObjectResponse(
         client: WebTestClient,
         requestUri: String,
+        retrieveRequestObjectMethod: RetrieveRequestObjectMethod = RetrieveRequestObjectMethod.Get,
     ): JsonObject {
-        val (header, payload) = getRequestObjectPair(client, requestUri)
+        val (header, payload) =
+            when (retrieveRequestObjectMethod) {
+                RetrieveRequestObjectMethod.Get -> {
+                    retrieveRequestObjectUsingGet(client, requestUri)
+                }
+
+                is RetrieveRequestObjectMethod.Post -> {
+                    retrieveRequestObjectUsingPost(
+                        client,
+                        requestUri,
+                        retrieveRequestObjectMethod.walletMetadata,
+                        retrieveRequestObjectMethod.walletNonce,
+                    )
+                }
+            }
+
         // debug
         TestUtils.prettyPrintJson("prettyHeader:\n", header)
         TestUtils.prettyPrintJson("prettyPayload:\n", payload)
@@ -51,27 +70,9 @@ object WalletApiClient {
     }
 
     /**
-     * Wallet application to Verifier Backend, get DCQL query
-     *
-     * As per ISO 23220-4, Appendix B:
-     * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
-     * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
-     */
-    fun getRequestObject(
-        client: WebTestClient,
-        requestUri: String,
-    ) {
-        val (header, payload) = getRequestObjectPair(client, requestUri)
-
-        // debug
-        TestUtils.prettyPrintJson("WalletApi.getRequestObject.prettyHeader:\n", header)
-        TestUtils.prettyPrintJson("WalletApi.getRequestObject.prettyPayload:\n", payload)
-    }
-
-    /**
      * private helper function to get the request object response as a pair of strings (header, payload)
      */
-    private fun getRequestObjectPair(
+    private fun retrieveRequestObjectUsingGet(
         client: WebTestClient,
         requestUri: String,
     ): Pair<JsonObject, JsonObject> {
@@ -95,6 +96,42 @@ object WalletApiClient {
         log.info("response: $getResponse.responseBody")
 
         return TestUtils.parseJWTIntoClaims(getResponse.responseBody!!)
+    }
+
+    /**
+     * private helper function to get the request object response as a pair of strings (header, payload)
+     * using request_uri_method post
+     */
+    private fun retrieveRequestObjectUsingPost(
+        client: WebTestClient,
+        requestUri: String,
+        walletMetadata: String?,
+        walletNonce: String?,
+    ): Pair<JsonObject, JsonObject> {
+        val relativeRequestUri = requestUri.removePrefix("http://localhost:0")
+        log.info("relative request_uri: $relativeRequestUri")
+
+        val form = LinkedMultiValueMap<String, Any>()
+        walletMetadata?.let { form.add(OpenId4VPSpec.WALLET_METADATA, it) }
+        walletNonce?.let { form.add(OpenId4VPSpec.WALLET_NONCE, it) }
+
+        val postResponse =
+            client
+                .post()
+                .uri(relativeRequestUri)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .accept(MediaType.parseMediaType(RFC9101.REQUEST_OBJECT_MEDIA_TYPE))
+                .body(BodyInserters.fromValue(form))
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody<String>()
+                .returnResult()
+
+        assertNotNull(postResponse.responseBody, "postRequestObject response is null")
+        log.info("response: $postResponse.responseBody")
+
+        return TestUtils.parseJWTIntoClaims(postResponse.responseBody!!)
     }
 
     /**

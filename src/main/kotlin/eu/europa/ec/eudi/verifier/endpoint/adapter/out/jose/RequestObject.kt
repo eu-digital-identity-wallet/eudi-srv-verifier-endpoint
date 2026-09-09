@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import arrow.core.NonEmptyList
 import com.eygraber.uri.Url
+import com.nimbusds.oauth2.sdk.id.Audience
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
@@ -32,7 +33,7 @@ internal data class RequestObject(
     val nonce: String,
     val responseMode: String,
     val responseUri: URL?,
-    val audience: List<String>,
+    val audience: List<Audience>,
     val state: String?,
     val issuedAt: Instant,
     val transactionData: List<String>? = null,
@@ -47,11 +48,12 @@ internal fun requestObjectFromDomain(
     channel: Channel,
     query: DCQL,
     nonce: Nonce,
+    walletIdentifier: Audience,
     registrationCertificate: RegistrationCertificate,
 ): RequestObject {
     val scope = emptyList<String>()
     val responseType = listOf(OpenId4VPSpec.VP_TOKEN)
-    val audience = listOf("https://self-issued.me/v2")
+    val audience = walletIdentifier.toSingleAudienceList()
     val transactionData = transactionData?.map { it.base64Url }
     val verifierInfo = VerifierInfo(format = ETSI119472Part2.REGISTRATION_CERTIFICATE, data = registrationCertificate.value.serialize())
 
