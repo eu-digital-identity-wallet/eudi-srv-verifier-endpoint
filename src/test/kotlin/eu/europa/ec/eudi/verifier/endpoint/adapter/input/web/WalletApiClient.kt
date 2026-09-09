@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.RFC9101
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.input.RetrieveRequestObjectMethod
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.slf4j.Logger
@@ -43,8 +44,24 @@ object WalletApiClient {
     fun getRequestObjectJsonResponse(
         client: WebTestClient,
         requestUri: String,
+        retrieveRequestObjectMethod: RetrieveRequestObjectMethod = RetrieveRequestObjectMethod.Get,
     ): JsonObject {
-        val (header, payload) = getRequestObjectPair(client, requestUri)
+        val (header, payload) =
+            when (retrieveRequestObjectMethod) {
+                RetrieveRequestObjectMethod.Get -> {
+                    getRequestObjectPair(client, requestUri)
+                }
+
+                is RetrieveRequestObjectMethod.Post -> {
+                    getRequestObjectUsingPost(
+                        client,
+                        requestUri,
+                        retrieveRequestObjectMethod.walletMetadata,
+                        retrieveRequestObjectMethod.walletNonce,
+                    )
+                }
+            }
+
         // debug
         TestUtils.prettyPrintJson("prettyHeader:\n", header)
         TestUtils.prettyPrintJson("prettyPayload:\n", payload)
@@ -62,8 +79,23 @@ object WalletApiClient {
     fun getRequestObject(
         client: WebTestClient,
         requestUri: String,
+        retrieveRequestObjectMethod: RetrieveRequestObjectMethod = RetrieveRequestObjectMethod.Get,
     ) {
-        val (header, payload) = getRequestObjectPair(client, requestUri)
+        val (header, payload) =
+            when (retrieveRequestObjectMethod) {
+                RetrieveRequestObjectMethod.Get -> {
+                    getRequestObjectPair(client, requestUri)
+                }
+
+                is RetrieveRequestObjectMethod.Post -> {
+                    getRequestObjectUsingPost(
+                        client,
+                        requestUri,
+                        retrieveRequestObjectMethod.walletMetadata,
+                        retrieveRequestObjectMethod.walletNonce,
+                    )
+                }
+            }
 
         // debug
         TestUtils.prettyPrintJson("WalletApi.getRequestObject.prettyHeader:\n", header)
@@ -100,10 +132,10 @@ object WalletApiClient {
     }
 
     /**
-     * Wallet application to Verifier Backend, POST to request.jwt (request_uri_method=post)
-     * with optional wallet_metadata and wallet_nonce.
+     * private helper function to get the request object response as a pair of strings (header, payload)
+     * using request_uri_method post
      */
-    fun postRequestObject(
+    private fun getRequestObjectUsingPost(
         client: WebTestClient,
         requestUri: String,
         walletMetadata: String?,

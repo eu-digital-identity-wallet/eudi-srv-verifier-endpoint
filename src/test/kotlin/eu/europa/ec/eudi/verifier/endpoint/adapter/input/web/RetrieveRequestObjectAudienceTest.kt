@@ -19,6 +19,7 @@ import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.port.input.EmbedModeTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.RequestUriMethodTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.RetrieveRequestObjectMethod
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -48,7 +49,7 @@ import kotlin.test.assertIs
         "verifier.defaultHttpResponseMode=DirectPostJwt",
     ],
 )
-internal class RequestObjectAudienceTest {
+internal class RetrieveRequestObjectAudienceTest {
     @Autowired
     private lateinit var client: WebTestClient
 
@@ -70,10 +71,11 @@ internal class RequestObjectAudienceTest {
                     putValidWalletMetadata()
                 }.toString()
 
+            val retrieveRequestObjectMethod = RetrieveRequestObjectMethod.Post(walletMetadata, null)
             val requestObject =
-                WalletApiClient.postRequestObject(client, transactionInitialized.requestUri!!, walletMetadata, null)
+                WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!, retrieveRequestObjectMethod)
 
-            assertEquals(listOf("https://wallet.example"), requestObject.second.audience())
+            assertEquals(listOf("https://wallet.example"), requestObject.audience())
         }
 
     @Test
