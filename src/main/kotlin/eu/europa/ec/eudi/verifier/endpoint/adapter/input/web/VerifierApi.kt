@@ -198,7 +198,7 @@ internal class VerifierApi(
         logger.info("Handling GetWalletResponse for tx ${transactionId.value} and response_code: ${responseCode?.value ?: "n/a"}. ...")
         return when (val result = getWalletResponse(transactionId, responseCode)) {
             is QueryResponse.NotFound -> notFound().buildAndAwait()
-            is QueryResponse.InvalidState -> badRequest().buildAndAwait()
+            is QueryResponse.InvalidState -> invalidState(result.error)
             is QueryResponse.Found -> found(result.value)
         }
     }
@@ -215,9 +215,25 @@ internal class VerifierApi(
         logger.info("Handling Get PresentationEvents for tx ${transactionId.value}")
         return when (val result = getPresentationEvents(transactionId)) {
             is QueryResponse.NotFound -> notFound().buildAndAwait()
-            is QueryResponse.InvalidState -> badRequest().buildAndAwait()
+            is QueryResponse.InvalidState -> invalidState(result.error)
             is QueryResponse.Found -> found(result.value)
         }
+    }
+
+    /**
+     * Reports a [QueryResponse.InvalidState] as a Bad Request carrying a machine readable error code.
+     *
+     * Without it a Verifier cannot tell a transient state, where the Wallet has not submitted a
+     * response yet and the query can be retried, from a terminal one, where the provided
+     * response_code does not match and retrying is pointless.
+     */
+    private suspend fun invalidState(error: InvalidStateError): ServerResponse {
+        val code =
+            when (error) {
+                InvalidStateError.PresentationNotSubmitted -> "PresentationNotSubmitted"
+                InvalidStateError.InvalidResponseCode -> "InvalidResponseCode"
+            }
+        return badRequest().json().bodyValueAndAwait(mapOf("error" to code))
     }
 
     private suspend fun handleGetIntendedUses(): ServerResponse =

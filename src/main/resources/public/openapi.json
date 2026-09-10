@@ -296,7 +296,14 @@
             }
           },
           "400": {
-            "description": "Bad request"
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetWalletResponseError"
+                }
+              }
+            }
           },
           "404": {
             "description": "Not found"
@@ -1336,6 +1343,34 @@
               },
               {
                 "$ref": "#/components/schemas/ValidationError"
+              }
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "GetWalletResponseErrorCode": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "PresentationNotSubmitted",
+          "InvalidResponseCode"
+        ]
+      },
+      "GetWalletResponseError": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "error": {
+            "allOf": [
+              {
+                "description": "The reason the Wallet response cannot be returned. 'PresentationNotSubmitted' is transient, the Verifier may poll again. 'InvalidResponseCode' is terminal, retrying with the same response_code cannot succeed."
+              },
+              {
+                "$ref": "#/components/schemas/GetWalletResponseErrorCode"
               }
             ]
           }

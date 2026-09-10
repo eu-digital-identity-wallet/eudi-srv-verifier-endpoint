@@ -124,13 +124,13 @@ class GetWalletResponseLive(
                 "Expected: ${presentation.responseCode.txt()}, " +
                 "Provided ${responseCode.txt()}"
         logVerifierFailedToGetWalletResponse(presentation, cause)
-        return InvalidState
+        return InvalidState(InvalidStateError.InvalidResponseCode)
     }
 
     private suspend fun invalidState(presentation: Presentation): InvalidState {
         val cause = "Presentation should be in Submitted state but is in ${presentation.javaClass.name}"
         logVerifierFailedToGetWalletResponse(presentation, cause)
-        return InvalidState
+        return InvalidState(InvalidStateError.PresentationNotSubmitted)
     }
 
     private suspend fun logVerifierGotWalletResponse(

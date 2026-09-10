@@ -461,6 +461,20 @@ curl http://localhost:8080/ui/presentations/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAu
 
 **Returns:** The wallet submitted response as JSON.
 
+If the response cannot be returned, the endpoint replies with:
+
+- `404 Not Found`, when the `transactionId` is unknown
+- `400 Bad Request` with an `error` in the body, when the transaction exists but the response
+  is not available:
+
+  | Error | Meaning |
+  |---|---|
+  | `PresentationNotSubmitted` | The Wallet has not submitted a response yet. Transient: poll again. |
+  | `InvalidResponseCode` | The provided `response_code` does not match the one issued for this transaction. Terminal: retrying cannot succeed. |
+
+  Telling these apart matters in the 'same device' case, where the Verifier may follow the
+  redirect before the Wallet's submission has been processed.
+
 You can also try it out in [Swagger UI](http://localhost:8080/swagger-ui#/verifier%20api/getWalletResponse).
 
 ### Get presentation event log
