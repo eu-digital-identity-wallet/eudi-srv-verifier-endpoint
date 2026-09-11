@@ -222,8 +222,7 @@ internal data class DocumentDigest(
     @SerialName(RQES.DOCUMENT_DIGEST_CIRCUMSTANTIAL_DATA)
     val circumstantialData: String? = null,
     @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_HREF)
-    @Required
-    val href: StringUri,
+    val href: StringUri? = null,
     @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_CHECKSUM)
     val checksum: Hash? = null,
     @SerialName(RQES.DOCUMENTS_DOCUMENT_REFERENCE_ACCESS)
