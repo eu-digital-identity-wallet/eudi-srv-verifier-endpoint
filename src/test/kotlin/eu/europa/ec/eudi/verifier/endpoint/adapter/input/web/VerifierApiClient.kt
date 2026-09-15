@@ -25,7 +25,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.Output
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
