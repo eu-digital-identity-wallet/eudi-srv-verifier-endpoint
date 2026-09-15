@@ -33,7 +33,10 @@ class RetrieveDcApiPresentationRequestLive(
     override suspend fun invoke(transactionId: TransactionId): QueryResponse<InitDcApiTransactionResponseTO> {
         val presentationById = loadPresentationById(transactionId) ?: return QueryResponse.NotFound
 
-        if (presentationById !is Presentation.RequestObjectRetrieved) return QueryResponse.InvalidState
+        if (presentationById !is Presentation.RequestObjectRetrieved)
+            return QueryResponse.InvalidState(
+                InvalidStateError.PresentationNotSubmitted,
+            )
         require(presentationById.channel is Channel.OverDcApi)
 
         val events = loadPresentationEvents(transactionId)
