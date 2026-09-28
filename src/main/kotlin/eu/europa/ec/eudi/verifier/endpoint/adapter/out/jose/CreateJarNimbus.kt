@@ -105,6 +105,7 @@ class CreateJarNimbus(
                     }
                     type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
                     if (responseMode is ResponseMode.OverHttp) {
+                        // ETSI TS 119 472-2 V1.2.1 - OIDFVP-HAIP-REDIRECTS_RO-03
                         customParam("iat", requestObject.issuedAt.epochSeconds)
                     }
                 }.build()
