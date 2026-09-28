@@ -104,6 +104,9 @@ class CreateJarNimbus(
                         }
                     }
                     type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
+                    if (responseMode is ResponseMode.OverHttp) {
+                        customParam("iat", requestObject.issuedAt.epochSeconds)
+                    }
                 }.build()
         val clientMetaData = verifierConfig.clientMetaData
 
