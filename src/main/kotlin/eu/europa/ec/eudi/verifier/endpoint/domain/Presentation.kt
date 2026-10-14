@@ -20,12 +20,10 @@ import arrow.core.raise.context.Raise
 import arrow.core.raise.context.ensure
 import com.eygraber.uri.Url
 import com.nimbusds.jose.JOSEObjectType
-import com.nimbusds.jose.JWSVerifier
 import com.nimbusds.jose.crypto.ECDSAVerifier
-import com.nimbusds.jose.util.X509CertChainUtils
 import com.nimbusds.jose.util.X509CertUtils
 import com.nimbusds.jwt.SignedJWT
-import com.nimbusds.oauth2.sdk.util.X509CertificateUtils
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import kotlinx.serialization.json.JsonObject
 import java.security.cert.X509Certificate
 import java.security.interfaces.ECPublicKey
@@ -177,6 +175,9 @@ sealed interface Channel {
 value class RegistrationCertificate private constructor(
     val value: SignedJWT,
 ) {
+    val base64Url: Base64UrlSafe
+        get() = base64UrlNoPadding.encode(value.serialize().encodeToByteArray())
+
     companion object {
         fun parse(value: String): RegistrationCertificate {
             val parsed = SignedJWT.parse(value)

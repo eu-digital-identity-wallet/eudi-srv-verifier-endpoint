@@ -31,6 +31,7 @@ import com.nimbusds.oauth2.sdk.id.Audience
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.TestUtils
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.domain.Channel
@@ -50,6 +51,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.UnresolvedAuthorizationRequest
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import kotlinx.coroutines.test.runTest
+import kotlinx.io.bytestring.decodeToByteString
+import kotlinx.io.bytestring.decodeToString
 import kotlinx.serialization.json.Json
 import net.minidev.json.JSONObject
 import java.net.URL
@@ -105,7 +108,7 @@ class CreateJarNimbusTest {
                     listOf(
                         VerifierInfo(
                             "registration_cert",
-                            wrprc,
+                            base64UrlNoPadding.encode(wrprc.encodeToByteArray()),
                         ),
                     ),
             )
@@ -132,6 +135,39 @@ class CreateJarNimbusTest {
         val clientMetadata = OIDCClientMetadata.parse(JSONObject(claimSet.getJSONObjectClaim("client_metadata")))
         assertNull(clientMetadata.jwkSetURI)
         assertEquals(JWKSet(ecKey).toPublicJWKSet(), clientMetadata.jwkSet)
+    }
+
+    @Test
+    fun `given a registration certificate, verifier_info data is the base64url encoding of the serialized certificate`() {
+        val wrprc = TestUtils.loadResource("wrprc.jwt")
+        val registrationCertificate = RegistrationCertificate.parse(wrprc)
+        val query = checkNotNull(Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery)
+        val channel =
+            Channel.OverHttp(
+                responseMode = ResponseMode.OverHttp.DirectPost,
+                requestUriMethod = RequestUriMethod.Post,
+                getWalletResponseMethod = GetWalletResponseMethod.Poll,
+                requestId = TestContext.testRequestId,
+            )
+        val requestObject =
+            context(verifierConfig) {
+                requestObjectFromDomain(
+                    issuedAt = TestContext.testClock.now(),
+                    transactionData = null,
+                    channel = channel,
+                    query = query,
+                    nonce = Nonce("test-nonce"),
+                    walletIdentifier = Audience("https://wallet.example"),
+                    registrationCertificate = registrationCertificate,
+                )
+            }
+
+        val verifierInfo = requestObject.verifierInfo.single()
+        assertEquals("registration_cert", verifierInfo.format)
+        assertEquals(base64UrlNoPadding.encode(wrprc.encodeToByteArray()), verifierInfo.data)
+
+        // Round-trip: decoding the data member yields the original serialized registration certificate.
+        assertEquals(wrprc, base64UrlNoPadding.decodeToByteString(verifierInfo.data).decodeToString())
     }
 
     @Test
