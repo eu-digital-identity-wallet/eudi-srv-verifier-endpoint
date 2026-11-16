@@ -1690,6 +1690,7 @@
           },
           "attributes": {
             "type": "object",
+            "description": "The issuer-signed data elements, by namespace. Byte strings are Base64 URL-safe encoded. Dates are ISO 8601 strings: a full-date as a calendar date (e.g. 1985-03-15), a date-time as an instant in UTC (e.g. 2026-11-12T19:42:00Z).",
             "nullable": false,
             "additionalProperties": true
           }

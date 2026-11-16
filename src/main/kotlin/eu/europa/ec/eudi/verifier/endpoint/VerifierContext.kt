@@ -245,7 +245,6 @@ internal class AppBeans :
         registerBean(lazyInit = true) {
             ValidateMsoMdocDeviceResponse(
                 bean(),
-                bean(),
                 deviceResponseValidatorFactory = { userProvided ->
                     val appDefault = bean<DeviceResponseValidator>()
                     userProvided?.let {

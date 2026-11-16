@@ -25,11 +25,9 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidat
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.InvalidDocument
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
-import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
 import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
-import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toStdlibInstant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
@@ -121,7 +119,6 @@ internal data class DocumentTO(
  * Tries to validate a value as an MSO MDoc DeviceResponse.
  */
 internal class ValidateMsoMdocDeviceResponse(
-    private val clock: Clock,
     private val parsePemEncodedX509Certificates: ParsePemEncodedX509Certificates,
     private val deviceResponseValidatorFactory: (NonEmptyList<X509Certificate>?) -> DeviceResponseValidator,
 ) {
@@ -137,7 +134,7 @@ internal class ValidateMsoMdocDeviceResponse(
             withError({ error -> error.toValidationFailureTO() }) {
                 validator
                     .ensureValid(deviceResponse)
-                    .map { Json.encodeToJsonElement(it.toDocumentTO(clock)) }
+                    .map { Json.encodeToJsonElement(it.toDocumentTO()) }
             }
 
         return JsonArray(documents)
@@ -183,14 +180,14 @@ private fun DocumentError.toDocumentErrorTO(): DocumentErrorTO =
         is DocumentError.DocumentStatusCheckFailed -> DocumentErrorTO.DocumentStatusCheckFailed
     }
 
-private fun MDoc.toDocumentTO(clock: Clock): DocumentTO =
+private fun MDoc.toDocumentTO(): DocumentTO =
     DocumentTO(
         docType = docType.value,
         attributes =
             nameSpaces.associateWith { namespace ->
                 buildJsonObject {
                     getIssuerSignedItems(namespace).forEach { item ->
-                        put(item.elementIdentifier.value, item.elementValue.toJsonElement(clock))
+                        put(item.elementIdentifier.value, item.elementValue.toJsonElement())
                     }
                 }
             },
@@ -209,8 +206,15 @@ private fun List<JsonElement>.toJsonArray() = JsonArray(this)
 
 private fun Map<String, JsonElement>.toJsonObject() = JsonObject(this)
 
+/**
+ * Converts an issuer-signed data element to JSON.
+ *
+ * Dates are converted to ISO 8601 strings: a full-date (RFC 8943) to its calendar date, e.g. `1985-03-15`,
+ * and a date-time to an instant in UTC, e.g. `2026-11-12T19:42:00Z`. A full-date carries no time and no time zone,
+ * so it is not converted to an instant.
+ */
 @OptIn(ExperimentalEncodingApi::class)
-private fun DataElement.toJsonElement(clock: Clock): JsonElement =
+internal fun DataElement.toJsonElement(): JsonElement =
     when (this) {
         is BooleanElement -> {
             value.toJsonPrimitive()
@@ -221,7 +225,7 @@ private fun DataElement.toJsonElement(clock: Clock): JsonElement =
         }
 
         is DateTimeElement -> {
-            value.toStdlibInstant().toEpochMilliseconds().toJsonPrimitive()
+            value.toStdlibInstant().toString().toJsonPrimitive()
         }
 
         is EncodedCBORElement -> {
@@ -229,17 +233,17 @@ private fun DataElement.toJsonElement(clock: Clock): JsonElement =
         }
 
         is FullDateElement -> {
-            value.atStartOfDayIn(clock.timeZone()).toEpochMilliseconds().toJsonPrimitive()
+            value.toString().toJsonPrimitive()
         }
 
         is ListElement -> {
-            value.map { it.toJsonElement(clock) }.toJsonArray()
+            value.map { it.toJsonElement() }.toJsonArray()
         }
 
         is MapElement -> {
             value
                 .mapKeys { (key, _) -> key.str }
-                .mapValues { (_, value) -> value.toJsonElement(clock) }
+                .mapValues { (_, value) -> value.toJsonElement() }
                 .toJsonObject()
         }
 
