@@ -55,7 +55,11 @@ internal fun requestObjectFromDomain(
     val responseType = listOf(OpenId4VPSpec.VP_TOKEN)
     val audience = walletIdentifier.toSingleAudienceList()
     val transactionData = transactionData?.map { it.base64Url }
-    val verifierInfo = VerifierInfo(format = ETSI119472Part2.REGISTRATION_CERTIFICATE, data = registrationCertificate.value.serialize())
+    val verifierInfo =
+        VerifierInfo(
+            format = ETSI119472Part2.REGISTRATION_CERTIFICATE,
+            data = registrationCertificate.base64Url,
+        )
 
     return when (channel) {
         is Channel.OverDcApi -> {
