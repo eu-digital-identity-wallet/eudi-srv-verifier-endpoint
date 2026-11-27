@@ -6,97 +6,14 @@ on:
   pull_request_target:
   workflow_dispatch:
 
-jobs:
-  check-secrets:
-    name: Check secrets presence
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    runs-on: ubuntu-latest
-    steps:
-      - run: if [[ -z "$SONAR_TOKEN" ]]; then exit 1; fi
+permissions: {}
 
-  analysis:
-    name: Analysis
-    needs: check-secrets
-    env:
+jobs:
+  sast:
+    permissions:
+      contents: read
+    uses: eu-digital-identity-wallet/eudi-infra-ci/.github/workflows/sast_action_libs_kotlin.yml@main
+    with:
+      java_version: '25'
+    secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      DEFECT_DOJO_TOKEN: ${{ secrets.DOJO_TOKEN }}
-      DEFECT_DOJO_URL: ${{ secrets.DOJO_URL }}
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "ORGANIZATION=${{ github.repository_owner}}" >> $GITHUB_ENV
-      - run: echo "PROJECT_KEY=${{ github.repository_owner}}_$(echo ${{ github.repository }} | sed 's/.*\///')" >> $GITHUB_ENV
-      - run: echo "SCAN_DATE=$(TZ='EET' date '+%Y-%m-%d')" >> $GITHUB_ENV
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '25'
-      - uses: gradle/actions/setup-gradle@v6.4.0
-        with:
-          cache-provider: basic
-      - run: ./gradlew clean test koverXmlReport
-      - uses: sonarsource/sonarqube-scan-action@v8.3.0
-        if: (github.event_name == 'push'|| github.event_name == 'workflow_dispatch')
-        with:
-          projectBaseDir: ${{ github.workspace }}
-          args: >
-            -Dsonar.organization=${{ env.ORGANIZATION }}
-            -Dsonar.projectKey=${{ env.PROJECT_KEY }}
-            -Dsonar.scanner.skipJreProvisioning=true
-            -Dsonar.language=kotlin
-            -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/kover/report.xml
-            -Dsonar.kotlin.coverage.reportPaths=build/reports/kover/report.xml
-            -Dsonar.sources=src/main
-            -Dsonar.tests=src/test
-            -Dsonar.java.binaries=build/classes/kotlin/
-            -Dsonar.kotlin.binaries=build/classes/kotlin/
-      - uses: sonarsource/sonarqube-scan-action@v8.3.0
-        if: (github.event_name == 'pull_request_target')
-        with:
-          projectBaseDir: ${{ github.workspace }}
-          args: >
-            -Dsonar.organization=${{ env.ORGANIZATION }}
-            -Dsonar.projectKey=${{ env.PROJECT_KEY }}
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
-            -Dsonar.pullrequest.base=${{ github.event.pull_request.base.ref }}
-            -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }}
-            -Dsonar.scanner.skipJreProvisioning=true
-            -Dsonar.language=kotlin
-            -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/kover/report.xml
-            -Dsonar.kotlin.coverage.reportPaths=build/reports/kover/report.xml
-            -Dsonar.sources=src/main
-            -Dsonar.tests=src/test
-            -Dsonar.java.binaries=build/classes/kotlin/
-            -Dsonar.kotlin.binaries=build/classes/kotlin/
-      - uses: actions/setup-node@v7
-        if: (github.repository_owner == 'eu-digital-identity-wallet' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch'))
-        with:
-          node-version: 18
-      - name: Publish Sonar Report
-        if: (github.repository_owner == 'eu-digital-identity-wallet' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch'))
-        run: |
-          npm cache clean --force
-          npm install -g sonar-report@3.0.10
-          sonar-report \
-            --sonarurl="https://sonarcloud.io" \
-            --sonarorganization="${{ env.ORGANIZATION }}" \
-            --branch="${{ github.ref_name }}" \
-            --sonartoken="${{ secrets.SONAR_TOKEN }}" \
-            --output sonarreport.html \
-            --application="${{ env.PROJECT_KEY }}" \
-            --sonarcomponent="${{ env.PROJECT_KEY }}"
-          curl -X POST "${{ env.DEFECT_DOJO_URL }}/api/v2/reimport-scan/" \
-            -H "Authorization: Token $DEFECT_DOJO_TOKEN" \
-            -F "active=true" \
-            -F "scan_type=SonarQube Scan detailed" \
-            -F "minimum_severity=Info" \
-            -F "skip_duplicates=true" \
-            -F "close_old_findings=true" \
-            -F "file=@sonarreport.html" \
-            -F "scan_date=${{ env.SCAN_DATE }}" \
-            -F "auto_create_context=True" \
-            -F "product_name=${{ github.repository }}-${{ github.ref_name }}" \
-            -F "engagement_name=Static Application Security Testing - ${{ github.repository }}-${{ github.ref_name }}"
